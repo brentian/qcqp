@@ -8,8 +8,7 @@ date: \today
 ---
 
 
-# QCQP Project Plan
-
+# Intro
 
 ## Scope of our work
 Develop a QCQP solver that uses SDP-relaxation-and-refinement approach. The QCQP solver should be problem-independent that works for any QCQP instance.
@@ -52,5 +51,15 @@ Test on SNL, kissing problem, etc.
   - computational tests on kissing problem, SNL using different SDP solver can be handled at the same time
 - add and move to C/C++ interface. does same thing as Python, then this backend with replace the pure Python one.
 - Add Python, Matlab support for C interface.
+
+
+## Details
+We describe some of the details here.
+
+### SDP Relaxations
+We consider two types of SDP relaxations:
+
+#### Method I:
+
 
 # Reference

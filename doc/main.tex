@@ -1,0 +1,32 @@
+\include{headers/header.note}
+\title{Global QCQP Solver}
+% \title{Dual Method for Solving Flight Maintenance Scheduling Problem}
+\author{Chuwen Zhang}
+\date{\today}
+
+
+\usepackage{subfiles}
+\usepackage{graphicx} 
+\usepackage{subfiles} 
+\usepackage{subfig}
+\usepackage[table]{xcolor}
+\usepackage[font=small,labelfont=bf]{caption}
+\begin{document}
+\maketitle
+{
+    \setcounter{tocdepth}{3}
+    \tableofcontents
+}
+\subfile{sections/intro.tex}
+\subfile{sections/sdp.tex}
+
+\bibliography{headers/qcqp}
+\bibliographystyle{headers/informs2014}
+\addcontentsline{toc}{section}{References}
+
+% finish off
+
+
+\section*{Appendix}\label{sec:appendix}
+
+\end{document}

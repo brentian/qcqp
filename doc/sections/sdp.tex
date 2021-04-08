@@ -1,0 +1,76 @@
+\documentclass[../main]{subfiles}
+
+\begin{document}
+\section{Semidefinite Relaxation}
+
+We consider two types of SDP relaxation for canonical QCQP.
+We first consider for the case where $x$ is a vector, i.e., $x \in \mathbb R^n$.
+
+\[
+    \begin{aligned}
+                       & \text { Maximize } \quad x^{T} Q x                      \\
+        \text { s.t. } &                                                         \\
+                       & x^{T} A_{i} x(\le,=, \ge) b_{i}, \forall i=1, \ldots, m
+    \end{aligned}
+\]
+
+\subsection{Method I}\label{sdp-method-1}
+
+\[
+    \begin{aligned}
+        \textrm{since: }\quad          & x^{T} A_{i} x = A_i \bullet (xx^T)                               \\
+        \textrm{SDP relaxation: }\quad &                                                                  \\
+                                       & \mathrm{Maximize}\quad Q\bullet Y                                \\
+                                       & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0
+    \end{aligned}
+\]
+
+for matrix \(X\):
+\[
+    \begin{aligned}
+                                       & X^{T} A_{i} X = A_i \bullet (XX^T)                               \\
+        \textrm{SDP relaxation: }\quad &                                                                  \\
+                                       & \mathrm{Maximize}\quad Q\bullet Y                                \\
+                                       & Y-XX^T \succeq 0 \text { or }\begin{bmatrix} I_d & X^{T} \\ X & Y \end{bmatrix} \succeq 0
+    \end{aligned}
+\]
+
+\subsection{Method II}\label{sdp-method-2}
+Let \(A = A_+ + A_-\) where \(A_-, A_+ \succeq 0\), so we do Cholesky \(R_+^T R_+ = A_+\), since $R_+$ may be low-rank,
+then we can define $z_+$ according the rank.
+\[
+    \begin{aligned}
+         & R_+ x = z_+, x^TA_+ x = ||z_+||^2 = \sum_i (z_+)_i^2            \\
+         & y_i = (z_+)_i^2, \begin{bmatrix} 1 & (z_+)_i \\ (z_+)_i & y_i \end{bmatrix} \succeq 0, \forall i
+    \end{aligned}
+\]
+
+This is the so-called ``many-small-cone'' method.
+\subsection{Extending to matrix and tensor case}\label{sdp-extending}
+
+We first develop for the vector case: $x \in \mathbb R^n$, whereas QCQP is not limited to vector case:
+
+\begin{itemize}
+    \item vectors, $x\in \mathbb {R}^n$, max-cut, quadratic knapsack problem
+    \item matrices, $x\in \mathbb {R}^{n\times d}$, quadratic assignment problem, SNL, kissing number.
+\end{itemize}
+
+For example, SNL uses $X \in \mathbb R^{n\times d}$ for $d$-dimensional coordinates. For higher dimensional case, followings can be done:
+
+\begin{itemize}
+    \item We may first however using vectorized method, i.e., $x = \mathsf{vec}(X)$ to reformulate the matrix-based optimization problem, given the SDP bounds by original and vectorized relaxations are equivalent. (verify this, \cite{ding_equivalence_2011})
+    \item the above method may create a matrix of very large dimension by Kronecker product. We should test this, if true, then we must include matrix and tensor variables.
+    \item ultimately, the solver should provide an option to use user specified relaxations.
+\end{itemize}
+
+\subsection{Tests}
+
+We test on applications:
+
+
+\begin{itemize}
+    \item vectors, $x\in \mathbb {R}^n$, max-cut, quadratic knapsack problem
+    \item matrices, $x\in \mathbb {R}^{n\times d}$, QAP, SNL, kissing number.
+\end{itemize}
+
+\end{document}
