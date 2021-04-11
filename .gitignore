@@ -18,6 +18,8 @@ instances
 instances_pr
 draft/*.pdf
 tex/*/*.pdf
+notes
+data/
 
 # mathematical programming
 *.lp

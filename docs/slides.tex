@@ -1,0 +1,147 @@
+\include{headers/header.slides}
+\usepackage{subfig}
+\usepackage[style=verbose]{biblatex}
+\title{Global QCQP Solver}
+\author{Chuwen}
+\date{\today}
+\addbibresource{headers/qcqp.bib}
+
+
+\begin{document}
+\fontsize{10pt}{11.2}\selectfont
+\frame{\titlepage}
+
+
+
+\begin{frame}
+  \frametitle{SDP relaxations: Method-I}
+  Recall relaxation Method-I:
+
+  for \(X \in \mathbb{R}^{n}\), homogeneous case:
+
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize} \quad & Q\bullet Y                                                        \\
+      \mathrm{s.t.}  \quad    & Y-xx^T \succeq 0 \text { or } \begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
+                              & A_i \bullet Y (\le,=, \ge) b_i, \forall i                         \\
+    \end{aligned}
+  \end{equation}
+
+\end{frame}
+
+
+
+\begin{frame}
+  \frametitle{Method-I: Inhomogeneous Case}
+
+  for inhomogeneous case:
+
+  \begin{equation}\label{eq:sdp_normal}
+    \begin{aligned}
+      \mathrm{Maximize} \quad & Q\bullet Y   + 2q^T x                                            \\
+      \mathrm{s.t.}  \quad    & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
+                              & A_i \bullet Y +2 a_i^Tx (\le,=, \ge) b_i, \forall i              \\
+    \end{aligned}
+  \end{equation}
+
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Method-I: Inhomogeneous Case, Compact}
+  We homogenize by letting \(y = (x; t)\),
+
+  \begin{equation}\label{eq:sdp_compact}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & y^T
+      \begin{bmatrix} Q   & q \\ q^T & 0 \end{bmatrix}y                                                                   \\
+      \mathrm{s.t.} \quad    & y^T  \begin{bmatrix} A_i   & a_i \\ a_i^T & 0 \end{bmatrix}y  \; (\le, =, \ge) \; b_i, \forall i \\
+    \end{aligned}
+  \end{equation}
+
+  and SDP accordingly,
+
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & \begin{bmatrix} Q   & q \\ q^T & 0 \end{bmatrix} \bullet Y                                     \\
+      \mathrm{s.t.} \quad    & \begin{bmatrix} A_i   & a_i \\ a_i^T & 0 \end{bmatrix} \bullet Y  \; (\le, =, \ge) \; b_i, \forall i \\
+                             & \begin{bmatrix} 1 & y^{T} \\ y & Y \end{bmatrix} \succeq 0
+    \end{aligned}
+  \end{equation}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Modifications}
+  Unboundedness:
+  \begin{itemize}
+    \item We found this unbounded on QKP (quadratic knapsack problem).
+          May also be the case for QP with linear constraints only: \(A_i = 0, \forall i\)
+    \item Solution: add \(\mathsf{diag}(Y) = x\)
+  \end{itemize}
+
+  Box Constraints:
+
+  \begin{itemize}
+    \item For \(0 \le x \le e\), we can use \(\mathsf{diag}(Y) = x\)
+    \item For \(l \le x \le u\), we can use \(\mathsf{diag}(Y) = x\)
+          + linear transformation \(P\) such that: \(Pz = x, 0\le z \le e\)
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Example: QKP}
+  The quadratic knapsack problem, we add \(\mathsf{diag}(Y) = x\)
+
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & x^TQx   + 2q^T x           \\
+      \mathrm{s.t.}  \quad   & a_i^Tx \le  b_i, \forall i \\
+                             & 0\le x\le e
+    \end{aligned}
+  \end{equation}
+  Adopt SDP: Method-I \eqref{eq:sdp_normal}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Example: Results \(n = 100\)}
+
+  \begin{tabular}{llrlr}
+    \toprule
+    prob\_num        & method      & solve\_time & best\_bound & best\_obj \\
+    \midrule
+    jeu\_100\_25\_1  & gurobi      & 0.33        & 18751.41    & 18528.00  \\
+                     & gurobi\_rel & 0.42        & 18906.74    & 18604.47  \\
+                     & sdp\_qcqp1  & 19.11       & -           & 23140.56  \\
+    jeu\_100\_25\_2  & gurobi      & 0.04        & 56576.0     & 56121.00  \\
+                     & gurobi\_rel & 0.07        & 56576.0     & 56561.75  \\
+                     & sdp\_qcqp1  & 22.80       & -           & 57450.54  \\
+    jeu\_3\_n\_1     & gurobi      & 0.00        & 20.0        & 20.00     \\
+                     & gurobi\_rel & 0.00        & 22.31       & 21.75     \\
+                     & sdp\_qcqp1  & 0.00        & -           & 24.55     \\
+    jeu\_10\_100\_13 & gurobi      & 0.01        & 1612.03     & 1541.00   \\
+                     & gurobi\_rel & 0.00        & 1782.36     & 1735.25   \\
+                     & sdp\_qcqp1  & 0.01        & -           & 1865.68   \\
+    jeu\_2\_100\_1   & gurobi      & 0.00        & 140.0       & 140.00    \\
+                     & gurobi\_rel & 0.00        & 140.0       & 140.00    \\
+                     & sdp\_qcqp1  & 0.00        & -           & 140.00    \\
+    \bottomrule
+  \end{tabular}
+
+  for full results refer to the excel.
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Future Work}
+  \begin{itemize}
+    \item Compare Method-I (normal \eqref{eq:sdp_normal} and compact \eqref{eq:sdp_compact})
+    \item Test on box constraints, extend to \(d\)-dimensional \(x\), i.e., matrices
+    \item Test on SNL and other ``real'' QCQPs, use Gurobi as benchmark.
+    \item Can we improve basic relaxation Method-I? \footcite{bao_semidefinite_2011}
+    \item Implement Method-II
+  \end{itemize}
+\end{frame}
+\end{document}
