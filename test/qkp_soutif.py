@@ -193,8 +193,8 @@ def qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", relax=True, **kwargs):
                 <= b[constr_num])
 
     model.setParam(grb.GRB.Param.NonConvex, 2)
-    model.setParam(grb.GRB.Param.TimeLimit, 100)
-    model.setParam(grb.GRB.Param.MIPGap, 0.05)
+    model.setParam(grb.GRB.Param.TimeLimit, 500)
+    # model.setParam(grb.GRB.Param.MIPGap, 0.05)
     model.setObjective(obj_expr, sense=(grb.GRB.MAXIMIZE if sense == 'max' else grb.GRB.MINIMIZE))
     model.optimize()
 
@@ -253,9 +253,9 @@ if __name__ == '__main__':
     evals = [
         {**eval_grb.__dict__, "method": "gurobi"},
         {**eval_grb_relax.__dict__, "method": "gurobi_rel"},
-        {**eval_qcqp1.__dict__, "method": "sdp_helberg"},
-        {**eval_qcqp1_no_x.__dict__, "method": "sdp_qcqp1"},
-        {**eval_helberg.__dict__, "method": "sdp_qcqp1_no_x"},
+        {**eval_qcqp1.__dict__, "method": "sdp_qcqp1"},
+        {**eval_qcqp1_no_x.__dict__, "method": "sdp_qcqp1_no_x"},
+        {**eval_helberg.__dict__, "method": "sdp_helberg"},
     ]
 
     df_eval = pd.DataFrame.from_records(evals)

@@ -62,7 +62,7 @@ def naive_homogenized_relaxation(Q, q, A, a, b, sign, lb, ub, solver="MOSEK", se
 
     problem = cvx.Problem(objective=obj_expr_cp, constraints=constrs)
     problem.solve(verbose=True, solver=solver, save_file="model.ptf")
-    return problem,  Y, x
+    return problem, Y, x
 
 
 def aggregated_homogenized_relaxation(Q, q, A, a, b, sign, lb, ub, solver="MOSEK", sense="max", **kwargs):

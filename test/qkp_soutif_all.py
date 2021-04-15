@@ -22,6 +22,7 @@
 
 from .qkp_soutif import *
 from .evaluation import *
+import tqdm
 import os
 
 if __name__ == '__main__':
@@ -34,7 +35,7 @@ if __name__ == '__main__':
         raise e
     files = os.listdir(fp)
     evals = []
-    for fname in files:
+    for fname in tqdm.tqdm(sorted(files)):
         print(f"running {fname}")
         n = int(fname.split("_")[1])
         prob_num = fname.split(".")[0]
