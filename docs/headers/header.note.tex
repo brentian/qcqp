@@ -60,16 +60,16 @@
   \usepackage[]{microtype}
   \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
 }{}
-\makeatletter
-\@ifundefined{KOMAClassName}{% if non-KOMA class
-  \IfFileExists{parskip.sty}{%
-    \usepackage{parskip}
-  }{% else
-    \setlength{\parindent}{0pt}
-    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
-}{% if KOMA class
-  \KOMAoptions{parskip=half}}
-\makeatother
+% \makeatletter
+% \@ifundefined{KOMAClassName}{% if non-KOMA class
+%   \IfFileExists{parskip.sty}{%
+%     \usepackage{parskip}
+%   }{% else
+%     \setlength{\parindent}{0pt}
+%     \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+% }{% if KOMA class
+%   \KOMAoptions{parskip=half}}
+% \makeatother
 \usepackage{xcolor}
 \definecolor{default-linkcolor}{HTML}{A50000}
 \definecolor{default-filecolor}{HTML}{A50000}
@@ -119,7 +119,7 @@
 \usepackage{polyglossia}
 \setmainlanguage[]{english}
 
-\usepackage[UTF8, heading=true]{ctex}
+% \usepackage[UTF8, heading=true]{ctex}
 \usepackage{booktabs}
 \definecolor{tufeijilk}{RGB}{68,87,151}
 \hypersetup{colorlinks=true,linkcolor=tufeijilk,urlcolor=cyan,citecolor=tufeijilk}
@@ -161,7 +161,7 @@
 % heading color
 %
 \definecolor{heading-color}{RGB}{40,40,40}
-\addtokomafont{section}{\color{heading-color}}
+% \addtokomafont{section}{\color{heading-color}}
 % When using the classes report, scrreprt, book,
 % scrbook or memoir, uncomment the following line.
 %\addtokomafont{chapter}{\color{heading-color}}

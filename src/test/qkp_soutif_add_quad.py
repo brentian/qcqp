@@ -22,29 +22,34 @@
 
 import sys
 import json
+import cvxpy as cvx
 import numpy as np
-import itertools
-import qcqp
-import pandas as pd
 
-from .evaluation import *
+import src
+from test.qkp_soutif import qkp_gurobi, read_qkp_soutif, qkp_helberg_sdp
+from test.evaluation import *
 
 if __name__ == '__main__':
 
     try:
-        fp, n = sys.argv[1:]
+        fp, n, m = sys.argv[1:]
     except Exception as e:
         print("usage:\n"
-              "python tests/qkp_soutif.py filepath n (number of variables)")
+              "python tests/qkp_soutif.py filepath n:(number of variables)")
         raise e
 
     Q, q, A, a, b, sign, lb, ub = read_qkp_soutif(filepath=fp, n=int(n))
 
+    # add a nonzero A to try qcqp
+    np.random.seed(1)
+    A = np.random.random_integers(0, 100, (1, int(n), int(n)))
+
     x_grb, model_grb = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=False, sense="max")
     x_grb_relax, model_grb_relax = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max")
-    y_helberg, problem_helberg = qkp_helberg_sdp(Q, q, A, a, b, sign, lb, ub, solver='MOSEK')
-    problem_qcqp2, y_qcqp2 = qcqp.cvx_sdp(Q, q, A, a, b, sign, lb, ub, rel_type=2, solver='MOSEK')
-    problem_qcqp1, (y_qcqp1, x_qcqp1) = qcqp.cvx_sdp(Q, q, A, a, b, sign, lb, ub, rel_type=1, solver='MOSEK')
+    Y_helberg, problem_helberg = qkp_helberg_sdp(Q, q, A, a, b, sign, lb, ub, solver='MOSEK')
+
+    problem_qcqp2, y_qcqp2 = src.cvx_sdp(Q, q, A, a, b, sign, lb, ub, rel_type=2, solver='MOSEK')
+    problem_qcqp1, (y_qcqp1, x_qcqp1) = src.cvx_sdp(Q, q, A, a, b, sign, lb, ub, rel_type=1, solver='MOSEK')
 
     obj_values = {
         "gurobi": model_grb.ObjVal,
@@ -56,36 +61,5 @@ if __name__ == '__main__':
 
     print(json.dumps(obj_values, indent=2))
 
-    # # validate
-    # # grb relaxation
-    # xrelg = np.array([i.x for i in x_grb_relax.values()]).reshape((3, 1))
-    # print(xrelg.T.dot(A[0]).dot(xrelg).trace() + xrelg.T.dot(a[0]).trace())
-    # print(xrelg.T.dot(Q).dot(xrelg).trace() + xrelg.T.dot(q).trace())
-    #
-    # # sdp by method 1
-    # Y, x = _
-    # xrelqc = x.value
-    # yrelqc = Y.value
-    # print(np.abs(yrelqc.diagonal() - xrelqc.flatten()).max())
-    # print(yrelqc.T.dot(A[0]).trace() + xrelqc.T.dot(a[0]).trace())
-    # print((yrelqc.T @ Q).trace() + q.T.dot(xrelqc).trace())
-
-    # evaluations
-    eval_grb = evaluate(model_grb, x_grb)
-    eval_grb_relax = evaluate(model_grb_relax, x_grb_relax)
-    eval_qcqp1 = evaluate(problem_qcqp1, y_qcqp1, x_qcqp1)
-    eval_qcqp2 = evaluate(problem_qcqp2, y_qcqp2, y_qcqp2)
-    eval_helberg = evaluate(problem_helberg, y_helberg)
-
-    evals = {
-        "gurobi": eval_grb.__dict__,
-        "gurobi_rel": eval_grb_relax.__dict__,
-        "sdp_qcqp1": eval_qcqp1.__dict__,
-        "sdp_qcqp2": eval_qcqp2.__dict__,
-        "sdp_helberg": eval_helberg.__dict__,
-    }
-
-    df_eval = pd.DataFrame(evals)
-    print(df_eval)
 
 

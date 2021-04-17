@@ -1,0 +1,42 @@
+\include{headers/header.slides}
+\usepackage{subfig}
+\usepackage[style=verbose]{biblatex}
+\title{Global QCQP Solver}
+\author{Chuwen}
+\date{\today}
+\addbibresource{headers/qcqp.bib}
+
+
+\begin{document}
+\fontsize{10pt}{11.2}\selectfont
+\frame{\titlepage}
+
+
+\begin{frame}
+  \frametitle{ QKP}
+  The quadratic knapsack problem
+
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & x^TQx   + 2q^T x           \\
+      \mathrm{s.t.}  \quad   & a_i^Tx \le  b_i, \forall i \\
+                             & 0\le x\le e
+    \end{aligned}
+  \end{equation}
+  Adopt SDP: Method-I, add \(\mathsf{diag}(Y) = x\)
+
+\end{frame}
+
+\begin{frame}
+  \begin{itemize}
+    \item record Gurobi integer solutions as \textsf{gurobi}
+    \item for a \(max\) problem, Gurobi relaxation \textsf{gurobi\_rel}
+          and SDP relaxation \textsf{sdp\_qcqp1} should produce upper bounds.
+    \item \textsf{gurobi\_rel} itself uses branch-and-bound, so the optimal solution is somewhere in \([L^{\mathsf{gurobi\_rel}}, U^{\mathsf{gurobi\_rel}}]\) where \(L, U\) is the lower bound and upper bound, respectively
+  \end{itemize}
+
+\end{frame}
+
+
+
+\end{document}

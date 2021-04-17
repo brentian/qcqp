@@ -19,43 +19,35 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
-try:
-    import gurobipy as grb
-except:
-    print("no gurobipy found!")
 
-try:
-    import cvxpy as cvx
-except:
-    print("no cvxpy found!")
+from ..qkp_soutif import *
+from pyqp.bb import *
 
-
-class Eval(object):
-    def __init__(self, prob_num, solve_time, best_bound, best_obj):
-        self.prob_num = prob_num
-        self.solve_time = round(solve_time, 2)
-        self.best_bound = best_bound if best_bound == "-" else round(best_bound, 2)
-        self.best_obj = round(best_obj, 2)
-
-
-def evaluate(prob_num, model, *variables):
+if __name__ == '__main__':
+    pd.set_option("display.max_columns", None)
     try:
-        import gurobipy as grb
-    except:
-        print("no gurobipy found!")
-    try:
-        import cvxpy as cvx
-    except:
-        print("no cvxpy found!")
-    if isinstance(model, grb.Model):
-        solve_time = model.Runtime
-        best_bound = model.ObjBoundC
-        best_obj = model.ObjVal
-    elif isinstance(model, cvx.Problem):
-        stats = model.solver_stats
-        solve_time = stats.solve_time
-        best_bound = "-"  # todo, add this
-        best_obj = model.value
-    else:
-        raise ValueError("not implemented")
-    return Eval(prob_num, solve_time, best_bound, best_obj)
+        fp, n = sys.argv[1:]
+    except Exception as e:
+        print("usage:\n"
+              "python tests/qkp_soutif.py filepath n (number of variables)")
+        raise e
+    verbose = False
+
+    # start
+    Q, q, A, a, b, sign, lb, ub = read_qkp_soutif(filepath=fp, n=int(n))
+    qp = QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
+
+    # benchmark by gurobi
+    r_grb_relax = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=True, sense="max", verbose=verbose)
+    print(f"gurobi benchmark @{r_grb_relax.true_obj}")
+    print(f"gurobi benchmark x\n"
+          f"{r_grb_relax.xval}")
+    # b-b
+    r_bb = bb_box(qp, verbose=True)
+
+    print(f"gurobi benchmark @{r_grb_relax.true_obj}")
+    print(f"gurobi benchmark x\n"
+          f"{r_grb_relax.xval.round(3)}")
+    print(f"branch-and-cut @{r_bb.true_obj}")
+    print(f"branch-and-cut x\n"
+          f"{r_bb.xval.round(3)}")

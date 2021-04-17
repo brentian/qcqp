@@ -24,10 +24,9 @@ import sys
 import json
 import numpy as np
 import itertools
-import qcqp
 import pandas as pd
 
-from .evaluation import *
+from pyqp.bg_cvx import *
 
 
 def read_qkp_soutif(filepath='', n=0):
@@ -138,7 +137,7 @@ def qkp_helberg_sdp(Q, q, A, a, b, sign, lb, ub, solver="MOSEK", sense="max", **
     return Y, problem
 
 
-def qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", relax=True, **kwargs):
+def qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", relax=True, verbose=True, **kwargs):
     """
     QCQP using Gurobi 9.1 as benchmark
     todo: works only for 1-d case now
@@ -164,6 +163,8 @@ def qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", relax=True, **kwargs):
     import gurobipy as grb
     m, n, d = a.shape
     model = grb.Model()
+    model.setParam(grb.GRB.Param.OutputFlag, verbose)
+
     indices = range(q.shape[0])
 
     if relax:
@@ -194,36 +195,44 @@ def qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", relax=True, **kwargs):
 
     model.setParam(grb.GRB.Param.NonConvex, 2)
     model.setParam(grb.GRB.Param.TimeLimit, 500)
-    # model.setParam(grb.GRB.Param.MIPGap, 0.05)
+
     model.setObjective(obj_expr, sense=(grb.GRB.MAXIMIZE if sense == 'max' else grb.GRB.MINIMIZE))
     model.optimize()
+    r = Result()
+    r.solve_time = model.Runtime
+    r.bound = model.ObjBoundC
+    r.relax_obj = model.ObjVal
+    r.true_obj = model.ObjVal
+    r.xval = np.array([i.x for i in x.values()]).reshape(q.shape)
 
-    return x, model
+    return r
 
 
 if __name__ == '__main__':
-
+    pd.set_option("display.max_columns", None)
     try:
         fp, n = sys.argv[1:]
     except Exception as e:
         print("usage:\n"
               "python tests/qkp_soutif.py filepath n (number of variables)")
         raise e
+    verbose = False
 
+    # start
     Q, q, A, a, b, sign, lb, ub = read_qkp_soutif(filepath=fp, n=int(n))
 
-    x_grb, model_grb = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=False, sense="max")
-    x_grb_relax, model_grb_relax = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max")
-    y_helberg, problem_helberg = qkp_helberg_sdp(Q, q, A, a, b, sign, lb, ub, solver='MOSEK')
-    problem_qcqp1, (y_qcqp1, x_qcqp1) = qcqp.cvx_sdp(Q, q, A, a, b, sign, lb, ub, rel_type=1, solver='MOSEK')
-    problem_qcqp1_no_x, y_qcqp1_no_x = qcqp.cvx_sdp(Q, q, A, a, b, sign, lb, ub, rel_type=2, solver='MOSEK')
+    r_grb = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=False, sense="max", verbose=verbose)
+    r_grb_relax = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", verbose=verbose)
+    r_shor = shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
+    r_compact = compact_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
+    r_srlt = srlt_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
 
     obj_values = {
-        "gurobi": model_grb.ObjVal,
-        "gurobi_rel": model_grb_relax.ObjVal,
-        "sdp_helberg": problem_helberg.value,
-        "sdp_qcqp1": problem_qcqp1.value,
-        "sdp_qcqp1_no_x": problem_qcqp1_no_x.value,
+        "gurobi": r_grb.true_obj,
+        "gurobi_rel": r_grb_relax.true_obj,
+        "sdp_qcqp1": r_shor.true_obj,
+        "sdp_compact": r_compact.true_obj,
+        "sdp_srlt": r_srlt.true_obj,
     }
 
     print(json.dumps(obj_values, indent=2))
@@ -244,18 +253,18 @@ if __name__ == '__main__':
 
     # evaluations
     prob_num = 0
-    eval_grb = evaluate(prob_num, model_grb, x_grb)
-    eval_grb_relax = evaluate(prob_num, model_grb_relax, x_grb_relax)
-    eval_qcqp1 = evaluate(prob_num, problem_qcqp1, y_qcqp1, x_qcqp1)
-    eval_qcqp1_no_x = evaluate(prob_num, problem_qcqp1_no_x, y_qcqp1_no_x, y_qcqp1_no_x)
-    eval_helberg = evaluate(prob_num, problem_helberg, y_helberg)
+    eval_grb = r_grb.eval(prob_num)
+    eval_grb_relax = r_grb_relax.eval(prob_num)
+    eval_qcqp1 = r_shor.eval(prob_num)
+    eval_qcqp1_no_x = r_compact.eval(prob_num)
+    eval_srlt = r_srlt.eval(prob_num)
 
     evals = [
         {**eval_grb.__dict__, "method": "gurobi"},
         {**eval_grb_relax.__dict__, "method": "gurobi_rel"},
         {**eval_qcqp1.__dict__, "method": "sdp_qcqp1"},
-        {**eval_qcqp1_no_x.__dict__, "method": "sdp_qcqp1_no_x"},
-        {**eval_helberg.__dict__, "method": "sdp_helberg"},
+        {**eval_qcqp1_no_x.__dict__, "method": "sdp_compact"},
+        {**eval_srlt.__dict__, "method": "sdp_srlt"},
     ]
 
     df_eval = pd.DataFrame.from_records(evals)
