@@ -31,11 +31,13 @@ except:
 
 
 class Eval(object):
-    def __init__(self, prob_num, solve_time, best_bound, best_obj):
+    def __init__(self, prob_num, solve_time, best_bound, best_obj, best_reform_obj=0.0):
         self.prob_num = prob_num
         self.solve_time = round(solve_time, 2)
-        self.best_bound = best_bound if best_bound == "-" else round(best_bound, 2)
+        self.best_bound = best_bound if best_bound == "-" else round(
+            best_bound, 2)
         self.best_obj = round(best_obj, 2)
+        self.best_reform_obj = round(best_reform_obj, 2)
 
 
 def evaluate(prob_num, model, *variables):
@@ -47,6 +49,7 @@ def evaluate(prob_num, model, *variables):
         import cvxpy as cvx
     except:
         print("no cvxpy found!")
+    best_reform_obj = 0.0
     if isinstance(model, grb.Model):
         solve_time = model.Runtime
         best_bound = model.ObjBoundC
@@ -55,7 +58,9 @@ def evaluate(prob_num, model, *variables):
         stats = model.solver_stats
         solve_time = stats.solve_time
         best_bound = "-"  # todo, add this
-        best_obj = model.value
+        best_reform_obj = model.value
+        best_obj = model.true_obj
+
     else:
         raise ValueError("not implemented")
-    return Eval(prob_num, solve_time, best_bound, best_obj)
+    return Eval(prob_num, solve_time, best_bound, best_obj, best_reform_obj)

@@ -19,7 +19,7 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
-
+from coptpy import COPT
 from .qkp_soutif import *
 from .evaluation import *
 import tqdm
@@ -45,10 +45,8 @@ if __name__ == '__main__':
 
         x_grb, model_grb = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=False, sense="max")
         x_grb_relax, model_grb_relax = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max")
-        # y_helberg, problem_helberg = qkp_helberg_sdp(Q, q, A, a, b, sign, lb, ub, solver='MOSEK')
-        problem_qcqp1, (y_qcqp1, x_qcqp1) = qcqp.cvx_sdp(Q, q, A, a, b, sign, lb, ub, rel_type=1, solver='MOSEK')
-        # problem_qcqp1_no_x, y_qcqp1_no_x = qcqp.sdp(Q, q, A, a, b, sign, lb, ub, rel_type=2, solver='MOSEK')
-
+        problem_qcqp1, (y_qcqp1, x_qcqp1) = src.cvx_sdp(Q, q, A, a, b, sign, lb, ub, rel_type=1, solver='MOSEK')
+        problem_qcqp1_srlt, *_ = src.srlt_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK')
         obj_values = {
             "gurobi": model_grb.ObjVal,
             "gurobi_rel": model_grb_relax.ObjVal,
@@ -77,15 +75,14 @@ if __name__ == '__main__':
         eval_grb = evaluate(prob_num, model_grb, x_grb)
         eval_grb_relax = evaluate(prob_num, model_grb_relax, x_grb_relax)
         eval_qcqp1 = evaluate(prob_num, problem_qcqp1, y_qcqp1, x_qcqp1)
-        # eval_qcqp1_no_x = evaluate(prob_num, problem_qcqp1_no_x, y_qcqp1_no_x, y_qcqp1_no_x)
-        # eval_helberg = evaluate(prob_num, problem_helberg, y_helberg)
+        eval_srlt = evaluate(prob_num, problem_qcqp1_srlt, _)
 
         evals += [
             {**eval_grb.__dict__, "method": "gurobi"},
             {**eval_grb_relax.__dict__, "method": "gurobi_rel"},
             {**eval_qcqp1.__dict__, "method": "sdp_qcqp1"},
-            # {**eval_qcqp1_no_xqp1_no_x.__dict__, "method": "sdp_qcqp1"},
-            # {**eval_helberg.__dict__, "method": "sdp_qcqp1_no_x"},
+            {**eval_srlt.__dict__, "method": "sdp_srlt"},
+
         ]
 
     df_eval = pd.DataFrame.from_records(evals).set_index(["prob_num", "method"])
