@@ -99,7 +99,10 @@ def shor_relaxation(Q, q, A, a, b, sign,
     return r
 
 
-def srlt_relaxation(Q, q, A, a, b, sign, lb, ub, solver="MOSEK", sense="max", verbose=True, **kwargs):
+def srlt_relaxation(Q, q, A, a, b, sign,
+                    lb, ub,
+                    ylb=None, yub=None,
+                    solver="MOSEK", sense="max", verbose=True, solve=True, **kwargs):
     """
     use a Y along with x in the SDP
         for basic 0 <= x <= e, diag(Y) = x

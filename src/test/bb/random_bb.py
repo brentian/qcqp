@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
         # benchmark by gurobi
         r_grb_relax = qp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=True, sense="max", verbose=True)
-        eval_grb = r_grb_relax.eval(0)
+        eval_grb = r_grb_relax.eval(i)
         print(eval_grb.__dict__)
         # b-b
         r_bb = bb_box(qp, verbose=verbose)
@@ -57,7 +57,7 @@ if __name__ == '__main__':
               f"{r_bb.xval.round(3)}")
         r_bb.check(qp)
 
-        eval_bb = r_bb.eval(0)
+        eval_bb = r_bb.eval(i)
 
         evals += [
             {**eval_grb.__dict__, "method": "gurobi_relax"},

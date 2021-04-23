@@ -11,6 +11,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+class BCParams:
+    feas_eps = 1e-5
+    opt_eps = 1e-4
+
+
 class Branch(object):
     def __init__(self):
         self.xpivot = None
@@ -82,8 +87,14 @@ class RLTCuttingPlane(CuttingPlane):
         expr1 = yvar[i, j] - xvar[i, 0] * u_j - l_i * xvar[j, 0] + u_j * l_i <= 0
         # (xi - ui)(xj - lj) <= 0
         expr2 = yvar[i, j] - xvar[i, 0] * l_j - u_i * xvar[j, 0] + u_i * l_j <= 0
+        # (xi - li)(xj - lj) >= 0
+        expr3 = yvar[i, j] - xvar[i, 0] * l_j - l_i * xvar[j, 0] + l_j * l_i >= 0
+        # (xi - ui)(xj - uj) >= 0
+        expr4 = yvar[i, j] - xvar[i, 0] * u_j - u_i * xvar[j, 0] + u_i * u_j >= 0
         yield expr1
         yield expr2
+        yield expr3
+        yield expr4
 
 
 class Cuts(object):
@@ -182,18 +193,14 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch):
     return left_item, right_item
 
 
-def bb_box(qp: QP, verbose=False):
-    # some alg hyper params
-    feas_eps = 1e-6
-    opt_eps = 1e-6
-
+def bb_box(qp: QP, verbose=False, params=BCParams()):
     # choose branching
 
     # problems
     k = 0
-    lb = -1e6
-    ub = -1e6
-    root_r = shor_relaxation(*qp.unpack(), verbose=verbose, solve=False)
+
+    print("solving root node")
+    root_r = srlt_relaxation(*qp.unpack(), verbose=verbose, solve=True)
     best_r = root_r
     # root
     root_bound = Bounds(
@@ -205,9 +212,11 @@ def bb_box(qp: QP, verbose=False):
 
     root = BBItem(qp, 0, 0, -1, result=root_r, bound=root_bound, cuts=glc)
     total_nodes = 1
+    ub = root_r.relax_obj
+    lb = -1e6
 
     queue = PriorityQueue()
-    queue.put((0, root))
+    queue.put((-ub, root))
     feasible = {}
     start_time = time.time()
 
@@ -215,7 +224,9 @@ def bb_box(qp: QP, verbose=False):
         priority, item = queue.get()
         r = item.result
 
-        if - priority < lb:
+        parent_sdp_val = - priority
+
+        if parent_sdp_val < lb:
             # prune this tree
             print(f"prune #{item.node_id} since parent pruned")
             continue
@@ -229,25 +240,30 @@ def bb_box(qp: QP, verbose=False):
             r.true_obj = qp_obj_func(item.qp.Q, item.qp.q, xval)
             r.solved = True
 
-        if r.relax_obj < lb:
-            # prune this tree
-            print(f"prune #{item.node_id} with prio {priority}")
-            continue
-
-        ub = max(r.relax_obj, ub)
+        ub = min(parent_sdp_val, ub)
+        r.bound = ub
         if r.true_obj > lb:
             best_r = r
             lb = r.true_obj
-        # r.check(qp)
+
+        if r.relax_obj < lb:
+            # prune this tree
+            print(f"prune #{item.node_id}")
+            continue
+
+        gap = (ub - lb) / lb
+        if gap < params.opt_eps:
+            break
+
         x = r.xval
         y = r.yval
         res = np.abs(y - x @ x.T)
-        gap = (ub - lb) / lb
-        print(
-            f"with prio {priority} #{item.node_id}, depth: {item.depth}, obj: {r.true_obj:.4f}, sdp_obj: {r.relax_obj:.4f}, gap:{gap:.4%} ([{lb: .2f},{ub: .2f}]")
 
-        if res.max() <= feas_eps:
-            print(f"#{item.node_id} is feasible with prio {priority}")
+        print(
+            f"with prio {priority} #{item.node_id}, depth: {item.depth}, feas: {res.max():.3e}, obj: {r.true_obj:.4f}, sdp_obj: {r.relax_obj:.4f}, gap:{gap:.4%} ([{lb: .2f},{ub: .2f}]")
+
+        if res.max() <= params.feas_eps:
+            print(f"#{item.node_id} is feasible")
             feasible[item.node_id] = r
             continue
 
