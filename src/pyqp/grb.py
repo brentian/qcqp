@@ -1,10 +1,10 @@
 import itertools
 import numpy as np
 
-from pyqp.classes import Result
+from .classes import Result, Params
 
 
-def qp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", relax=True, verbose=True, **kwargs):
+def qp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", relax=True, verbose=True, params: Params = Params(), **kwargs):
     """
     QCQP using Gurobi 9.1 as benchmark
     todo: works only for 1-d case now
@@ -27,6 +27,10 @@ def qp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", relax=True, verbose=True
     -------
 
     """
+    ######################
+    # === extra params
+    ######################
+    time_limit = params.time_limit
     import gurobipy as grb
     m, n, d = a.shape
     model = grb.Model()
@@ -61,7 +65,7 @@ def qp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", relax=True, verbose=True
                 <= b[constr_num])
 
     model.setParam(grb.GRB.Param.NonConvex, 2)
-    model.setParam(grb.GRB.Param.TimeLimit, 500)
+    model.setParam(grb.GRB.Param.TimeLimit, time_limit)
 
     model.setObjective(obj_expr, sense=(grb.GRB.MAXIMIZE if sense == 'max' else grb.GRB.MINIMIZE))
     model.optimize()

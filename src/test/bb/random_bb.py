@@ -19,7 +19,8 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
-
+import pandas as pd
+import sys
 from pyqp.bb import *
 from pyqp.grb import *
 
@@ -35,17 +36,19 @@ if __name__ == '__main__':
         raise e
     verbose = False
     evals = []
+    params = BCParams()
     for i in range(int(instances)):
         # start
         qp = QP.create_random_instance(int(n), int(m))
         Q, q, A, a, b, sign, lb, ub, ylb, yub = qp.unpack()
 
         # benchmark by gurobi
-        r_grb_relax = qp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=True, sense="max", verbose=True)
+        r_grb_relax = qp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=True, sense="max", verbose=True,
+                                params=params)
         eval_grb = r_grb_relax.eval(i)
         print(eval_grb.__dict__)
         # b-b
-        r_bb = bb_box(qp, verbose=verbose)
+        r_bb = bb_box(qp, verbose=verbose, params=params)
 
         print(f"gurobi benchmark @{r_grb_relax.true_obj}")
         print(f"gurobi benchmark x\n"

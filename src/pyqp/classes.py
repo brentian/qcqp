@@ -36,10 +36,10 @@ class QP(object):
     @staticmethod
     def create_random_instance(n, m):
         Q = np.random.randint(0, 10, (n, n))
-        A = np.random.randint(0, 4, (m, n, n))
-        q = np.random.randint(0, 10, (n, 1))
-        a = np.random.randint(0, 10, (m, n, 1))
-        b = np.random.randint(1, 10, (m, 1))
+        A = np.random.randint(0, 2, (m, n, n))
+        q = np.random.randint(0, 5, (n, 1))
+        a = np.random.randint(0, 5, (m, n, 1))
+        b = np.random.randint(n, 3 * n, (m, 1))
         sign = np.ones(shape=m)
         lb = np.zeros(shape=(n, 1))
         ub = np.ones(shape=(n, 1))
@@ -77,3 +77,15 @@ class Result:
         print(f"y - xx':{res.min(), res.max()}")
         for m in range(qp.A.shape[0]):
             print(f"A*Y + a * x - b:{(x.T @ qp.A[m] * x).trace() + (qp.a[m].T @ x).trace() - qp.b[m][0]}")
+
+
+keys = ['feas_eps', 'opt_eps', 'time_limit']
+
+
+class Params(object):
+    feas_eps = 1e-5
+    opt_eps = 1e-4
+    time_limit = 200
+
+    def __dict__(self):
+        return {k: self.__getattribute__(k) for k in keys}

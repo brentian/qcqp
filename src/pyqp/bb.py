@@ -1,19 +1,17 @@
 # branch and bound tree implementations
-import collections
+import json
 import time
-
-from .classes import QP
-from .bg_cvx import *
-import pandas as pd
+from dataclasses import dataclass
 from queue import PriorityQueue
-import sys
-from dataclasses import dataclass, field
-from typing import Any
+
+from .bg_cvx import *
+from .classes import QP, Params
 
 
-class BCParams:
+class BCParams(Params):
     feas_eps = 1e-5
     opt_eps = 1e-4
+    time_limit = 200
 
 
 class Branch(object):
@@ -97,43 +95,45 @@ class RLTCuttingPlane(CuttingPlane):
         yield expr4
 
 
+def add_rlt_cuts(branch, bounds):
+    i = branch.xpivot
+    j = branch.xminor
+    u_i, l_i = bounds.xub[i, 0], bounds.xlb[i, 0]
+    u_j, l_j = bounds.xub[j, 0], bounds.xlb[j, 0]
+    return RLTCuttingPlane((i, j, u_i, l_i, u_j, l_j))
+
+
+cutting_method = {
+    'rlt': add_rlt_cuts
+}
+
+
 class Cuts(object):
+
     def __init__(self):
         self.cuts = {}
 
-    def add_global_cuts_to_cvx(self, r: CVXResult, branch: Branch, qp: QP, bounds: Bounds):
-        _pivot, _val = branch.xpivot, branch.xpivot_val
+    def add_cuts_to_cvx(self, r: CVXResult):
+
         _problem = r.problem
         x, y = r.xvar, r.yvar
 
-        # cuts
-        _rlt = self.add_rlt_cuts_cvx(branch, bounds)
-        new_cuts = Cuts()
-        new_cuts.cuts['rlt'] = self.cuts.get('rlt', []) + [_rlt]
-
-        for cut_type, cut_list in new_cuts.cuts.items():
+        for cut_type, cut_list in self.cuts.items():
             for ct in cut_list:
                 for expr in ct.serialize_to_cvx(x, y):
                     _problem._constraints.append(expr)
+
+    def generate_cuts(self, branch: Branch, bounds: Bounds, scope=None):
+
+        # cuts
+        if scope is None:
+            scope = cutting_method
+        new_cuts = Cuts()
+        for k, v in scope.items():
+            val = v(branch, bounds)
+            new_cuts.cuts[k] = self.cuts.get(k, []) + [val]
+
         return new_cuts
-
-    def add_rlt_cuts_cvx(self, branch, bounds):
-        i = branch.xpivot
-        j = branch.xminor
-        u_i, l_i = bounds.xub[i, 0], bounds.xlb[i, 0]
-        u_j, l_j = bounds.xub[j, 0], bounds.xlb[j, 0]
-        return RLTCuttingPlane((i, j, u_i, l_i, u_j, l_j))
-
-    # def update_ybounds_from_branch(self, branch: Branch, left=True):
-    #     _pivot = branch.xpivot
-    #     _val = branch.xpivot_val
-    #
-    #     if left:
-    #         self.yub[_pivot, :] = (_val ** 2) * self.xub[:,0]
-    #         self.yub[:, _pivot] = (_val ** 2) * self.xub[:,0]
-    #     else:
-    #         self.ylb[_pivot, :] = (_val ** 2) * self.xlb[:,0]
-    #         self.ylb[:, _pivot] = (_val ** 2) * self.xlb[:,0]
 
 
 @dataclass(order=True)
@@ -169,7 +169,8 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch):
         left_cuts = Cuts()
     else:
         # add cuts to cut off
-        left_cuts = parent.cuts.add_global_cuts_to_cvx(left_r, branch, left_qp, left_bounds)
+        left_cuts = parent.cuts.generate_cuts(branch, left_bounds)
+    left_cuts.add_cuts_to_cvx(left_r)
 
     left_item = BBItem(left_qp, parent.depth + 1, total_nodes, parent.node_id, left_r, left_bounds, left_cuts)
 
@@ -188,12 +189,15 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch):
         right_cuts = Cuts()
     else:
         # add cuts to cut off
-        right_cuts = parent.cuts.add_global_cuts_to_cvx(right_r, branch, right_qp, right_bounds)
+        right_cuts = parent.cuts.generate_cuts(branch, right_bounds)
+        right_cuts.add_cuts_to_cvx(right_r)
+
     right_item = BBItem(right_qp, parent.depth + 1, total_nodes + 1, parent.node_id, right_r, right_bounds, right_cuts)
     return left_item, right_item
 
 
 def bb_box(qp: QP, verbose=False, params=BCParams()):
+    print(json.dumps(params.__dict__(), indent=2))
     # choose branching
 
     # problems
@@ -246,14 +250,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
             best_r = r
             lb = r.true_obj
 
-        if r.relax_obj < lb:
-            # prune this tree
-            print(f"prune #{item.node_id}")
-            continue
-
         gap = (ub - lb) / lb
-        if gap < params.opt_eps:
-            break
 
         x = r.xval
         y = r.yval
@@ -262,8 +259,17 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
         print(
             f"with prio {priority} #{item.node_id}, depth: {item.depth}, feas: {res.max():.3e}, obj: {r.true_obj:.4f}, sdp_obj: {r.relax_obj:.4f}, gap:{gap:.4%} ([{lb: .2f},{ub: .2f}]")
 
+        if gap < params.opt_eps or r.solve_time >= params.time_limit:
+            print(f"terminate #{item.node_id} by gap")
+            break
+
+        if r.relax_obj < lb:
+            # prune this tree
+            print(f"prune #{item.node_id} by bound")
+            continue
+
         if res.max() <= params.feas_eps:
-            print(f"#{item.node_id} is feasible")
+            print(f"prune #{item.node_id} by feasible solution")
             feasible[item.node_id] = r
             continue
 
