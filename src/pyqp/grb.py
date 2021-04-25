@@ -41,7 +41,7 @@ def qp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", relax=True, verbose=True
     if relax:
         x = model.addVars(indices, lb=lb.flatten(), ub=ub.flatten())
     else:
-        x = model.addVars(indices, vtype=grb.GRB.BINARY)
+        x = model.addVars(indices, lb=lb.flatten(), ub=ub.flatten(), vtype=grb.GRB.INTEGER)
 
     obj_expr = grb.quicksum(Q[i][j] * x[i] * x[j] for i, j in itertools.product(indices, indices)) \
                + grb.quicksum(q[i][0] * x[i] for i in indices)

@@ -22,44 +22,37 @@
 
 import sys
 import json
-import cvxpy as cvx
 import numpy as np
+import itertools
+import pandas as pd
 
-import src
-from test.qkp_soutif import qkp_gurobi, read_qkp_soutif, qkp_helberg_sdp
-from test.evaluation import *
+from pyqp import bg_msk, bg_cvx
+from pyqp.classes import QP
+from ..qkp_soutif import read_qkp_soutif, qkp_gurobi
 
 if __name__ == '__main__':
-
+    pd.set_option("display.max_columns", None)
     try:
-        fp, n, m = sys.argv[1:]
+        fp, n = sys.argv[1:]
     except Exception as e:
         print("usage:\n"
-              "python tests/qkp_soutif.py filepath n:(number of variables)")
+              "python tests/qkp_soutif.py filepath n (number of variables)")
         raise e
+    verbose = True
 
+    # start
     Q, q, A, a, b, sign, lb, ub = read_qkp_soutif(filepath=fp, n=int(n))
+    qp = QP(Q, q, A, a, b, sign, lb, ub, None, None)
 
-    # add a nonzero A to try qcqp
-    np.random.seed(1)
-    A = np.random.random_integers(0, 100, (1, int(n), int(n)))
-
-    x_grb, model_grb = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=False, sense="max")
-    x_grb_relax, model_grb_relax = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max")
-    Y_helberg, problem_helberg = qkp_helberg_sdp(Q, q, A, a, b, sign, lb, ub, solver='MOSEK')
-
-    problem_qcqp2, y_qcqp2 = src.cvx_sdp(Q, q, A, a, b, sign, lb, ub, rel_type=2, solver='MOSEK')
-    problem_qcqp1, (y_qcqp1, x_qcqp1) = src.cvx_sdp(Q, q, A, a, b, sign, lb, ub, rel_type=1, solver='MOSEK')
+    #
+    r_grb_relax = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", verbose=verbose)
+    r_shor = bg_cvx.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
+    r_shor_msk = bg_msk.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
 
     obj_values = {
-        "gurobi": model_grb.ObjVal,
-        "gurobi_rel": model_grb_relax.ObjVal,
-        "sdp_helberg": problem_helberg.value,
-        "sdp_qcqp1": problem_qcqp1.value,
-        "sdp_qcqp2": problem_qcqp2.value,
+        "gurobi_rel": r_grb_relax.true_obj,
+        "sdp_qcqp1": r_shor.true_obj,
+        "sdp_qcqp1_msk": r_shor_msk.true_obj,
     }
-
+    r_shor_msk.check(qp)
     print(json.dumps(obj_values, indent=2))
-
-
-

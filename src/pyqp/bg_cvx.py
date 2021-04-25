@@ -1,6 +1,6 @@
 import cvxpy as cvx
 import numpy as np
-from .classes import Result
+from .classes import Result, qp_obj_func
 
 
 class CVXResult(Result):
@@ -10,6 +10,13 @@ class CVXResult(Result):
         self.xvar = xvar
         self.yvar = yvar
         self.solved = False
+
+    def solve(self):
+        self.problem.solve()
+        self.yval = self.yvar.value
+        self.xval = self.xvar.value
+        self.relax_obj = self.problem.value
+        self.solved = True
 
 
 def cvx_sdp(*params, sense="max", rel_type=1, **kwargs):
@@ -24,13 +31,10 @@ def cvx_sdp(*params, sense="max", rel_type=1, **kwargs):
     return _
 
 
-def qp_obj_func(Q, q, xval: np.ndarray):
-    return xval.T.dot(Q).dot(xval).trace() + xval.T.dot(q).trace()
-
-
 def shor_relaxation(Q, q, A, a, b, sign,
                     lb, ub,
                     ylb=None, yub=None,
+                    diagx=None,
                     solver="MOSEK", sense="max", verbose=True, solve=True, **kwargs):
     """
     use a Y along with x in the SDP
@@ -89,7 +93,7 @@ def shor_relaxation(Q, q, A, a, b, sign,
     if not solve:
         return r
 
-    problem.solve(verbose=verbose, solver=solver, save_file="model.ptf")
+    problem.solve(verbose=verbose, solver=solver)
     xval = x.value
     r.yval = Y.value
     r.xval = xval
@@ -155,7 +159,7 @@ def srlt_relaxation(Q, q, A, a, b, sign,
         obj_expr)
 
     problem = cvx.Problem(objective=obj_expr_cp, constraints=constrs)
-    problem.solve(verbose=verbose, solver=solver, save_file="model.ptf")
+    problem.solve(verbose=verbose, solver=solver)
     xval = x.value
 
     r = CVXResult()
@@ -195,6 +199,7 @@ def compact_relaxation(Q, q, A, a, b, sign, lb, ub, solver="MOSEK", sense="max",
     -------
 
     """
+    raise ValueError("to be checked")
     _unused = kwargs
     m, n, d = a.shape
     xshape = (n, d)
@@ -221,7 +226,7 @@ def compact_relaxation(Q, q, A, a, b, sign, lb, ub, solver="MOSEK", sense="max",
     obj_expr_cp = cvx.Maximize(obj_expr) if sense == 'max' else cvx.Minimize(
         obj_expr)
     problem = cvx.Problem(objective=obj_expr_cp, constraints=constrs)
-    problem.solve(verbose=verbose, solver=solver, save_file="model.ptf")
+    problem.solve(verbose=verbose, solver=solver)
     xtval = np.sqrt(_Y_flatten.value)
     xval = xtval[:-1].reshape(xshape)
 
