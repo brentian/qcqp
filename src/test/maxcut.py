@@ -109,10 +109,31 @@ if __name__ == '__main__':
     qp = QP(Q, q, A, a, b, sign, lb, ub, 0, None)
     r_grb = qp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=True, sense="min", verbose=verbose,
                       params=params)
+    r_grb.true_obj = (Q.sum() - r_grb.true_obj) / 2
+    r_grb.bound = (Q.sum() - r_grb.bound) / 2
+    r_grb.relax_obj = (Q.sum() - r_grb.relax_obj) / 2
     eval_grb = r_grb.eval(1)
 
-    r_shor = bg_msk.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', sense='min', verbose=verbose)
+    n, _ = q.shape
+    lb1 = np.zeros(q.shape)
+    ub1 = np.ones(q.shape)
+    Q1 = 4 * Q
+    q1 = (- 2 * Q - 2 * Q.T) @ np.ones((n, 1))
+    qp1 = QP(Q1, q1, A, a, b, sign, lb1, ub1, 0, None)
+    r_shor = bg_msk.shor_relaxation(Q1, q1, A, a, b, sign, lb1, ub1, solver='MOSEK', sense='min', verbose=verbose)
+    r_shor.xval = xval = r_shor.xval * 2 - 1
+    r_shor.true_obj = (Q.sum() - qp_obj_func(Q, q, xval)) / 2
+    r_shor.relax_obj = (- r_shor.relax_obj) / 2
+    r_shor.bound = (- r_shor.bound) / 2
     eval_shor = r_shor.eval(1)
+
+
+
+    # cvx
+    r_shor_cvx = bg_cvx.shor_relaxation(Q1, q1, A, a, b, sign, lb1, ub1, solver='MOSEK', sense='min', verbose=verbose)
+
+
+
     print(eval_grb.__dict__)
     print(eval_shor.__dict__)
     # r_bb = bb_box(qp, verbose=verbose, params=params)

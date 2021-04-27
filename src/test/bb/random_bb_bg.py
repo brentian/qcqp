@@ -38,8 +38,8 @@ if __name__ == '__main__':
     evals = []
     params = BCParams()
     params.backend_name = backend
-    for n in [5, 10, 20, 50]:
-        for m in [1, 5, 10, 20]:
+    for n in [20, 50, 80]:
+        for m in [5, 10, 20]:
             for i in range(int(instances)):
                 # problem
                 problem_id = f"{n}:{m}:{i}"
@@ -74,4 +74,4 @@ if __name__ == '__main__':
 
     df_eval = pd.DataFrame.from_records(evals)
     print(df_eval)
-    df_eval.to_excel("random_qp.xlsx")
+    df_eval.to_excel(f"random_qp_{backend}.xlsx")

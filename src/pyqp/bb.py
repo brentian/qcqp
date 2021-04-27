@@ -11,9 +11,10 @@ from .classes import QP, Params, qp_obj_func, Result
 
 class BCParams(Params):
     feas_eps = 1e-5
-    opt_eps = 1e-4
+    opt_eps = 5e-4
     time_limit = 200
     backend_name = 'cvx'
+    sdp_solver = 'MOSEK'
 
 
 class Branch(object):
@@ -211,7 +212,7 @@ class BBItem(object):
 
 
 def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=False, backend_name='msk',
-                         backend_func=None):
+                         backend_func=None, sdp_solver="MOSEK"):
     Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = parent.qp.unpack()
     # left <=
     left_bounds = Bounds(*parent.bound.unpack())
@@ -220,7 +221,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
         Q, q, A, a, b, sign,
         *left_bounds.unpack()
     )
-    left_r = backend_func(*left_qp.unpack(), verbose=verbose, solve=False)
+    left_r = backend_func(*left_qp.unpack(), solver=sdp_solver, verbose=verbose, solve=False)
     if not left_succ:
         # problem is infeasible:
         left_r.solved = True
@@ -240,7 +241,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
         Q, q, A, a, b, sign,
         *right_bounds.unpack()
     )
-    right_r = backend_func(*right_qp.unpack(), verbose=verbose, solve=False)
+    right_r = backend_func(*right_qp.unpack(), solver=sdp_solver, verbose=verbose, solve=False)
     if not right_succ:
         # problem is infeasible
         right_r.solved = True
@@ -270,7 +271,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
     k = 0
     start_time = time.time()
     print("solving root node")
-    root_r = backend_func(*qp.unpack(), verbose=True, solve=True)
+    root_r = backend_func(*qp.unpack(), solver=params.sdp_solver, verbose=True, solve=True)
     best_r = root_r
     # root
     root_bound = Bounds(
@@ -341,7 +342,8 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
         br = Branch()
         br.simple_vio_branch(x, y, res)
         left_item, right_item = generate_child_items(
-            total_nodes, item, br, verbose=verbose, backend_name=backend_name, backend_func=backend_func)
+            total_nodes, item, br, sdp_solver=params.sdp_solver, verbose=verbose, backend_name=backend_name,
+            backend_func=backend_func)
         total_nodes += 2
         next_priority = - r.relax_obj.round(3)
         queue.put((next_priority, right_item))
@@ -350,4 +352,5 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
 
         k += 1
 
+    best_r.solve_time = time.time() - start_time
     return best_r

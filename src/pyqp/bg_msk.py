@@ -81,7 +81,7 @@ def shor_relaxation(Q, q, A, a, b, sign,
     Z = model.variable("Z", dom.inPSDCone(n + 1))
     Y = Z.slice([0, 0], [n, n])
     x = Z.slice([0, n], [n, n + 1])
-
+    model.constraint(Y, dom.inPSDCone(n))
     # bounds
     # constrs = [x <= ub, x >= lb]
     if diagx is None:
@@ -131,6 +131,7 @@ def shor_relaxation(Q, q, A, a, b, sign,
     r.relax_obj = model.primalObjValue()
     r.true_obj = qp_obj_func(Q, q, xval)
     r.solved = True
+    r.solve_time = model.getSolverDoubleInfo("optimizerTime")
 
     return r
 

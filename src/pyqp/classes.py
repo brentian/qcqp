@@ -23,6 +23,7 @@ class QP(object):
         self.diagx = diagx
         self.description = self.__str__()
 
+
     def __str__(self):
         # todo add a description
         return ""
@@ -48,13 +49,13 @@ class QP(object):
 
 
 class Eval(object):
-    def __init__(self, prob_num, solve_time, best_bound, best_obj, best_relax_obj=0.0):
+    def __init__(self, prob_num, solve_time, best_bound, best_obj, relax_obj=0.0):
         self.prob_num = prob_num
         self.solve_time = round(solve_time, 2)
         self.best_bound = best_bound if best_bound == "-" else round(
             best_bound, 2)
         self.best_obj = round(best_obj, 2)
-        self.best_relax_obj = round(best_relax_obj, 2)
+        self.relax_obj = round(relax_obj, 2)
 
 
 class Result:
@@ -70,7 +71,7 @@ class Result:
         self.solve_time = solve_time
 
     def eval(self, problem_id=""):
-        return Eval(problem_id, self.solve_time, self.bound, self.true_obj, best_relax_obj=self.relax_obj)
+        return Eval(problem_id, self.solve_time, self.bound, self.true_obj, relax_obj=self.relax_obj)
 
     def check(self, qp: QP):
         x, y = self.xval, self.yval

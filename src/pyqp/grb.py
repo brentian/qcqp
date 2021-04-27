@@ -66,6 +66,7 @@ def qp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", relax=True, verbose=True
 
     model.setParam(grb.GRB.Param.NonConvex, 2)
     model.setParam(grb.GRB.Param.TimeLimit, time_limit)
+    model.setParam(grb.GRB.Param.Threads, 1)
 
     model.setObjective(obj_expr, sense=(grb.GRB.MAXIMIZE if sense == 'max' else grb.GRB.MINIMIZE))
     model.optimize()

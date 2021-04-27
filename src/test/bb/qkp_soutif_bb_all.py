@@ -19,7 +19,9 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
-from .qkp_soutif import *
+from pyqp.bb import BCParams, bb_box
+from pyqp.classes import QP
+from ..qkp_soutif import *
 import tqdm
 import os
 
@@ -33,6 +35,10 @@ if __name__ == '__main__':
         raise e
     files = os.listdir(fp)
     evals = []
+    verbose = False
+    params = BCParams()
+    # start
+
     for fname in tqdm.tqdm(sorted(files)):
         print(f"running {fname}")
         n = int(fname.split("_")[1])
@@ -44,13 +50,13 @@ if __name__ == '__main__':
         # r_grb = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=False, sense="max")
         r_grb_relax = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max")
         # r_shor = shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK')
-        r_bb = srlt_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK')
+
+        qp = QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
+        r_bb = bb_box(qp, verbose=True, params=params)
 
         obj_values = {
-            "gurobi": r_grb.true_obj,
-            "gurobi_rel": r_grb_relax.true_obj,
-            "sdp_qcqp1": r_shor.true_obj,
-            "sdp_srlt": r_srlt.true_obj,
+            "gurobi_relax": r_grb_relax.true_obj,
+            "qcq_bb": r_bb.true_obj
         }
 
         print(json.dumps(obj_values, indent=2))
@@ -70,19 +76,15 @@ if __name__ == '__main__':
         # print((yrelqc.T @ Q).trace() + q.T.dot(xrelqc).trace())
 
         # evaluations
-        eval_grb = r_grb.eval(prob_num)
         eval_grb_relax = r_grb_relax.eval(prob_num)
-        eval_qcqp1 = r_shor.eval(prob_num)
-        eval_srlt = r_srlt.eval(prob_num)
+        eval_bb = r_bb.eval(prob_num)
 
         evals += [
-            {**eval_grb.__dict__, "method": "gurobi"},
-            {**eval_grb_relax.__dict__, "method": "gurobi_rel"},
-            {**eval_qcqp1.__dict__, "method": "sdp_qcqp1"},
-            {**eval_srlt.__dict__, "method": "sdp_srlt"},
+            {**eval_grb_relax.__dict__, "method": "gurobi_relax"},
+            {**eval_bb.__dict__, "method": "qcq_bb"},
         ]
 
     df_eval = pd.DataFrame.from_records(evals).set_index(["prob_num", "method"])
     print(df_eval)
     print(df_eval.to_latex())
-    df_eval.to_excel("data.xlsx")
+    df_eval.to_excel("soutif.xlsx")
