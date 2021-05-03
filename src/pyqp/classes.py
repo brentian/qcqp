@@ -5,14 +5,15 @@ except:
     grb = None
 
 import numpy as np
+import numpy.linalg as nl
 
 
 # todo use a C struct or CC class
 class QP(object):
-    def __init__(self, Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx=None):
-        self.Q = Q
+    def __init__(self, Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx=None, shape=None):
+        self.Q = Q / 2 + Q.T / 2
         self.q = q
-        self.A = A
+        self.A = A / 2 + np.transpose(A, (0, 2, 1)) / 2
         self.a = a
         self.b = b
         self.sign = sign
@@ -21,8 +22,16 @@ class QP(object):
         self.ylb = ylb
         self.yub = yub
         self.diagx = diagx
+        if shape is None:
+            # infer from Q
+            self.n, self.d = q.shape
+            self.m, *_ = a.shape
         self.description = self.__str__()
-
+        self.Qpos, self.Qneg = None, None
+        self.Apos = None
+        self.Aneg = None
+        self.zlb = None
+        self.zub = None
 
     def __str__(self):
         # todo add a description
@@ -46,6 +55,36 @@ class QP(object):
         lb = np.zeros(shape=(n, 1))
         ub = np.ones(shape=(n, 1))
         return QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
+
+    def decompose(self, validate=False):
+        """
+        decompose into positive and negative part
+        Returns
+        -------
+        """
+        self.Apos = {}
+        self.Aneg = {}
+        for i in range(self.m):
+            (ap, ip), (an, inn) = self._decompose_matrix(self.A[i])
+            self.Apos[i] = (ap, ip)
+            self.Aneg[i] = (an, inn)
+            if validate:
+                d = np.abs(ap @ ap.T - an @ an.T - self.A[i])
+                assert d.max() < 1e-3
+        self.Qpos, self.Qneg = self._decompose_matrix(self.Q)
+
+    def _decompose_matrix(self, A):
+        gamma, u = nl.eig(A)
+        ipos = (gamma > 0).astype(int)
+        ineg = (gamma < 0).astype(int)
+        eig = np.diag(gamma)
+        upos = u @ np.sqrt(np.diag(ipos) @ eig)
+        uneg = u @ np.sqrt(- np.diag(ineg) @ eig)
+        #
+        ipos, *_ = np.nonzero(ipos)
+        ineg, *_ = np.nonzero(ineg)
+
+        return (upos, ipos), (uneg, ineg)
 
 
 class Eval(object):
@@ -75,8 +114,8 @@ class Result:
 
     def check(self, qp: QP):
         x, y = self.xval, self.yval
-        res = (y - x @ x.T)
-        print(f"y - xx':{res.min(), res.max()}")
+        # res = (y - x @ x.T)
+        # print(f"y - xx':{res.min(), res.max()}")
         for m in range(qp.A.shape[0]):
             print(f"A*Y + a * x - b:{(x.T @ qp.A[m] * x).trace() + (qp.a[m].T @ x).trace() - qp.b[m]}")
 
@@ -95,3 +134,119 @@ class Params(object):
 
 def qp_obj_func(Q, q, xval: np.ndarray):
     return xval.T.dot(Q).dot(xval).trace() + xval.T.dot(q).trace()
+
+
+class Branch(object):
+    def __init__(self):
+        self.xpivot = None
+        self.xpivot_val = None
+        self.xminor = None
+        self.xminor_val = None
+        self.ypivot = None
+        self.ypivot_val = None
+
+    def simple_vio_branch(self, x, y, res):
+        res_sum = res.sum(0)
+        x_index = res_sum.argmax()
+        self.xpivot = x_index
+        self.xpivot_val = x[self.xpivot, 0].round(6)
+        x_minor = res[x_index].argmax()
+        self.xminor = x_minor
+        self.xminor_val = x[x_minor, 0].round(6)
+        self.ypivot = x_index, x_minor
+        self.ypivot_val = y[x_index, x_minor].round(6)
+
+    def simple_vio_branch(self, x, y, res):
+        res_sum = res.sum(0)
+        x_index = res_sum.argmax()
+        self.xpivot = x_index
+        self.xpivot_val = x[self.xpivot, 0].round(6)
+        x_minor = res[x_index].argmax()
+        self.xminor = x_minor
+        self.xminor_val = x[x_minor, 0].round(6)
+        self.ypivot = x_index, x_minor
+        self.ypivot_val = y[x_index, x_minor].round(6)
+
+
+class Bounds(object):
+    def __init__(self, xlb=None, xub=None, ylb=None, yub=None):
+        # sparse implementation
+        self.xlb = xlb.copy()
+        self.xub = xub.copy()
+        self.ylb = ylb.copy()
+        self.yub = yub.copy()
+
+    def unpack(self):
+        return self.xlb, self.xub, self.ylb, self.yub
+
+    def update_bounds_from_branch(self, branch: Branch, left=True):
+        # todo, extend this
+        _succeed = False
+        _pivot = branch.xpivot
+        _val = branch.xpivot_val
+        _lb, _ub = self.xlb[_pivot, 0], self.xub[_pivot, 0]
+        if left and _val < _ub:
+            # <= and a valid upper bound
+            self.xub[_pivot, 0] = _val
+            _succeed = True
+        if not left and _val > _lb:
+            self.xlb[_pivot, 0] = _val
+            # self.ylb = self.xlb @ self.xlb.T
+            _succeed = True
+
+        # after update, check bound feasibility:
+        if self.xlb[_pivot, 0] > self.xub[_pivot, 0]:
+            _succeed = False
+        return _succeed
+
+
+class CuttingPlane(object):
+    def __init__(self, data):
+        self.data = data
+
+    def serialize_to_cvx(self, *args, **kwargs):
+        pass
+
+    def serialize_to_msk(self, *args, **kwargs):
+        pass
+
+    def serialize(self, backend_name, *args, **kwargs):
+        if backend_name == 'cvx':
+            self.serialize_to_cvx(*args, **kwargs)
+        elif backend_name == 'msk':
+            self.serialize_to_msk(*args, **kwargs)
+        else:
+            raise ValueError(f"not implemented backend {backend_name}")
+
+
+class MscBounds(Bounds):
+    def __init__(self, zlb=None, zub=None):
+        # sparse implementation
+        self.zlb = zlb.copy()
+        self.zub = zub.copy()
+        # self.xub = xub.copy()
+        # self.yub = yub.copy()
+
+    def unpack(self):
+        return self.zlb, self.zub
+
+    @classmethod
+    def construct(cls, qp):
+        zlb = []
+        zub = []
+        qpos, qipos = qp.Qpos
+        qneg, qineg = qp.Qneg
+        # _zval = np.hstack([qpos.T @ qp.ub + qneg.T @ qp.ub, qpos.T @ qp.lb + qneg.T @ qp.lb])
+        _zval = np.hstack([1e2 * np.ones(qp.q.shape), - 1e2 * np.ones(qp.q.shape)])
+        zub.append(_zval.max(axis=1).reshape(qp.q.shape))
+        zlb.append(_zval.min(axis=1).reshape(qp.q.shape))
+
+        for i in range(qp.a.shape[0]):
+            apos, ipos = qp.Apos[i]
+            aneg, ineg = qp.Aneg[i]
+            # _zval = np.hstack([apos.T @ qp.ub + aneg.T @ qp.ub, apos.T @ qp.lb + aneg.T @ qp.lb])
+            zub.append(_zval.max(axis=1).reshape(qp.q.shape))
+            zlb.append(_zval.min(axis=1).reshape(qp.q.shape))
+
+        # return cls(np.array(zlb), np.array(zub))
+        return cls(np.array(zlb).round(4), np.array(zub).round(4))

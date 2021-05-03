@@ -49,14 +49,15 @@ if __name__ == '__main__':
 
         # r_grb = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=False, sense="max")
         r_grb_relax = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max")
-        # r_shor = shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK')
+        r_shor = shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK')
 
         qp = QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
         r_bb = bb_box(qp, verbose=True, params=params)
 
         obj_values = {
             "gurobi_relax": r_grb_relax.true_obj,
-            "qcq_bb": r_bb.true_obj
+            "qcq_bb": r_bb.true_obj,
+            "shor": r_shor.true_obj
         }
 
         print(json.dumps(obj_values, indent=2))
@@ -78,10 +79,12 @@ if __name__ == '__main__':
         # evaluations
         eval_grb_relax = r_grb_relax.eval(prob_num)
         eval_bb = r_bb.eval(prob_num)
+        eval_shor = r_shor.eval(prob_num)
 
         evals += [
             {**eval_grb_relax.__dict__, "method": "gurobi_relax"},
             {**eval_bb.__dict__, "method": "qcq_bb"},
+            {**eval_shor.__dict__, "method": "shor"},
         ]
 
     df_eval = pd.DataFrame.from_records(evals).set_index(["prob_num", "method"])

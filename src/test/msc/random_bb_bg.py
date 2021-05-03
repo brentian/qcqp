@@ -21,7 +21,7 @@
 #  SOFTWARE.
 import pandas as pd
 import sys
-from pyqp.bb import *
+from pyqp.bb_msc import *
 from pyqp.grb import *
 
 np.random.seed(1)
@@ -29,7 +29,7 @@ np.random.seed(1)
 if __name__ == '__main__':
     pd.set_option("display.max_columns", None)
     try:
-        n, m, backend, *_ = sys.argv[1:]
+        instances, backend, *_ = sys.argv[1:]
     except Exception as e:
         print("usage:\n"
               "python tests/random_bb.py n (number of variables) m (num of constraints)")
@@ -38,43 +38,40 @@ if __name__ == '__main__':
     evals = []
     params = BCParams()
     params.backend_name = backend
+    for n in [20, 50, 80]:
+        for m in [5, 10, 20]:
+            for i in range(int(instances)):
+                # problem
+                problem_id = f"{n}:{m}:{i}"
+                # start
+                qp = QP.create_random_instance(int(n), int(m))
+                Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
 
-    # problem
-    problem_id = f"{n}:{m}:{0}"
-    # start
-    qp = QP.create_random_instance(int(n), int(m))
-    Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
+                # benchmark by gurobi
+                r_grb_relax = qp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=True, sense="max", verbose=True,
+                                        params=params)
+                eval_grb = r_grb_relax.eval(problem_id)
+                print(eval_grb.__dict__)
+                # b-b
+                r_bb = bb_box(qp, verbose=verbose, params=params)
 
-    # benchmark by gurobi
-    r_grb_relax = qp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=True, sense="max", verbose=True,
-                            params=params)
-    eval_grb = r_grb_relax.eval(problem_id)
-    print(eval_grb.__dict__)
+                print(f"gurobi benchmark @{r_grb_relax.true_obj}")
+                print(f"gurobi benchmark x\n"
+                      f"{r_grb_relax.xval.round(3)}")
 
-    # msc
-    r_msc = bg_cvx.msc_relaxation(qp, solver='MOSEK', verbose=True, params=params)
-    eval_msc= r_msc.eval(problem_id)
-    print(eval_msc.__dict__)
+                r_grb_relax.check(qp)
+                print(f"branch-and-cut @{r_bb.true_obj}")
+                print(f"branch-and-cut x\n"
+                      f"{r_bb.xval.round(3)}")
+                r_bb.check(qp)
 
-    # b-b
-    r_bb = bb_box(qp, verbose=verbose, params=params)
+                eval_bb = r_bb.eval(problem_id)
 
-    print(f"gurobi benchmark @{r_grb_relax.true_obj}")
-    print(f"gurobi benchmark x\n"
-          f"{r_grb_relax.xval.round(3)}")
-
-    r_grb_relax.check(qp)
-    print(f"branch-and-cut @{r_bb.true_obj}")
-    print(f"branch-and-cut x\n"
-          f"{r_bb.xval.round(3)}")
-    r_bb.check(qp)
-
-    eval_bb = r_bb.eval(problem_id)
-
-    evals += [
-        {**eval_grb.__dict__, "method": "gurobi_relax", "size": (n, m)},
-        {**eval_bb.__dict__, "method": "qcq_bb", "size": (n, m)},
-    ]
+                evals += [
+                    {**eval_grb.__dict__, "method": "gurobi_relax", "size": (n, m)},
+                    {**eval_bb.__dict__, "method": "qcq_bb", "size": (n, m)},
+                ]
 
     df_eval = pd.DataFrame.from_records(evals)
     print(df_eval)
+    df_eval.to_excel(f"random_qp_{backend}.xlsx")

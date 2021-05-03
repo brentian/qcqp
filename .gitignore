@@ -20,6 +20,9 @@ draft/*.pdf
 tex/*/*.pdf
 notes
 data/
+build-debug/
+build-rc/
+references/
 
 # mathematical programming
 *.lp

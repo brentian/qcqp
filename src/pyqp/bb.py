@@ -6,7 +6,7 @@ from queue import PriorityQueue
 
 import numpy as np
 from . import bg_msk, bg_cvx
-from .classes import QP, Params, qp_obj_func, Result
+from .classes import qp_obj_func, QP, Params, Result, Bounds, Branch, CuttingPlane
 
 
 class BCParams(Params):
@@ -15,78 +15,6 @@ class BCParams(Params):
     time_limit = 200
     backend_name = 'cvx'
     sdp_solver = 'MOSEK'
-
-
-class Branch(object):
-    def __init__(self):
-        self.xpivot = None
-        self.xpivot_val = None
-        self.xminor = None
-        self.xminor_val = None
-        self.ypivot = None
-        self.ypivot_val = None
-
-    def simple_vio_branch(self, x, y, res):
-        res_sum = res.sum(0)
-        x_index = res_sum.argmax()
-        self.xpivot = x_index
-        self.xpivot_val = x[self.xpivot, 0].round(6)
-        x_minor = res[x_index].argmax()
-        self.xminor = x_minor
-        self.xminor_val = x[x_minor, 0].round(6)
-        self.ypivot = x_index, x_minor
-        self.ypivot_val = y[x_index, x_minor].round(6)
-
-
-class Bounds(object):
-    def __init__(self, xlb=None, xub=None, ylb=None, yub=None):
-        # sparse implementation
-        self.xlb = xlb.copy()
-        self.xub = xub.copy()
-        self.ylb = ylb.copy()
-        self.yub = yub.copy()
-
-    def unpack(self):
-        return self.xlb, self.xub, self.ylb, self.yub
-
-    def update_bounds_from_branch(self, branch: Branch, left=True):
-        # todo, extend this
-        _succeed = False
-        _pivot = branch.xpivot
-        _val = branch.xpivot_val
-        _lb, _ub = self.xlb[_pivot, 0], self.xub[_pivot, 0]
-        if left and _val < _ub:
-            # <= and a valid upper bound
-            self.xub[_pivot, 0] = _val
-            _succeed = True
-        if not left and _val > _lb:
-            self.xlb[_pivot, 0] = _val
-            # self.ylb = self.xlb @ self.xlb.T
-            _succeed = True
-
-        # after update, check bound feasibility:
-        if self.xlb[_pivot, 0] > self.xub[_pivot, 0]:
-            _succeed = False
-        return _succeed
-
-
-class CuttingPlane(object):
-    def __init__(self, data):
-        self.data = data
-
-    def serialize_to_cvx(self, *args, **kwargs):
-        pass
-
-    def serialize_to_msk(self, *args, **kwargs):
-        pass
-
-    def serialize(self, backend_name, *args, **kwargs):
-        if backend_name == 'cvx':
-            self.serialize_to_cvx(*args, **kwargs)
-        elif backend_name == 'msk':
-            self.serialize_to_msk(*args, **kwargs)
-        else:
-            raise ValueError(f"not implemented backend {backend_name}")
 
 
 class RLTCuttingPlane(CuttingPlane):

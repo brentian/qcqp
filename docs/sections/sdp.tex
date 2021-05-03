@@ -7,30 +7,30 @@ We consider two types of SDP relaxation for canonical QCQP.
 We first consider for the case where $x$ is a vector, i.e., $x \in \mathbb R^n$.
 
 \begin{equation}
-    \begin{aligned}
-        \textrm { Maximize } \quad & x^{T} Q x                                                      \\
-        \text { s.t. }  \quad      & x^{T} A_{i} x\; (\le, =, \ge) \; b_{i}, \forall i=1, \ldots, m
-    \end{aligned}
+  \begin{aligned}
+    \textrm { Maximize } \quad & x^{T} Q x                                                      \\
+    \text { s.t. }  \quad      & x^{T} A_{i} x\; (\le, =, \ge) \; b_{i}, \forall i=1, \ldots, m
+  \end{aligned}
 \end{equation}
 
 And for inhomogeneous QCQP,
 
 \begin{equation}
-    \begin{aligned}
-        \mathrm{Maximize}\quad & x^TQx +2 q^T x                                   \\
-        \mathrm{s.t.}  \quad   & x^{T} A_i x  + 2a_i^Tx   \; (\le, =, \ge) \; b_i
-    \end{aligned}
+  \begin{aligned}
+    \mathrm{Maximize}\quad & x^TQx +2 q^T x                                   \\
+    \mathrm{s.t.}  \quad   & x^{T} A_i x  + 2a_i^Tx   \; (\le, =, \ge) \; b_i
+  \end{aligned}
 \end{equation}
 for inhomogeneous case, we notice:
 
 \begin{equation*}
-    \begin{aligned}
-                            & x^{T} Q x  + 2q^Tx        \\
-        =                   & \begin{bmatrix}x^T & t\end{bmatrix}
-        \begin{bmatrix} Q   & q \\ q^T & o \end{bmatrix}
-        \begin{bmatrix} x \\ t\end{bmatrix}                       \\
-        \mathrm{s.t.} \quad & 1\le t le 1
-    \end{aligned}
+  \begin{aligned}
+                        & x^{T} Q x  + 2q^Tx        \\
+    =                   & \begin{bmatrix}x^T & t\end{bmatrix}
+    \begin{bmatrix} Q   & q \\ q^T & o \end{bmatrix}
+    \begin{bmatrix} x \\ t\end{bmatrix}                       \\
+    \mathrm{s.t.} \quad & - 1\le t \le 1
+  \end{aligned}
 \end{equation*}
 
 we can use a homogeneous reformulation where the size of problem by $1$.
@@ -41,73 +41,124 @@ we can use a homogeneous reformulation where the size of problem by $1$.
 \subsubsection{Vector case}
 for \(X \in \mathbb{R}^{n}\), we have: \(x^{T} A_{i} x = A_i \bullet (xx^T)\)
 \begin{equation}
-    \begin{aligned}
-        \mathrm{Maximize}\quad & Q\bullet Y                                                        \\
-        \mathrm{s.t.}  \quad   & Y-xx^T \succeq 0 \text { or } \begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
-                               & A_i \bullet Y \; (\le, =, \ge) \; b_i, \forall i                  \\
-    \end{aligned}
+  \begin{aligned}
+    \mathrm{Maximize}\quad & Q\bullet Y                                                        \\
+    \mathrm{s.t.}  \quad   & Y-xx^T \succeq 0 \text { or } \begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
+                           & A_i \bullet Y \; (\le, =, \ge) \; b_i, \forall i                  \\
+  \end{aligned}
 \end{equation}
 
 \subsubsection{Matrix case}
 for \(X \in \mathbb{R}^{n\times d}\), we have: \(X^{T} A_{i} X = A_i \bullet (XX^T)\)
 \begin{equation}
-    \begin{aligned}
-        \mathrm{Maximize}\quad & Q\bullet Y                                                       \\
-        \mathrm{s.t.}  \quad   & Y-XX^T \succeq 0 \text { or }\begin{bmatrix} I_d & X^{T} \\ X & Y \end{bmatrix} \succeq 0 \\
-                               & A_i \bullet Y \; (\le, =, \ge) \; b_i, \forall i                 \\
-    \end{aligned}
+  \begin{aligned}
+    \mathrm{Maximize}\quad & Q\bullet Y                                                       \\
+    \mathrm{s.t.}  \quad   & Y-XX^T \succeq 0 \text { or }\begin{bmatrix} I_d & X^{T} \\ X & Y \end{bmatrix} \succeq 0 \\
+                           & A_i \bullet Y \; (\le, =, \ge) \; b_i, \forall i                 \\
+  \end{aligned}
 \end{equation}
 
 \subsubsection{Inhomogeneous}
 SDP relaxation,
 \begin{equation}
-    \begin{aligned}
-        \mathrm{Maximize}\quad & Q\bullet Y   + 2q^T x                                            \\
-        \mathrm{s.t.}  \quad   & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
-                               & A_i \bullet Y +2 a_i^Tx \; (\le, =, \ge) \; b_i, \forall i       \\
-    \end{aligned}
+  \begin{aligned}
+    \mathrm{Maximize}\quad & Q\bullet Y   + 2q^T x                                            \\
+    \mathrm{s.t.}  \quad   & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
+                           & A_i \bullet Y +2 a_i^Tx \; (\le, =, \ge) \; b_i, \forall i       \\
+  \end{aligned}
 \end{equation}
 
 \subsubsection*{Alternative}
 The above formulation could be unbounded. We homogenize by letting \(y = (x; t)\),
 
 \begin{equation}
-    \begin{aligned}
-        \mathrm{Maximize}\quad & y^T
-        \begin{bmatrix} Q   & q \\ q^T & 0 \end{bmatrix}y                                                                    \\
-        \mathrm{s.t.} \quad    & y^T  \begin{bmatrix} A_i   & a_i \\ a_i^T & 0 \end{bmatrix}y  \; (\le, =, \ge) \; b_i, \forall i \\
-    \end{aligned}
+  \begin{aligned}
+    \mathrm{Maximize}\quad & y^T
+    \begin{bmatrix} Q   & q \\ q^T & 0 \end{bmatrix}y                                                                    \\
+    \mathrm{s.t.} \quad    & y^T  \begin{bmatrix} A_i   & a_i \\ a_i^T & 0 \end{bmatrix}y  \; (\le, =, \ge) \; b_i, \forall i \\
+  \end{aligned}
 \end{equation}
 
 
 
-\subsection{Method II}\label{sdp-method-2}
-Let \(A = A_+ + A_-\) where \(A_-, A_+ \succeq 0\), so we do Cholesky \(R_+^T R_+ = A_+\), since $R_+$ may be low-rank,
-then we can define $z_+$ according the rank.
+\subsection{Method II: The Many-Small-Cone}\label{sdp-method-2}
+Let \(A = A^+ + A^-\) be symmetric where \(A^-, A^+ \succeq 0\), which allows Cholesky decomposition,
+
+\[U^+ (U^+)^T = A^+\]
+
+since $U^+$ may be low-rank, we can define $z^+$ accordingly,
+
 \begin{equation}
-    \begin{aligned}
-         & R_+ x = z_+, x^TA_+ x = ||z_+||^2 = \sum_i (z_+)_i^2             \\
-         & y_i = (z_+)_i^2, \begin{bmatrix} 1 & (z_+)_i \\ (z_+)_i & y_i \end{bmatrix} \succeq 0, \forall i
-    \end{aligned}
+  \begin{aligned}
+     & (U^+)^T x = z^+                                                  \\
+     & x^TA^+ x = ||z^+||^2 = \sum_i (z^+)_i^2                          \\
+     & y_i = (z^+_i)^2, \begin{bmatrix} 1 & z^+_i \\ z^+_i & y_i \end{bmatrix} \succeq 0, \forall i
+  \end{aligned}
 \end{equation}
 
 This is the so-called ``many-small-cone'' method.
+
+
+\subsubsection{Partition a Matrix into Positive and Negative Parts}
+We first compute the eigenvalues for \(Q, A_i, i=1,...,m\) beforehand, then we decompose each matrix by sign of the eigenvalues.
+One way to do this is:
+\begin{itemize}
+
+  \item Symmetrize: re-define \(Q := \frac{Q + Q^T}{2}\), by the fact that \(x^TQx = x^T(\frac{Q + Q^T}{2})x\)
+
+  \item Compute eigenvalue decomposition:
+        \[Q = U\Gamma U^T\]
+  \item Partition columns of \(U\) by
+        \(I^+ \in \mathbb{R}^{n\times n}, I^+_{ii} = 1 \textrm{  if  }\Gamma_i > 0\)
+
+  \item We define \(U^+ = U\cdot \sqrt{(I^+)\cdot\Gamma},\; U^- = U \cdot\sqrt{-(I^-)\cdot\Gamma}\)
+  \item We have:
+
+        \[Q =  U^+ (U^+)^T - U^- (U^-)^T\]
+\end{itemize}
+
+\subsubsection{Many-small-cone Relaxation}
+
+Now we conclude the many-small-cone relaxation,
+
+\begin{equation}
+  \begin{aligned}
+    \mathrm{Maximize}\quad               & (y^+)^Te - (y^-)^Te + q^Tx                                        \\
+    \mathrm{s.t.} \quad                  & \begin{bmatrix}y^+_i & z^+_i \\ z^+_i & 1 \end{bmatrix} \succeq 0,
+    \begin{bmatrix}y^-_i & z^-_i \\ z^-_i & 1 \end{bmatrix} \succeq 0 & \forall i                                                         \\
+                                         & (U^+)^Tx = z^+, (U^-)^Tx = z^-                                    \\
+                                         & \begin{bmatrix}Y^+_{j, i} & Z^+_{j, i}\\ Z^+_{j, i} & 1 \end{bmatrix} \succeq 0,
+    \begin{bmatrix} Y^-_{j, i} & Z^-_{j, i} \\ Z^-_{j, i} & 1 \end{bmatrix} \succeq 0 & \forall j, \forall i                                              \\
+                                         & (U^+_j)^Tx = Z^+_j, (U^-_j)^Tx = Z^-_j                & \forall j \\
+                                         & (Y^+_j)^Te - (Y^-_j)^Te + a_j^Tx (\le, =, \ge) \; b_j & \forall j \\
+  \end{aligned}
+\end{equation}
+
+where \(Q =  U^+ (U^+)^T - U^- (U^-)^T, A_j = U^+_j (U^+_j)^T - U^-_j (U^-_j)^T, j = 1,...,m\)
+
+
+\subsubsection{Bounds}
+To avoid unboundedness (the above is unbounded above), for example,
+
+\[(U^+)^Tx = z^+, y^+ = (U^+)^T\]
+
+
 \subsection{Remark}
 \subsubsection{Extending to matrix and tensor case}\label{sdp-extending}
 
 We first develop for the vector case: $x \in \mathbb R^n$, whereas QCQP is not limited to vector case:
 
 \begin{itemize}
-    \item vectors, $x\in \mathbb {R}^n$, max-cut, quadratic knapsack problem
-    \item matrices, $x\in \mathbb {R}^{n\times d}$, quadratic assignment problem, SNL, kissing number.
+  \item vectors, $x\in \mathbb {R}^n$, max-cut, quadratic knapsack problem
+  \item matrices, $x\in \mathbb {R}^{n\times d}$, quadratic assignment problem, SNL, kissing number.
 \end{itemize}
 
 For example, SNL uses $X \in \mathbb R^{n\times d}$ for $d$-dimensional coordinates. For higher dimensional case, followings can be done:
 
 \begin{itemize}
-    \item One may however using the vectorized method, i.e., $x = \mathsf{vec}(X)$ to reformulate the matrix-based optimization problem, given the SDP bounds by original and vectorized relaxations are equivalent with mile assumptions. (see \cite{ding_equivalence_2011})
-    \item the above method may create a matrix of very large dimension resulted from Kronecker product.
-    \item ultimately, the solver should provide an option to use user specified relaxations.
+  \item One may however using the vectorized method, i.e., $x = \mathsf{vec}(X)$ to reformulate the matrix-based optimization problem, given the SDP bounds by original and vectorized relaxations are equivalent with mild assumptions. (see \cite{ding_equivalence_2011})
+  \item the above method may create a matrix of very large dimension resulted from Kronecker product.
+  \item ultimately, the solver should provide an option to use user specified relaxations.
 \end{itemize}
 
 \subsection{Tests}
@@ -116,22 +167,10 @@ We test on specific applications:
 
 
 \begin{itemize}
-    \item vectors, $x\in \mathbb {R}^n$, max-cut, quadratic knapsack problem
-    \item matrices, $x\in \mathbb {R}^{n\times d}$, QAP, SNL, kissing number.
+  \item vectors, $x\in \mathbb {R}^n$, max-cut, quadratic knapsack problem
+  \item matrices, $x\in \mathbb {R}^{n\times d}$, QAP, SNL, kissing number.
 \end{itemize}
 
 and a recent general new library as present in \texttt{qplib}, \underline{\texttt{http://qplib.zib.de/instances.html}}, see \cite{furini_qplib_2019}.
 
-\begin{tabular}{llrlr}
-    \toprule
-              &                   & solve\_time & best\_bound & best\_obj   \\
-    prob\_num & method            &             &             &             \\
-    \midrule
-    0         & gurobi            & 0.008010    & 1609.0      & 1609.000000 \\
-              & gurobi\_rel       & 0.006286    & 1781.581401 & 1781.581125 \\
-              & sdp\_helberg      & 0.006992    & -           & 1865.679912 \\
-              & sdp\_qcqp1        & 0.006028    & -           & 2526.824086 \\
-              & sdp\_qcqp1\_no\_x & 0.005026    & -           & 2018.968153 \\
-    \bottomrule
-\end{tabular}
 \end{document}

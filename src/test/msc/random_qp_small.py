@@ -21,7 +21,7 @@
 #  SOFTWARE.
 import pandas as pd
 import sys
-from pyqp.bb import *
+from pyqp.bb_msc import *
 from pyqp.grb import *
 
 np.random.seed(1)
@@ -45,36 +45,17 @@ if __name__ == '__main__':
     qp = QP.create_random_instance(int(n), int(m))
     Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
 
-    # benchmark by gurobi
-    r_grb_relax = qp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=True, sense="max", verbose=True,
-                            params=params)
-    eval_grb = r_grb_relax.eval(problem_id)
-    print(eval_grb.__dict__)
+    #
+    r_grb_relax = qp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", verbose=verbose)
+    r_shor = bg_cvx.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
+    r_msc = bg_cvx.msc_relaxation(qp, solver='MOSEK', verbose=verbose)
+    # r_msc_msk = bg_msk.msc_relaxation(qp, solver='MOSEK', verbose=verbose)
+    obj_values = {
+        "gurobi_rel": r_grb_relax.true_obj,
+        "cvx_shor": r_shor.true_obj,
+        "cvx_msc": r_msc.true_obj,
+        # "msk_msc": r_msc_msk.true_obj,
+    }
 
-    # msc
-    r_msc = bg_cvx.msc_relaxation(qp, solver='MOSEK', verbose=True, params=params)
-    eval_msc= r_msc.eval(problem_id)
-    print(eval_msc.__dict__)
-
-    # b-b
-    r_bb = bb_box(qp, verbose=verbose, params=params)
-
-    print(f"gurobi benchmark @{r_grb_relax.true_obj}")
-    print(f"gurobi benchmark x\n"
-          f"{r_grb_relax.xval.round(3)}")
-
-    r_grb_relax.check(qp)
-    print(f"branch-and-cut @{r_bb.true_obj}")
-    print(f"branch-and-cut x\n"
-          f"{r_bb.xval.round(3)}")
-    r_bb.check(qp)
-
-    eval_bb = r_bb.eval(problem_id)
-
-    evals += [
-        {**eval_grb.__dict__, "method": "gurobi_relax", "size": (n, m)},
-        {**eval_bb.__dict__, "method": "qcq_bb", "size": (n, m)},
-    ]
-
-    df_eval = pd.DataFrame.from_records(evals)
-    print(df_eval)
+    r_msc.check(qp)
+    print(json.dumps(obj_values, indent=2))

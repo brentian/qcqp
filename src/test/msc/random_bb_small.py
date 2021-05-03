@@ -21,7 +21,7 @@
 #  SOFTWARE.
 import pandas as pd
 import sys
-from pyqp.bb import *
+from pyqp.bb_msc import *
 from pyqp.grb import *
 
 np.random.seed(1)
@@ -50,11 +50,6 @@ if __name__ == '__main__':
                             params=params)
     eval_grb = r_grb_relax.eval(problem_id)
     print(eval_grb.__dict__)
-
-    # msc
-    r_msc = bg_cvx.msc_relaxation(qp, solver='MOSEK', verbose=True, params=params)
-    eval_msc= r_msc.eval(problem_id)
-    print(eval_msc.__dict__)
 
     # b-b
     r_bb = bb_box(qp, verbose=verbose, params=params)

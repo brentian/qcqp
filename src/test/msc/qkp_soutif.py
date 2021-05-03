@@ -38,7 +38,7 @@ if __name__ == '__main__':
         print("usage:\n"
               "python tests/qkp_soutif.py filepath n (number of variables)")
         raise e
-    verbose = True
+    verbose = False
 
     # start
     Q, q, A, a, b, sign, lb, ub = read_qkp_soutif(filepath=fp, n=int(n))
@@ -47,12 +47,14 @@ if __name__ == '__main__':
     #
     r_grb_relax = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", verbose=verbose)
     r_shor = bg_cvx.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
-    r_shor_msk = bg_msk.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
-
+    r_msc = bg_cvx.msc_relaxation(qp, solver='MOSEK', verbose=verbose)
+    # r_msc_msk = bg_msk.msc_relaxation(qp, solver='MOSEK', verbose=verbose)
     obj_values = {
         "gurobi_rel": r_grb_relax.true_obj,
-        "sdp_qcqp1": r_shor.true_obj,
-        "sdp_qcqp1_msk": r_shor_msk.true_obj,
+        "cvx_shor": r_shor.true_obj,
+        "cvx_msc": r_msc.true_obj,
+        # "msk_msc": r_msc_msk.true_obj,
     }
-    r_shor_msk.check(qp)
+
+    r_msc.check(qp)
     print(json.dumps(obj_values, indent=2))
