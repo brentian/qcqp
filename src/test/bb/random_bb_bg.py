@@ -32,7 +32,7 @@ if __name__ == '__main__':
         instances, backend, *_ = sys.argv[1:]
     except Exception as e:
         print("usage:\n"
-              "python tests/random_bb.py n (number of variables) m (num of constraints)")
+              "python - NUM_OF_INSTANCE_PER_PROBLEM_SIZE BACKEND")
         raise e
     verbose = False
     evals = []

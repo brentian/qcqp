@@ -10,7 +10,7 @@ from .classes import qp_obj_func, QP, Params, Result, Bounds, Branch, CuttingPla
 
 
 class BCParams(Params):
-    feas_eps = 1e-5
+    feas_eps = 1e-4
     opt_eps = 5e-4
     time_limit = 200
     backend_name = 'cvx'

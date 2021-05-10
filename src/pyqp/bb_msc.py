@@ -52,16 +52,38 @@ class MscBBItem(BBItem):
 
 class MscRLT(RLTCuttingPlane):
     def serialize_to_cvx(self, zvar, yvar):
-        n, i, u_i, l_i = self.data
+        n, i, ui, li = self.data
         # (xi - li)(xi - ui) <= 0
-        expr1 = yvar[n][i, 0] - zvar[n][i, 0] * u_i - l_i * zvar[n][i, 0] + u_i * l_i <= 0
-        # (xi - li)(xi - li) >= 0l_j
-        expr3 = yvar[n][i, 0] - zvar[n][i, 0] * l_i - l_i * zvar[n][i, 0] + l_i * l_i >= 0
+        expr1 = yvar[n][i, 0] - zvar[n][i, 0] * ui - li * zvar[n][i, 0] + ui * li <= 0
+        # (xi - li)(xi - li) >= 0
+        expr3 = yvar[n][i, 0] - zvar[n][i, 0] * li - li * zvar[n][i, 0] + li * li >= 0
         # (xi - ui)(xi - ui) >= 0
-        expr4 = yvar[n][i, 0] - zvar[n][i, 0] * u_i - u_i * zvar[n][i, 0] + u_i * u_i >= 0
+        expr4 = yvar[n][i, 0] - zvar[n][i, 0] * ui - ui * zvar[n][i, 0] + ui * ui >= 0
         yield expr1
         yield expr3
         yield expr4
+
+    def serialize_to_msk(self, zvar, yvar):
+        expr = bg_msk.expr
+        exprs = expr.sub
+        exprm = expr.mul
+
+        n, i, ui, li = self.data
+        # n = yvar.getShape()[0]
+        yi = yvar[n].index(i, 0)
+        zi = zvar[n].index(i, 0)
+        # (xi - li)(xi - ui) <= 0
+        expr1, dom1 = exprs(exprs(yi, exprm(ui, zi)),
+                            exprm(li, zi)), bg_msk.dom.lessThan(- ui * li)
+        yield expr1, dom1
+        # # (xi - li)(xi - li) >= 0
+        # expr3, dom3 = exprs(exprs(yi, exprm(li, zi)),
+        #                     exprm(li, zi)), bg_msk.dom.greaterThan(- li * li)
+        # yield expr3, dom3
+        # # (xi - ui)(xi - ui) >= 0
+        # expr4, dom4 = exprs(exprs(yi, exprm(ui, zi)),
+        #                     exprm(ui, zi)), bg_msk.dom.greaterThan(- ui * ui)
+        # yield expr4, dom4
 
 
 def add_rlt_cuts(branch, bounds):
@@ -101,11 +123,19 @@ class MscCuts(Cuts):
                 for expr in ct.serialize_to_cvx(z, y):
                     _problem._constraints.append(expr)
 
+    def add_cuts_to_msk(self, r: bg_cvx.CVXMscResult):
+
+        _problem: bg_msk.mf.Model = r.problem
+        z, y = r.Zvar, r.Yvar
+
+        for cut_type, cut_list in self.cuts.items():
+            for ct in cut_list:
+                for expr, dom in ct.serialize_to_msk(z, y):
+                    _problem.constraint(expr, dom)
 
 
 def generate_child_items(total_nodes, parent: MscBBItem, branch: MscBranch, verbose=False, backend_name='msk',
                          backend_func=None, sdp_solver="MOSEK"):
-    Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = parent.qp.unpack()
     # left <=
     left_succ, left_bounds = branch.imply_bounds(parent.bound, left=True)
     left_r = backend_func(parent.qp, bounds=left_bounds, solver=sdp_solver, verbose=verbose, solve=False)
@@ -143,7 +173,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
     print(json.dumps(params.__dict__(), indent=2))
     backend_name = params.backend_name
     if backend_name == 'msk':
-        backend_func = None
+        backend_func = bg_msk.msc_relaxation
     elif backend_name == 'cvx':
         backend_func = bg_cvx.msc_relaxation
     else:
@@ -156,7 +186,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
     print("solving root node")
     # root
     qp.decompose()
-    root_bound = MscBounds.construct(qp)
+    root_bound = MscBounds.construct(qp, imply_y=True)
     root_r = backend_func(qp, bounds=root_bound, solver=params.sdp_solver, verbose=True, solve=True)
     best_r = root_r
 
@@ -191,7 +221,20 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
             print(f"prune #{item.node_id} @{r.relax_obj :.4f} by bound")
             continue
 
-        r.true_obj = qp_obj_func(item.qp.Q, item.qp.q, r.xval)
+        x = r.xval
+        z = r.zval
+        y = r.yval
+        zc = r.Zval
+        yc = r.Yval
+        resc = np.abs(yc.T - zc.T ** 2)
+        resc_feas = resc.max()
+        resc_feasC = resc[1:].max() if resc.shape[0] > 1 else 0
+
+        # it is for real a lower bound by real objective
+        #   if and only if it is feasible
+        r.true_obj = 0 if resc_feasC > params.feas_eps \
+            else qp_obj_func(item.qp.Q, item.qp.q, r.xval)
+
         ub = min(parent_sdp_val, ub)
         r.bound = ub
         if r.true_obj > lb:
@@ -200,17 +243,11 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
 
         gap = (ub - lb) / lb
 
-        x = r.xval
-        z = r.zval
-        y = r.yval
-        zc = r.Zval
-        yc = r.Yval
-        resc = np.abs(yc.T - zc.T ** 2)
-
         print(
             f"time: {r.solve_time: .2f} #{item.node_id}, "
             f"depth: {item.depth}, "
-            f"feas: {resc.max():.3e} "
+            f"feas: {resc_feas:.3e} "
+            f"feasC: {resc_feasC:.3e}"
             f"obj: {r.true_obj:.4f}, "
             f"sdp_obj: {r.relax_obj:.4f}, gap:{gap:.4%} ([{lb: .2f},{ub: .2f}]")
 
@@ -218,7 +255,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
             print(f"terminate #{item.node_id} by gap or time_limit")
             break
 
-        if resc.max() <= params.feas_eps:
+        if resc_feas <= params.feas_eps:
             print(f"prune #{item.node_id} by feasible solution")
             feasible[item.node_id] = r
             continue

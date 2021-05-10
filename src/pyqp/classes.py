@@ -117,14 +117,14 @@ class Result:
         # res = (y - x @ x.T)
         # print(f"y - xx':{res.min(), res.max()}")
         for m in range(qp.A.shape[0]):
-            print(f"A*Y + a * x - b:{(x.T @ qp.A[m] * x).trace() + (qp.a[m].T @ x).trace() - qp.b[m]}")
+            print(f"A*Y + a * x - b:{(x.T @ qp.A[m] * x).trace() + (qp.a[m].T @ x).trace() - qp.b[m]}: {qp.sign[m]}")
 
 
 keys = ['feas_eps', 'opt_eps', 'time_limit']
 
 
 class Params(object):
-    feas_eps = 1e-5
+    feas_eps = 1e-4
     opt_eps = 1e-4
     time_limit = 200
 
@@ -220,18 +220,59 @@ class CuttingPlane(object):
 
 
 class MscBounds(Bounds):
-    def __init__(self, zlb=None, zub=None):
+    def __init__(self, zlb=None, zub=None, ylb=None, yub=None):
         # sparse implementation
         self.zlb = zlb.copy()
         self.zub = zub.copy()
+        if ylb is not None:
+            self.ylb = ylb.copy()
+        else:
+            self.ylb = None
+        if yub is not None:
+            self.yub = yub.copy()
+        else:
+            self.yub = None
         # self.xub = xub.copy()
         # self.yub = yub.copy()
 
     def unpack(self):
-        return self.zlb, self.zub
+        return self.zlb, self.zub, self.ylb, self.yub
 
     @classmethod
-    def construct(cls, qp):
+    def construct(cls, qp, imply_y=False):
+        zlb = []
+        zub = []
+        qpos, qipos = qp.Qpos
+        qneg, qineg = qp.Qneg
+
+        zub.append(
+            ((qpos.T * (qpos.T > 0)).sum(axis=1)
+             + (qneg.T * (qneg.T > 0)).sum(axis=1)).reshape(qp.q.shape))
+        zlb.append(
+            ((qpos.T * (qpos.T < 0)).sum(axis=1)
+             + (qneg.T * (qneg.T < 0)).sum(axis=1)).reshape(qp.q.shape))
+
+        for i in range(qp.a.shape[0]):
+            apos, ipos = qp.Apos[i]
+            aneg, ineg = qp.Aneg[i]
+            zub.append(
+                ((apos.T * (apos.T > 0)).sum(axis=1)
+                 + (aneg.T * (aneg.T > 0)).sum(axis=1)).reshape(qp.q.shape))
+            zlb.append(
+                ((apos.T * (apos.T < 0)).sum(axis=1)
+                 + (aneg.T * (aneg.T < 0)).sum(axis=1)).reshape(qp.q.shape))
+
+        # return cls(np.array(zlb), np.array(zub))
+        if not imply_y:
+            return cls(np.array(zlb).round(4), np.array(zub).round(4))
+
+        yub = []
+        for _zlb, _zub in zip(zlb, zub):
+            yub.append(np.max([_zub ** 2, _zlb ** 2], axis=0))
+        return cls(np.array(zlb).round(4), np.array(zub).round(4), yub=np.array(yub))
+
+    @classmethod
+    def construct_constant_bound(cls, qp):
         zlb = []
         zub = []
         qpos, qipos = qp.Qpos

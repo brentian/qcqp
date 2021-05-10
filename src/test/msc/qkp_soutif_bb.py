@@ -26,13 +26,14 @@ from pyqp.bb_msc import *
 if __name__ == '__main__':
     pd.set_option("display.max_columns", None)
     try:
-        fp, n = sys.argv[1:]
+        fp, n, backend = sys.argv[1:]
     except Exception as e:
         print("usage:\n"
               "python tests/qkp_soutif.py filepath n (number of variables)")
         raise e
     verbose = False
     params = BCParams()
+    params.backend_name = backend
     params.opt_eps = 5e-3
     # start
     Q, q, A, a, b, sign, lb, ub = read_qkp_soutif(filepath=fp, n=int(n))

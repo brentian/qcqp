@@ -30,6 +30,7 @@ class CVXMscResult(CVXResult):
         self.Yval = None
         self.Zval = None
         self.solved = False
+        self.obj_expr = None
 
     def solve(self, verbose=True):
         try:
@@ -43,9 +44,9 @@ class CVXMscResult(CVXResult):
             self.zval = self.zvar.value.round(4)
             self.Yval = np.hstack([xx.value.round(4) for xx in self.Yvar])
             self.Zval = np.hstack([xx.value.round(4) for xx in self.Zvar])
-            self.relax_obj = self.problem.value
-        else: # infeasible
-            self.relax_obj = 1e-6
+            self.relax_obj = self.obj_expr.value
+        else:  # infeasible
+            self.relax_obj = -1e6
         self.solved = True
 
 
@@ -228,86 +229,94 @@ def msc_relaxation(qp: QP, bounds: MscBounds = None, solver="MOSEK", sense="max"
     Y, Z = [y], [z]
     # bounds
     if bounds is None:
-        bounds = MscBounds.construct(qp)
+        bounds = MscBounds.construct_constant_bound(qp)
     zlb = bounds.zlb
     zub = bounds.zub
     constrs = [x <= qp.ub, x >= qp.lb]
+    constrs += [z <= zub[0], z >= zlb[0]]
     constrs += [y <= 1e5 * np.ones((n, n))]
 
     # For Q in the objective
     # yposub = np.max([(qpos.T @ qp.ub) ** 2, (qpos.T @ qp.lb) ** 2], axis=0)
     # ynegub = np.max([(qneg.T @ qp.ub) ** 2, (qneg.T @ qp.lb) ** 2], axis=0)
 
-    if qipos.shape[0] > 0:
-        constrs += [qpos[:, qipos].T @ x == z[qipos, :]]
-        # constrs += [y[qipos] <= yposub[qipos]]
-    if qineg.shape[0] > 0:
-        constrs += [qneg[:, qineg].T @ x == z[qineg, :]]
-        # constrs += [y[qineg] <= ynegub[qineg]]
+    # if qipos.shape[0] > 0:
+    #     constrs += [qpos[:, qipos].T @ x == z[qipos, :]]
+    #     # constrs += [y[qipos] <= yposub[qipos]]
+    # if qineg.shape[0] > 0:
+    #     constrs += [qneg[:, qineg].T @ x == z[qineg, :]]
+    #     # constrs += [y[qineg] <= ynegub[qineg]]
+    constrs += [(qneg + qpos).T @ x == z]
     for idx in range(n):
-        _lb, _ub = zlb[0, idx, 0], zub[0, idx, 0]
         constrs += [cvx.bmat([[y[idx], z[idx]], [z[idx], 1]]) >> 0]
         # constrs += [y[idx] - (_lb + _ub) * z[idx] + _lb * _ub <= 0]
         # constrs += [y[idx] - 2 * _lb * z[idx] + _lb ** 2 >= 0]
         # constrs += [y[idx] - 2 * _ub * z[idx] + _ub ** 2 >= 0]
 
-        for i in range(m):
-            apos, ipos = qp.Apos[i]
-            aneg, ineg = qp.Aneg[i]
-            # yposub = np.max([(apos.T @ qp.ub) ** 2, (apos.T @ qp.lb) ** 2], axis=0)
-            # ynegub = np.max([(aneg.T @ qp.ub) ** 2, (aneg.T @ qp.lb) ** 2], axis=0)
-
-            if ipos.shape[0] + ineg.shape[0] > 0:
-                yi = cvx.Variable(xshape, nonneg=True)
-                zi = cvx.Variable(xshape)
-                Y.append(yi)
-                Z.append(zi)
-            else:
-                yi = np.zeros(xshape)
-                zi = np.zeros(xshape)
-            if ipos.shape[0] > 0:
-                # means you have positive eigenvalues
-                constrs += [apos[:, ipos].T @ x == zi[ipos, :]]
-                # constrs += [yi[ipos] <= yposub[ipos]]
-            if ineg.shape[0] > 0:
-                constrs += [apos[:, ineg].T @ x == zi[ineg, :]]
-                # constrs += [yi[ineg] <= ynegub[ineg]]
+    for i in range(m):
+        apos, ipos = qp.Apos[i]
+        aneg, ineg = qp.Aneg[i]
+        # yub = np.max([(apos.T @ qp.ub) ** 2, (apos.T @ qp.lb) ** 2], axis=0)
+        # yub += np.max([(aneg.T @ qp.ub) ** 2, (aneg.T @ qp.lb) ** 2], axis=0)
+        # yub = np.max([zub[i + 1] ** 2, zlb[i + 1] ** 2], axis=0)
+        if ipos.shape[0] + ineg.shape[0] > 0:
+            yi = cvx.Variable(xshape, nonneg=True)
+            zi = cvx.Variable(xshape)
+            Y.append(yi)
+            Z.append(zi)
+            constrs += [zi <= zub[i + 1], z >= zlb[i + 1]]
+            constrs += [(aneg + apos).T @ x == zi]
             for idx in range(n):
-                constrs += [cvx.bmat([[yi[idx], zi[idx]], [yi[idx], 1]]) >> 0]
+                constrs += [cvx.bmat([[yi[idx], zi[idx]], [zi[idx], 1]]) >> 0]
+        else:
+            yi = np.zeros(xshape)
+            zi = np.zeros(xshape)
+        # if ipos.shape[0] > 0:
+        #     # means you have positive eigenvalues
+        #     constrs += [apos[:, ipos].T @ x == zi[ipos, :]]
+        #     # constrs += [yi[ipos] <= yposub[ipos]]
+        # if ineg.shape[0] > 0:
+        #     constrs += [aneg[:, ineg].T @ x == zi[ineg, :]]
+        #     # constrs += [yi[ineg] <= ynegub[ineg]]
 
-            # y+^Te - y-^Te + q^Tx - b
-            expr = cvx.trace(a[i].T @ x) - b[i]
-            if ipos.shape[0] > 0:
-                expr += cvx.sum(yi[ipos])
-            if ineg.shape[0] > 0:
-                expr -= cvx.sum(yi[ineg])
-            if sign[i] == 0:
-                constrs += [expr == 0]
-            elif sign[i] == -1:
-                constrs += [expr >= 0]
-            else:
-                constrs += [expr <= 0]
 
-        # objectives
-        obj_expr = cvx.sum(y[qipos]) - cvx.sum(y[qineg]) + cvx.trace(q.T @ x)
-        obj_expr_cp = cvx.Maximize(obj_expr) if sense == 'max' else cvx.Minimize(
-            obj_expr)
 
-        r = CVXMscResult()
-        r.xvar = x
-        r.yvar = y
-        r.zvar = z
-        r.Zvar = Z
-        r.Yvar = Y
+        # y+^Te - y-^Te + q^Tx - b
+        expr = cvx.trace(a[i].T @ x) - b[i]
+        if ipos.shape[0] > 0:
+            expr += cvx.sum(yi[ipos])
+        if ineg.shape[0] > 0:
+            expr -= cvx.sum(yi[ineg])
+        if sign[i] == 0:
+            constrs += [expr == 0]
+        elif sign[i] == -1:
+            constrs += [expr >= 0]
+        else:
+            constrs += [expr <= 0]
 
-        problem = cvx.Problem(objective=obj_expr_cp, constraints=constrs)
-        r.problem = problem
-        if not solve:
-            return r
+    # objectives
+    true_obj_expr = cvx.sum(y[qipos]) - cvx.sum(y[qineg]) + cvx.trace(q.T @ x)
+    obj_expr = true_obj_expr - cvx.sum(cvx.sum(Y[1:]))
+    obj_expr_cp = cvx.Maximize(obj_expr) if sense == 'max' else cvx.Minimize(
+        obj_expr)
 
-        r.solve(verbose=verbose)
-        r.true_obj = qp_obj_func(qp.Q, qp.q, r.xval)
+    r = CVXMscResult()
+    r.obj_expr = true_obj_expr
+    r.xvar = x
+    r.yvar = y
+    r.zvar = z
+    r.Zvar = Z
+    r.Yvar = Y
+
+    problem = cvx.Problem(objective=obj_expr_cp, constraints=constrs)
+    r.problem = problem
+    if not solve:
         return r
+
+    r.solve(verbose=verbose)
+    r.true_obj = 0  # qp_obj_func(qp.Q, qp.q, r.xval)
+    return r
+
 
 #################
 ## not used

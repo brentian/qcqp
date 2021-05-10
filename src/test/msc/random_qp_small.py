@@ -29,15 +29,14 @@ np.random.seed(1)
 if __name__ == '__main__':
     pd.set_option("display.max_columns", None)
     try:
-        n, m, backend, *_ = sys.argv[1:]
+        n, m, *_ = sys.argv[1:]
     except Exception as e:
         print("usage:\n"
               "python tests/random_bb.py n (number of variables) m (num of constraints)")
         raise e
-    verbose = False
+    verbose = True
     evals = []
     params = BCParams()
-    params.backend_name = backend
 
     # problem
     problem_id = f"{n}:{m}:{0}"
@@ -48,14 +47,15 @@ if __name__ == '__main__':
     #
     r_grb_relax = qp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", verbose=verbose)
     r_shor = bg_cvx.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
-    r_msc = bg_cvx.msc_relaxation(qp, solver='MOSEK', verbose=verbose)
-    # r_msc_msk = bg_msk.msc_relaxation(qp, solver='MOSEK', verbose=verbose)
+    # r_msc = bg_cvx.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose)
+    r_msc_msk = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose)
     obj_values = {
         "gurobi_rel": r_grb_relax.true_obj,
-        "cvx_shor": r_shor.true_obj,
-        "cvx_msc": r_msc.true_obj,
-        # "msk_msc": r_msc_msk.true_obj,
+        # "cvx_shor": r_shor.true_obj,
+        # "cvx_msc": r_msc.true_obj,
+        "msk_msc": r_msc_msk.true_obj,
     }
 
-    r_msc.check(qp)
+    # r_msc.check(qp)
+    r_msc_msk.check(qp)
     print(json.dumps(obj_values, indent=2))
