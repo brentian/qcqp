@@ -6,6 +6,7 @@ from queue import PriorityQueue
 
 import numpy as np
 from . import bg_msk, bg_cvx
+from .bg_msk import shor_relaxation
 from .classes import QP, Params, qp_obj_func, Result
 from .bb import BCParams, BBItem, Cuts, RLTCuttingPlane
 from .classes import MscBounds, Branch
@@ -134,11 +135,16 @@ class MscCuts(Cuts):
                     _problem.constraint(expr, dom)
 
 
-def generate_child_items(total_nodes, parent: MscBBItem, branch: MscBranch, verbose=False, backend_name='msk',
-                         backend_func=None, sdp_solver="MOSEK"):
+def generate_child_items(
+        total_nodes, parent: MscBBItem, branch: MscBranch,
+        verbose=False, backend_name='msk',
+        backend_func=None, sdp_solver="MOSEK",
+        with_shor: Result = None
+):
     # left <=
     left_succ, left_bounds = branch.imply_bounds(parent.bound, left=True)
-    left_r = backend_func(parent.qp, bounds=left_bounds, solver=sdp_solver, verbose=verbose, solve=False)
+    left_r = backend_func(parent.qp, bounds=left_bounds, solver=sdp_solver, verbose=verbose, solve=False,
+                          with_shor=with_shor)
     if not left_succ:
         # problem is infeasible:
         left_r.solved = True
@@ -153,7 +159,8 @@ def generate_child_items(total_nodes, parent: MscBBItem, branch: MscBranch, verb
 
     # right >=
     right_succ, right_bounds = branch.imply_bounds(parent.bound, left=False)
-    right_r = backend_func(parent.qp, bounds=right_bounds, solver=sdp_solver, verbose=verbose, solve=False)
+    right_r = backend_func(parent.qp, bounds=right_bounds, solver=sdp_solver, verbose=verbose, solve=False,
+                           with_shor=with_shor)
     if not right_succ:
         # problem is infeasible
         right_r.solved = True
@@ -169,7 +176,7 @@ def generate_child_items(total_nodes, parent: MscBBItem, branch: MscBranch, verb
     return left_item, right_item
 
 
-def bb_box(qp: QP, verbose=False, params=BCParams()):
+def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False):
     print(json.dumps(params.__dict__(), indent=2))
     backend_name = params.backend_name
     if backend_name == 'msk':
@@ -183,11 +190,21 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
     # problems
     k = 0
     start_time = time.time()
-    print("solving root node")
     # root
     qp.decompose()
+
     root_bound = MscBounds.construct(qp, imply_y=True)
-    root_r = backend_func(qp, bounds=root_bound, solver=params.sdp_solver, verbose=True, solve=True)
+
+    if bool_use_shor:
+        print("Solving the Shor relaxation")
+        Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
+        r_shor = bg_msk.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=False)
+    else:
+        r_shor = None
+
+    print("Solving root node")
+    root_r = backend_func(qp, bounds=root_bound, solver=params.sdp_solver, verbose=True, solve=True, with_shor=r_shor)
+
     best_r = root_r
 
     # global cuts
@@ -265,8 +282,13 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
         br = MscBranch()
         br.simple_vio_branch(y, z, yc, zc, resc)
         left_item, right_item = generate_child_items(
-            total_nodes, item, br, sdp_solver=params.sdp_solver, verbose=verbose, backend_name=backend_name,
-            backend_func=backend_func)
+            total_nodes, item, br,
+            sdp_solver=params.sdp_solver,
+            verbose=verbose,
+            backend_name=backend_name,
+            backend_func=backend_func,
+            with_shor=r_shor,
+        )
         total_nodes += 2
         next_priority = - r.relax_obj.round(3)
         queue.put((next_priority, right_item))

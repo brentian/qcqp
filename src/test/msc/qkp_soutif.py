@@ -26,7 +26,7 @@ import numpy as np
 import itertools
 import pandas as pd
 
-from pyqp import bg_msk, bg_cvx
+from pyqp import bg_msk, bg_cvx, grb
 from pyqp.classes import QP
 from ..qkp_soutif import read_qkp_soutif, qkp_gurobi
 
@@ -38,23 +38,24 @@ if __name__ == '__main__':
         print("usage:\n"
               "python tests/qkp_soutif.py filepath n (number of variables)")
         raise e
-    verbose = False
+    verbose = True
 
     # start
     Q, q, A, a, b, sign, lb, ub = read_qkp_soutif(filepath=fp, n=int(n))
     qp = QP(Q, q, A, a, b, sign, lb, ub, None, None)
 
-    #
-    r_grb_relax = qkp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", verbose=verbose)
-    r_shor = bg_cvx.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
-    r_msc = bg_cvx.msc_relaxation(qp, solver='MOSEK', verbose=verbose)
-    # r_msc_msk = bg_msk.msc_relaxation(qp, solver='MOSEK', verbose=verbose)
+    r_grb_relax = grb.qp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", verbose=verbose)
+    r_cvx_shor = bg_cvx.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
+    r_shor = bg_msk.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
+    r_msc = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose)
+    r_msc_msk = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose, with_shor=r_shor)
     obj_values = {
-        "gurobi_rel": r_grb_relax.true_obj,
-        "cvx_shor": r_shor.true_obj,
-        "cvx_msc": r_msc.true_obj,
-        # "msk_msc": r_msc_msk.true_obj,
+        "gurobi_rel": r_grb_relax.relax_obj,
+        "cvx_shor": r_cvx_shor.relax_obj,
+        "msk_shor": r_shor.relax_obj,
+        # "cvx_msc": r_msc.true_obj,
+        "msk_msc": r_msc.relax_obj,
+        "msk_msc_with_shor": r_msc_msk.relax_obj,
     }
-
-    r_msc.check(qp)
+    # r_msc.check(qp)
     print(json.dumps(obj_values, indent=2))

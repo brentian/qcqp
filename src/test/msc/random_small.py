@@ -22,7 +22,7 @@
 import pandas as pd
 import sys
 from pyqp.bb_msc import *
-from pyqp.grb import *
+from pyqp import grb
 
 np.random.seed(1)
 
@@ -34,7 +34,7 @@ if __name__ == '__main__':
         print("usage:\n"
               "python tests/random_bb.py n (number of variables) m (num of constraints)")
         raise e
-    verbose = True
+    verbose = False
     evals = []
     params = BCParams()
 
@@ -42,20 +42,23 @@ if __name__ == '__main__':
     problem_id = f"{n}:{m}:{0}"
     # start
     qp = QP.create_random_instance(int(n), int(m))
+    qp.decompose()
     Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
 
     #
-    r_grb_relax = qp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", verbose=verbose)
-    r_shor = bg_cvx.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
-    # r_msc = bg_cvx.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose)
-    r_msc_msk = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose)
+    r_grb_relax = grb.qp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", verbose=verbose)
+    r_cvx_shor = bg_cvx.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
+    r_shor = bg_msk.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
+    r_msc = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose)
+    r_msc_msk = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose, with_shor=r_shor)
+
     obj_values = {
-        "gurobi_rel": r_grb_relax.true_obj,
-        # "cvx_shor": r_shor.true_obj,
-        # "cvx_msc": r_msc.true_obj,
-        "msk_msc": r_msc_msk.true_obj,
+        "gurobi_rel": r_grb_relax.relax_obj,
+        "cvx_shor": r_cvx_shor.relax_obj,
+        "msk_shor": r_shor.relax_obj,
+        "msk_msc": r_msc.relax_obj,
+        "msk_msc_with_shor": r_msc_msk.relax_obj,
     }
 
-    # r_msc.check(qp)
     r_msc_msk.check(qp)
     print(json.dumps(obj_values, indent=2))

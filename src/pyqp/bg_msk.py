@@ -173,6 +173,7 @@ def shor_relaxation(
 
 def msc_relaxation(
         qp: QP, bounds: MscBounds = None, sense="max", verbose=True, solve=True,
+        with_shor: Result = None,
         *args, **kwargs
 ):
     """
@@ -199,10 +200,12 @@ def msc_relaxation(
 
     qpos, qipos = qp.Qpos
     qneg, qineg = qp.Qneg
+
+    # build a vector of signs
     qel = np.ones([*xshape])
     qel[qineg] = -1
-    x = model.variable("x", [*xshape], dom.inRange(qp.lb, qp.ub))
 
+    x = model.variable("x", [*xshape], dom.inRange(qp.lb, qp.ub))
     zcone = model.variable("zc", dom.inPSDCone(2, n))
     y = zcone.slice([0, 0, 0], [n, 1, 1]).reshape([n, 1])
     z = zcone.slice([0, 0, 1], [n, 1, 2]).reshape([n, 1])
@@ -225,70 +228,88 @@ def msc_relaxation(
             z), dom.equalsTo(0))
     for idx in range(n):
         model.constraint(zcone.index([idx, 1, 1]), dom.equalsTo(1))
+
     # y^Te \le (q @ q.T) > 0
     qqpos = qpos @ qpos.T
     qqneg = qneg @ qneg.T
     yposs = expr.sum(y.pick([[j, 0] for j in qipos]))
     ynegs = expr.sum(y.pick([[j, 0] for j in qineg]))
     model.constraint(
-        yposs, dom.lessThan((qqpos * (qqpos> 0)).sum())
+        yposs, dom.lessThan((qqpos * (qqpos > 0)).sum().round(4))
     )
     model.constraint(
-        ynegs, dom.lessThan((qqneg * (qqneg> 0)).sum())
+        ynegs, dom.lessThan((qqneg * (qqneg > 0)).sum().round(4))
     )
-    model.constraint(
-        expr.sub(yposs, ynegs), dom.lessThan(Q.sum())
-    )
+    # model.constraint(
+    #     expr.sub(yposs, ynegs), dom.lessThan(Q.sum())
+    # )
+
+    # with shor results
+    if with_shor is not None:
+        # print("use shor as ub")
+        shor_ub = (Q @ with_shor.xval @ with_shor.xval.T).sum().round(4)
+        # shor_ub = (Q @ with_shor.yval.T).sum()
+        model.constraint(
+            expr.sub(yposs, ynegs), dom.lessThan(shor_ub)
+        )
 
     for i in range(m):
         apos, ipos = qp.Apos[i]
         aneg, ineg = qp.Aneg[i]
         quad_expr = expr.sub(expr.dot(a[i], x), b[i])
-        # yub = np.max([(apos.T @ qp.ub) ** 2, (apos.T @ qp.lb) ** 2], axis=0)
-        # yub += np.max([(aneg.T @ qp.ub) ** 2, (aneg.T @ qp.lb) ** 2], axis=0)
-        # yub = np.max([zub[i + 1] ** 2, zlb[i + 1] ** 2], axis=0)
+
         if ipos.shape[0] + ineg.shape[0] > 0:
+
+            # if it is indeed quadratic
             zconei = model.variable(f"zci@{i}", dom.inPSDCone(2, n))
             yi = zconei.slice([0, 0, 0], [n, 1, 1]).reshape([n, 1])
             zi = zconei.slice([0, 0, 1], [n, 1, 2]).reshape([n, 1])
             Y.append(yi)
             Z.append(zi)
-            # create a mat
+
+            # build a vector of signs
             el = np.ones([n, 1])
             el[ineg] = -1
+
             # bounds
             model.constraint(zi, dom.inRange(zlb[i + 1], zub[i + 1]))
             if bounds.yub is not None:
                 model.constraint(yi, dom.lessThan(bounds.yub[i + 1]))
-            #
+
+            # Z[-1, -1] == 1
             for idx in range(n):
                 model.constraint(zconei.index([idx, 1, 1]), dom.equalsTo(1))
+
+            # A.T @ x == z
             model.constraint(
                 expr.sub(
                     expr.mul((apos + aneg).T, x),
                     zi), dom.equalsTo(0))
-            quad_expr = expr.add(quad_expr, expr.dot(el, yi))
+
+            #
+            quad_terms = expr.dot(el, yi)
+
+            quad_expr = expr.add(quad_expr, quad_terms)
+
+            # if with_shor is not None:
+            #     a_shor_ub = (A[i] @ with_shor.xval @ with_shor.xval.T).sum().round(4)
+            #     # a_shor_ub = (A[i] @ with_shor.yval.T).sum()
+            #     model.constraint(
+            #         quad_terms, dom.lessThan(a_shor_ub)
+            #     )
 
         else:
             yi = np.zeros(xshape)
             zi = np.zeros(xshape)
-        if sign[i] == 0:
-            model.constraint(
-                quad_expr,
-                dom.equalsTo(0))
-        elif sign[i] == -1:
-            model.constraint(
-                quad_expr,
-                dom.greaterThan(0))
-        else:
-            model.constraint(
-                quad_expr,
-                dom.lessThan(0))
+
+        quad_dom = dom.equalsTo(0) if sign[i] == 0 else (dom.greaterThan(0) if sign[i] == -1 else dom.lessThan(0))
+
+        model.constraint(
+            quad_expr, quad_dom)
 
     # objectives
-    penalized_obj_expr = expr.mul(1.0, expr.sum(expr.vstack(Y[1:]))) if len(Y) > 1 else 0
     true_obj_expr = expr.add(expr.dot(q, x), expr.dot(qel, y))
-    obj_expr = expr.sub(true_obj_expr, penalized_obj_expr)
+    obj_expr = true_obj_expr
     # obj_expr = true_obj_expr
     model.objective(mf.ObjectiveSense.Minimize
                     if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)

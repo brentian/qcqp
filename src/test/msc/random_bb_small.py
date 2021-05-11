@@ -35,6 +35,7 @@ if __name__ == '__main__':
               "python tests/random_bb.py n (number of variables) m (num of constraints)")
         raise e
     verbose = False
+    bool_use_shor = True
     evals = []
     params = BCParams()
     params.backend_name = backend
@@ -52,7 +53,7 @@ if __name__ == '__main__':
     print(eval_grb.__dict__)
 
     # b-b
-    r_bb = bb_box(qp, verbose=verbose, params=params)
+    r_bb = bb_box(qp, verbose=verbose, params=params, bool_use_shor=bool_use_shor)
 
     print(f"gurobi benchmark @{r_grb_relax.true_obj}")
     print(f"gurobi benchmark x\n"
