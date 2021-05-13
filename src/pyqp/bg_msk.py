@@ -44,6 +44,8 @@ class MSKMscResult(MSKResult):
         self.Yvar = None
         self.Yval = None
         self.Zval = None
+        self.Dvar = None
+        self.Dval = None
         self.solved = False
         self.obj_expr = None
         self.qel = None
@@ -59,8 +61,17 @@ class MSKMscResult(MSKResult):
             self.yval = self.yvar.level().reshape(self.yvar.getShape()).round(4)
             self.xval = self.xvar.level().reshape(self.xvar.getShape()).round(4)
             self.zval = self.zvar.level().reshape(self.zvar.getShape()).round(4)
-            self.Yval = np.hstack([xx.level().reshape(self.xvar.getShape()).round(4) for xx in self.Yvar])
-            self.Zval = np.hstack([xx.level().reshape(self.xvar.getShape()).round(4) for xx in self.Zvar])
+            self.Yval = np.hstack([xx.level().reshape(self.xvar.getShape()).round(4)
+                                   if xx is not None else np.zeros(self.xvar.getShape())
+                                   for xx in self.Yvar])
+            self.Zval = np.hstack([xx.level().reshape(self.xvar.getShape()).round(4)
+                                   if xx is not None else np.zeros(self.xvar.getShape())
+                                   for xx in self.Zvar])
+
+            if self.Dvar is not None:
+                self.Dval = np.hstack([xx.level().reshape((2, 1)).round(4)
+                                       if xx is not None else np.zeros((2, 1))
+                                       for xx in self.Dvar])
             self.relax_obj = self.qel.T.dot(self.yval).trace() + self.q.T.dot(self.xval).trace()
         else:  # infeasible
             self.relax_obj = -1e6
@@ -171,10 +182,174 @@ def shor_relaxation(
     return r
 
 
+# def msc_relaxation(
+#         qp: QP, bounds: MscBounds = None, sense="max", verbose=True, solve=True,
+#         with_shor: Result = None,
+#         *args, **kwargs
+# ):
+#     """
+#     The many-small-cone approach
+#     Returns
+#     -------
+#     """
+#     _unused = kwargs
+#     Q, q, A, a, b, sign, *_ = qp.unpack()
+#     if qp.Qpos is None:
+#         qp.decompose()
+#     m, n, d = a.shape
+#     xshape = (n, d)
+#     model = mf.Model('many_small_cone_msk')
+#
+#     if verbose:
+#         model.setLogHandler(sys.stdout)
+#
+#     if bounds is None:
+#         bounds = MscBounds.construct(qp)
+#
+#     zlb = bounds.zlb
+#     zub = bounds.zub
+#
+#     qpos, qipos = qp.Qpos
+#     qneg, qineg = qp.Qneg
+#
+#     # build a vector of signs
+#     qel = np.ones([*xshape])
+#     qel[qineg] = -1
+#
+#     x = model.variable("x", [*xshape], dom.inRange(qp.lb, qp.ub))
+#     zcone = model.variable("zc", dom.inPSDCone(2, n))
+#     y = zcone.slice([0, 0, 0], [n, 1, 1]).reshape([n, 1])
+#     z = zcone.slice([0, 0, 1], [n, 1, 2]).reshape([n, 1])
+#     Y = [y]
+#     Z = [z]
+#
+#     # bounds
+#
+#     model.constraint(z, dom.inRange(zlb[0], zub[0]))
+#     if bounds.ylb is not None:
+#         pass
+#     if bounds.yub is not None:
+#         model.constraint(y, dom.lessThan(bounds.yub[0]))
+#     else:
+#         model.constraint(y, dom.lessThan(1e5))
+#     #
+#     model.constraint(
+#         expr.sub(
+#             expr.mul((qneg + qpos).T, x),
+#             z), dom.equalsTo(0))
+#     for idx in range(n):
+#         model.constraint(zcone.index([idx, 1, 1]), dom.equalsTo(1))
+#
+#     # y^Te \le (q @ q.T) > 0
+#     qqpos = qpos @ qpos.T
+#     qqneg = qneg @ qneg.T
+#     yposs = expr.sum(y.pick([[j, 0] for j in qipos]))
+#     ynegs = expr.sum(y.pick([[j, 0] for j in qineg]))
+#     model.constraint(
+#         yposs, dom.lessThan((qqpos * (qqpos > 0)).sum().round(4))
+#     )
+#     model.constraint(
+#         ynegs, dom.lessThan((qqneg * (qqneg > 0)).sum().round(4))
+#     )
+#     # model.constraint(
+#     #     expr.sub(yposs, ynegs), dom.lessThan(Q.sum())
+#     # )
+#
+#     for i in range(m):
+#         apos, ipos = qp.Apos[i]
+#         aneg, ineg = qp.Aneg[i]
+#         quad_expr = expr.sub(expr.dot(a[i], x), b[i])
+#
+#         if ipos.shape[0] + ineg.shape[0] > 0:
+#
+#             # if it is indeed quadratic
+#             zconei = model.variable(f"zci@{i}", dom.inPSDCone(2, n))
+#             yi = zconei.slice([0, 0, 0], [n, 1, 1]).reshape([n, 1])
+#             zi = zconei.slice([0, 0, 1], [n, 1, 2]).reshape([n, 1])
+#             Y.append(yi)
+#             Z.append(zi)
+#
+#             # build a vector of signs
+#             el = np.ones([n, 1])
+#             el[ineg] = -1
+#
+#             # bounds
+#             model.constraint(zi, dom.inRange(zlb[i + 1], zub[i + 1]))
+#             if bounds.yub is not None:
+#                 model.constraint(yi, dom.lessThan(bounds.yub[i + 1]))
+#
+#             # Z[-1, -1] == 1
+#             for idx in range(n):
+#                 model.constraint(zconei.index([idx, 1, 1]), dom.equalsTo(1))
+#
+#             # A.T @ x == z
+#             model.constraint(
+#                 expr.sub(
+#                     expr.mul((apos + aneg).T, x),
+#                     zi), dom.equalsTo(0))
+#
+#             #
+#             quad_terms = expr.dot(el, yi)
+#
+#             quad_expr = expr.add(quad_expr, quad_terms)
+#
+#             # if with_shor is not None:
+#             #     a_shor_ub = (A[i] @ with_shor.xval @ with_shor.xval.T).sum().round(4)
+#             #     # a_shor_ub = (A[i] @ with_shor.yval.T).sum()
+#             #     model.constraint(
+#             #         quad_terms, dom.lessThan(a_shor_ub)
+#             #     )
+#
+#         else:
+#             yi = np.zeros(xshape)
+#             zi = np.zeros(xshape)
+#
+#         quad_dom = dom.equalsTo(0) if sign[i] == 0 else (dom.greaterThan(0) if sign[i] == -1 else dom.lessThan(0))
+#
+#         model.constraint(
+#             quad_expr, quad_dom)
+#
+#     # objectives
+#     true_obj_expr = expr.add(expr.dot(q, x), expr.dot(qel, y))
+#     obj_expr = true_obj_expr
+#
+#     # with shor results
+#     if with_shor is not None:
+#         # print("use shor as ub")
+#         shor_ub = with_shor.relax_obj.round(4)
+#         model.constraint(
+#             true_obj_expr, dom.lessThan(shor_ub)
+#         )
+#
+#     model.objective(mf.ObjectiveSense.Minimize
+#                     if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
+#
+#     r = MSKMscResult()
+#     r.obj_expr = true_obj_expr
+#     r.xvar = x
+#     r.yvar = y
+#     r.zvar = z
+#     r.Zvar = Z
+#     r.Yvar = Y
+#     r.qel = qel
+#     r.q = q
+#     r.problem = model
+#     if not solve:
+#         return r
+#
+#     r.solve(verbose=verbose)
+#
+#     return r
+#
+
 def msc_relaxation(
-        qp: QP, bounds: MscBounds = None, sense="max", verbose=True, solve=True,
-        with_shor: Result = None,
-        *args, **kwargs
+        qp: QP, bounds: MscBounds = None,
+        sense="max", verbose=True, solve=True,
+        with_shor: Result = None, # if not None then use Shor relaxation as upper bound
+        constr_d=True, # True if we add d = y^Te >= z^Tz
+        rlt=False, # True add all rlt/secant cut: yi - (li + ui) zi + li * ui <= 0
+        *args,
+        **kwargs
 ):
     """
     The many-small-cone approach
@@ -185,8 +360,8 @@ def msc_relaxation(
     Q, q, A, a, b, sign, *_ = qp.unpack()
     if qp.Qpos is None:
         qp.decompose()
-    m, n, d = a.shape
-    xshape = (n, d)
+    m, n, dim = a.shape
+    xshape = (n, dim)
     model = mf.Model('many_small_cone_msk')
 
     if verbose:
@@ -213,7 +388,6 @@ def msc_relaxation(
     Z = [z]
 
     # bounds
-
     model.constraint(z, dom.inRange(zlb[0], zub[0]))
     if bounds.ylb is not None:
         pass
@@ -229,7 +403,7 @@ def msc_relaxation(
     for idx in range(n):
         model.constraint(zcone.index([idx, 1, 1]), dom.equalsTo(1))
 
-    # y^Te \le (q @ q.T) > 0
+    # y^Te \le [(q @ q.T) > 0]
     qqpos = qpos @ qpos.T
     qqneg = qneg @ qneg.T
     yposs = expr.sum(y.pick([[j, 0] for j in qipos]))
@@ -240,18 +414,17 @@ def msc_relaxation(
     model.constraint(
         ynegs, dom.lessThan((qqneg * (qqneg > 0)).sum().round(4))
     )
-    # model.constraint(
-    #     expr.sub(yposs, ynegs), dom.lessThan(Q.sum())
-    # )
 
-    # with shor results
-    if with_shor is not None:
-        # print("use shor as ub")
-        shor_ub = (Q @ with_shor.xval @ with_shor.xval.T).sum().round(4)
-        # shor_ub = (Q @ with_shor.yval.T).sum()
-        model.constraint(
-            expr.sub(yposs, ynegs), dom.lessThan(shor_ub)
-        )
+    if constr_d:
+        d = model.variable("dp", 2, dom.greaterThan(0))
+        D = [d]
+        model.constraint(d, dom.inRange(bounds.dlb[0], bounds.dub[0]))
+        model.constraint(expr.sub(d.index(0), yposs), dom.equalsTo(0))
+        model.constraint(expr.sub(d.index(1), ynegs), dom.equalsTo(0))
+
+    if rlt:
+        rlt_expr = expr.sub(y, expr.mulElm(zlb[0] + zub[0], z))
+        model.constraint(rlt_expr, dom.lessThan(- zlb[0] * zub[0]))
 
     for i in range(m):
         apos, ipos = qp.Apos[i]
@@ -286,21 +459,30 @@ def msc_relaxation(
                     expr.mul((apos + aneg).T, x),
                     zi), dom.equalsTo(0))
 
-            #
+            # for dp, dn
+            # dp = y^Te
+            if constr_d:
+                di = model.variable(f"di@{i}", 2, dom.greaterThan(0))
+
+                model.constraint(expr.sub(di.index(0), expr.sum(yi.pick([[j, 0] for j in ipos]))),
+                                 dom.equalsTo(0))
+
+                model.constraint(expr.sub(di.index(1), expr.sum(yi.pick([[j, 0] for j in ineg]))),
+                                 dom.equalsTo(0))
+
+                model.constraint(di, dom.inRange(bounds.dlb[i + 1], bounds.dub[i + 1]))
+
+                D.append(di)
+
             quad_terms = expr.dot(el, yi)
 
             quad_expr = expr.add(quad_expr, quad_terms)
 
-            # if with_shor is not None:
-            #     a_shor_ub = (A[i] @ with_shor.xval @ with_shor.xval.T).sum().round(4)
-            #     # a_shor_ub = (A[i] @ with_shor.yval.T).sum()
-            #     model.constraint(
-            #         quad_terms, dom.lessThan(a_shor_ub)
-            #     )
-
         else:
-            yi = np.zeros(xshape)
-            zi = np.zeros(xshape)
+            Y.append(None)
+            Z.append(None)
+            if constr_d:
+                D.append(None)
 
         quad_dom = dom.equalsTo(0) if sign[i] == 0 else (dom.greaterThan(0) if sign[i] == -1 else dom.lessThan(0))
 
@@ -310,6 +492,15 @@ def msc_relaxation(
     # objectives
     true_obj_expr = expr.add(expr.dot(q, x), expr.dot(qel, y))
     obj_expr = true_obj_expr
+
+    # with shor results
+    if with_shor is not None:
+        # use shor as ub
+        shor_ub = with_shor.relax_obj.round(4)
+        model.constraint(
+            true_obj_expr, dom.lessThan(shor_ub)
+        )
+
     # obj_expr = true_obj_expr
     model.objective(mf.ObjectiveSense.Minimize
                     if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
@@ -321,6 +512,7 @@ def msc_relaxation(
     r.zvar = z
     r.Zvar = Z
     r.Yvar = Y
+    r.Dvar = D if constr_d else None
     r.qel = qel
     r.q = q
     r.problem = model

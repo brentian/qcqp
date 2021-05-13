@@ -32,6 +32,7 @@ class QP(object):
         self.Aneg = None
         self.zlb = None
         self.zub = None
+        self.decom_map = None
 
     def __str__(self):
         # todo add a description
@@ -64,14 +65,26 @@ class QP(object):
         """
         self.Apos = {}
         self.Aneg = {}
+        (upos, ipos), (uneg, ineg) = self._decompose_matrix(self.Q)
+        self.Qpos, self.Qneg = (upos, ipos), (uneg, ineg)
+        decom_arr = []
+        decom_map = np.zeros((self.m + 1, 2, self.n))
+        decom_map[0, 0, ipos] = 1
+        decom_map[0, 1, ineg] = 1
+        decom_arr.append([ipos, ineg])
+
         for i in range(self.m):
             (ap, ip), (an, inn) = self._decompose_matrix(self.A[i])
             self.Apos[i] = (ap, ip)
             self.Aneg[i] = (an, inn)
+            decom_map[i + 1, 0, ip] = 1
+            decom_map[i + 1, 1, inn] = 1
+            decom_arr.append([ip, inn])
             if validate:
                 d = np.abs(ap @ ap.T - an @ an.T - self.A[i])
                 assert d.max() < 1e-3
-        self.Qpos, self.Qneg = self._decompose_matrix(self.Q)
+        self.decom_map = decom_map
+        self.decom_arr = decom_arr
 
     def _decompose_matrix(self, A):
         gamma, u = nl.eig(A)
@@ -220,7 +233,7 @@ class CuttingPlane(object):
 
 
 class MscBounds(Bounds):
-    def __init__(self, zlb=None, zub=None, ylb=None, yub=None):
+    def __init__(self, zlb=None, zub=None, ylb=None, yub=None, dlb=None, dub=None):
         # sparse implementation
         self.zlb = zlb.copy()
         self.zub = zub.copy()
@@ -232,14 +245,20 @@ class MscBounds(Bounds):
             self.yub = yub.copy()
         else:
             self.yub = None
-        # self.xub = xub.copy()
-        # self.yub = yub.copy()
+        if dub is not None:
+            self.dlb = dlb.copy()
+        else:
+            self.dlb = None
+        if dub is not None:
+            self.dub = dub.copy()
+        else:
+            self.dub = None
 
     def unpack(self):
-        return self.zlb, self.zub, self.ylb, self.yub
+        return self.zlb, self.zub, self.ylb, self.yub, self.dlb, self.dub
 
     @classmethod
-    def construct(cls, qp, imply_y=False):
+    def construct(cls, qp, imply_y=True):
         zlb = []
         zub = []
         qpos, qipos = qp.Qpos
@@ -262,32 +281,17 @@ class MscBounds(Bounds):
                 ((apos.T * (apos.T < 0)).sum(axis=1)
                  + (aneg.T * (aneg.T < 0)).sum(axis=1)).reshape(qp.q.shape))
 
-        # return cls(np.array(zlb), np.array(zub))
         if not imply_y:
             return cls(np.array(zlb).round(4), np.array(zub).round(4))
 
         yub = []
         for _zlb, _zub in zip(zlb, zub):
             yub.append(np.max([_zub ** 2, _zlb ** 2], axis=0))
-        return cls(np.array(zlb).round(4), np.array(zub).round(4), yub=np.array(yub))
+        dub = [qp.decom_map[i] @ yub[i] for i in range(len(yub))]
 
-    @classmethod
-    def construct_constant_bound(cls, qp):
-        zlb = []
-        zub = []
-        qpos, qipos = qp.Qpos
-        qneg, qineg = qp.Qneg
-        # _zval = np.hstack([qpos.T @ qp.ub + qneg.T @ qp.ub, qpos.T @ qp.lb + qneg.T @ qp.lb])
-        _zval = np.hstack([1e2 * np.ones(qp.q.shape), - 1e2 * np.ones(qp.q.shape)])
-        zub.append(_zval.max(axis=1).reshape(qp.q.shape))
-        zlb.append(_zval.min(axis=1).reshape(qp.q.shape))
-
-        for i in range(qp.a.shape[0]):
-            apos, ipos = qp.Apos[i]
-            aneg, ineg = qp.Aneg[i]
-            # _zval = np.hstack([apos.T @ qp.ub + aneg.T @ qp.ub, apos.T @ qp.lb + aneg.T @ qp.lb])
-            zub.append(_zval.max(axis=1).reshape(qp.q.shape))
-            zlb.append(_zval.min(axis=1).reshape(qp.q.shape))
-
-        # return cls(np.array(zlb), np.array(zub))
-        return cls(np.array(zlb).round(4), np.array(zub).round(4))
+        return cls(
+            np.array(zlb).round(4), np.array(zub).round(4),
+            yub=np.array(yub),
+            dlb=np.zeros((len(dub), 2)),
+            dub=np.vstack(dub)
+        )

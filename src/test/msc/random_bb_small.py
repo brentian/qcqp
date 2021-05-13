@@ -21,7 +21,7 @@
 #  SOFTWARE.
 import pandas as pd
 import sys
-from pyqp.bb_msc import *
+from pyqp import bb_msc, bb_msc2
 from pyqp.grb import *
 
 np.random.seed(1)
@@ -37,39 +37,47 @@ if __name__ == '__main__':
     verbose = False
     bool_use_shor = True
     evals = []
-    params = BCParams()
+    params = bb_msc.BCParams()
     params.backend_name = backend
 
     # problem
     problem_id = f"{n}:{m}:{0}"
     # start
-    qp = QP.create_random_instance(int(n), int(m))
+    qp = bb_msc.QP.create_random_instance(int(n), int(m))
     Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
 
     # benchmark by gurobi
     r_grb_relax = qp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=True, sense="max", verbose=True,
                             params=params)
     eval_grb = r_grb_relax.eval(problem_id)
-    print(eval_grb.__dict__)
 
     # b-b
-    r_bb = bb_box(qp, verbose=verbose, params=params, bool_use_shor=bool_use_shor)
+    r_bb = bb_msc.bb_box(qp, verbose=verbose, params=params, bool_use_shor=bool_use_shor, rlt=True)
+    eval_bb = r_bb.eval(problem_id)
+
+    # b-b2
+    # r_bb2 = bb_msc2.bb_box(qp, verbose=verbose, params=params, bool_use_shor=bool_use_shor)
+    # eval_bb2 = r_bb2.eval(problem_id)
 
     print(f"gurobi benchmark @{r_grb_relax.true_obj}")
     print(f"gurobi benchmark x\n"
           f"{r_grb_relax.xval.round(3)}")
-
     r_grb_relax.check(qp)
+
     print(f"branch-and-cut @{r_bb.true_obj}")
     print(f"branch-and-cut x\n"
           f"{r_bb.xval.round(3)}")
     r_bb.check(qp)
 
-    eval_bb = r_bb.eval(problem_id)
+    # print(f"branch-and-cut @{r_bb2.true_obj}")
+    # print(f"branch-and-cut x\n"
+    #       f"{r_bb2.xval.round(3)}")
+    # r_bb2.check(qp)
 
     evals += [
         {**eval_grb.__dict__, "method": "gurobi_relax", "size": (n, m)},
         {**eval_bb.__dict__, "method": "qcq_bb", "size": (n, m)},
+        # {**eval_bb2.__dict__, "method": "qcq_bb2", "size": (n, m)},
     ]
 
     df_eval = pd.DataFrame.from_records(evals)

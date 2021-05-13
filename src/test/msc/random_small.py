@@ -51,6 +51,8 @@ if __name__ == '__main__':
     r_shor = bg_msk.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
     r_msc = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose)
     r_msc_msk = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose, with_shor=r_shor)
+    r_msc_msk2 = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose, constr_d=True)
+    r_msc_msk3 = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose, rlt=True)
 
     obj_values = {
         "gurobi_rel": r_grb_relax.relax_obj,
@@ -58,6 +60,8 @@ if __name__ == '__main__':
         "msk_shor": r_shor.relax_obj,
         "msk_msc": r_msc.relax_obj,
         "msk_msc_with_shor": r_msc_msk.relax_obj,
+        "msk_msc_with_d": r_msc_msk2.relax_obj,
+        "msk_msc_with_rlt": r_msc_msk3.relax_obj,
     }
 
     r_msc_msk.check(qp)

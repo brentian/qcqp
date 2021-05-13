@@ -1,10 +1,11 @@
 # branch and bound tree implementations
 import json
-import time
 from dataclasses import dataclass
 from queue import PriorityQueue
 
 import numpy as np
+import time
+
 from . import bg_msk, bg_cvx
 from .classes import qp_obj_func, QP, Params, Result, Bounds, Branch, CuttingPlane
 

@@ -14,35 +14,33 @@ from .classes import QP, qp_obj_func, Result
 class MscBranch(Branch):
     def __init__(self):
 
+        self.dpivot = None
         self.ypivot = None
-        self.ypivot_val = None
-        self.zpivot = None
-        self.zpivot_val = None
+        self.dpivot_val = None
 
-    def simple_vio_branch(self, y, z, yc, zc, res):
-        y_index = np.unravel_index(np.argmax(res, axis=None), res.shape)
-        self.ypivot = self.zpivot = y_index
-        self.ypivot_val = yc[y_index]
-        self.zpivot_val = zc[y_index]
+    def simple_vio_branch(self, dc, res, decomp_arr):
+        n, m = d_index = np.unravel_index(np.argmax(res, axis=None), res.shape)
+        self.dpivot = d_index
+        self.dpivot_val = dc[d_index]
+        self.ypivot = decomp_arr[m][n]
 
     def imply_bounds(self, bounds: MscBounds, left=True):
         _succeed = False
-        n, m = self.zpivot
+        n, m = self.dpivot
         _pivot = (m, n)
-        _val = self.zpivot_val
+        _val = self.dpivot_val
         newbl = MscBounds(*bounds.unpack())
-        _lb, _ub = newbl.zlb[(*_pivot, 0)], newbl.zub[(*_pivot, 0)]
+        _lb, _ub = newbl.dlb[_pivot], newbl.dub[_pivot]
         if left and _val < _ub:
             # <= and a valid upper bound
-            newbl.zub[(*_pivot, 0)] = _val
+            newbl.dub[_pivot] = _val
             _succeed = True
         if not left and _val > _lb:
-            newbl.zlb[(*_pivot, 0)] = _val
+            newbl.dlb[_pivot] = _val
             # newbl.ylb = newbl.xlb @ newbl.xlb.T
             _succeed = True
-
         # after update, check bound feasibility:
-        if newbl.zlb[(*_pivot, 0)] > newbl.zub[(*_pivot, 0)]:
+        if newbl.dlb[_pivot] > newbl.dub[_pivot]:
             _succeed = False
         return _succeed, newbl
 
@@ -52,31 +50,29 @@ class MscBBItem(BBItem):
 
 
 class MscRLT(RLTCuttingPlane):
-    def serialize_to_cvx(self, zvar, yvar):
-        n, i, ui, li = self.data
-        # (xi - li)(xi - ui) <= 0
-        expr1 = yvar[n][i, 0] - zvar[n][i, 0] * ui - li * zvar[n][i, 0] + ui * li <= 0
-        yield expr1
+    def serialize_to_cvx(self, zvar, yvar, dvar):
+        raise ValueError("not implemented cvx backend")
 
-    def serialize_to_msk(self, zvar, yvar):
+    def serialize_to_msk(self, zvar, yvar, dvar):
         expr = bg_msk.expr
         exprs = expr.sub
         exprm = expr.mul
 
-        m, n, ui, li = self.data
-        # n = yvar.getShape()[0]
-        yi = yvar[m].index(n, 0)
-        zi = zvar[m].index(n, 0)
+        n, m, ui, li, y_indicator_arr = self.data
+        di = dvar[m].index(n)
+        zi = zvar[m].pick([[i, 0] for i in y_indicator_arr])
         # (xi - li)(xi - ui) <= 0
-        expr1, dom1 = exprs(exprs(yi, exprm(ui, zi)),
-                            exprm(li, zi)), bg_msk.dom.lessThan(- ui * li)
+        expr1 = exprs(
+            exprs(di, expr.dot(ui, zi)), expr.dot(li, zi))
+        dom1 = bg_msk.dom.lessThan((- li.T @ ui).trace())
         yield expr1, dom1
 
 
 def add_rlt_cuts(branch, bounds):
-    n, m = branch.zpivot
-    u_i, l_i = bounds.zub[m, n, 0], bounds.zlb[m, n, 0]
-    return MscRLT((m, n, u_i, l_i))
+    n, m = branch.dpivot
+    y_indicator_arr = branch.ypivot
+    u_i, l_i = bounds.zub[m, y_indicator_arr], bounds.zlb[m, y_indicator_arr]
+    return MscRLT((n, m, u_i, l_i, y_indicator_arr))
 
 
 cutting_method = {
@@ -110,14 +106,14 @@ class MscCuts(Cuts):
                 for expr in ct.serialize_to_cvx(z, y):
                     _problem._constraints.append(expr)
 
-    def add_cuts_to_msk(self, r: bg_cvx.CVXMscResult):
+    def add_cuts_to_msk(self, r: bg_msk.MSKMscResult):
 
         _problem: bg_msk.mf.Model = r.problem
-        z, y = r.Zvar, r.Yvar
+        z, y, d = r.Zvar, r.Yvar, r.Dvar
 
         for cut_type, cut_list in self.cuts.items():
             for ct in cut_list:
-                for expr, dom in ct.serialize_to_msk(z, y):
+                for expr, dom in ct.serialize_to_msk(z, y, d):
                     _problem.constraint(expr, dom)
 
 
@@ -130,7 +126,7 @@ def generate_child_items(
     # left <=
     left_succ, left_bounds = branch.imply_bounds(parent.bound, left=True)
     left_r = backend_func(parent.qp, bounds=left_bounds, solver=sdp_solver, verbose=verbose, solve=False,
-                          with_shor=with_shor, constr_d=False, rlt=True)
+                          with_shor=with_shor)
     if not left_succ:
         # problem is infeasible:
         left_r.solved = True
@@ -146,7 +142,7 @@ def generate_child_items(
     # right >=
     right_succ, right_bounds = branch.imply_bounds(parent.bound, left=False)
     right_r = backend_func(parent.qp, bounds=right_bounds, solver=sdp_solver, verbose=verbose, solve=False,
-                           with_shor=with_shor, constr_d=False, rlt=True)
+                           with_shor=with_shor)
     if not right_succ:
         # problem is infeasible
         right_r.solved = True
@@ -162,13 +158,11 @@ def generate_child_items(
     return left_item, right_item
 
 
-def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr_d=False, rlt=True):
+def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False):
     print(json.dumps(params.__dict__(), indent=2))
     backend_name = params.backend_name
     if backend_name == 'msk':
         backend_func = bg_msk.msc_relaxation
-    elif backend_name == 'cvx':
-        backend_func = bg_cvx.msc_relaxation
     else:
         raise ValueError("not implemented")
     # choose branching
@@ -189,8 +183,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
         r_shor = None
 
     print("Solving root node")
-    root_r = backend_func(qp, bounds=root_bound, solver=params.sdp_solver, verbose=True, solve=True, with_shor=r_shor,
-                          constr_d=constr_d, rlt=rlt)
+    root_r = backend_func(qp, bounds=root_bound, solver=params.sdp_solver, verbose=True, solve=True, with_shor=r_shor)
 
     best_r = root_r
 
@@ -230,9 +223,13 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
         y = r.yval
         zc = r.Zval
         yc = r.Yval
-        resc = np.abs(yc - zc ** 2)
-        resc_feas = resc.max()
-        resc_feasC = resc[:, 1].max() if resc.shape[0] > 1 else 0
+        dc = r.Dval
+        quad_zc = zc ** 2
+        resc_feas_dc = np.zeros(dc.shape)
+        for i in range(qp.m + 1):
+            resc_feas_dc[:, i] = dc[:, i] - qp.decom_map[i] @ quad_zc[:, i]
+        resc_feas = resc_feas_dc.max()
+        resc_feasC = resc_feas_dc[1:].max() if resc_feas_dc.shape[0] > 1 else 0
 
         # it is for real a lower bound by real objective
         #   if and only if it is feasible
@@ -245,7 +242,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
             best_r = r
             lb = r.true_obj
 
-        gap = (ub - lb) / lb
+        gap = (ub - lb) / (lb + 0.1)
 
         print(
             f"time: {r.solve_time: .2f} #{item.node_id}, "
@@ -267,7 +264,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
         ## branching
 
         br = MscBranch()
-        br.simple_vio_branch(y, z, yc, zc, resc)
+        br.simple_vio_branch(dc, resc_feas_dc, qp.decom_arr)
         left_item, right_item = generate_child_items(
             total_nodes, item, br,
             sdp_solver=params.sdp_solver,
@@ -279,7 +276,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
         total_nodes += 2
         next_priority = - r.relax_obj.round(3)
         queue.put((next_priority, right_item))
-        queue.put((next_priority, left_item))
+        # queue.put((next_priority, left_item))
         #
 
         k += 1
