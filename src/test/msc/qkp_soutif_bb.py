@@ -19,9 +19,8 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
-from pyqp.grb import qp_gurobi
+from pyqp import grb, bb_msc, bb
 from ..qkp_soutif import *
-from pyqp.bb_msc import *
 
 if __name__ == '__main__':
     pd.set_option("display.max_columns", None)
@@ -32,7 +31,7 @@ if __name__ == '__main__':
               "python tests/qkp_soutif.py filepath n (number of variables)")
         raise e
     verbose = False
-    params = BCParams()
+    params = bb.BCParams()
     params.backend_name = backend
     params.opt_eps = 5e-3
     # start
@@ -40,17 +39,19 @@ if __name__ == '__main__':
     qp = QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
 
     # benchmark by gurobi
-    r_grb_relax = qp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=True, sense="max", verbose=True,
-                            params=params)
+    r_grb_relax = grb.qp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=True, sense="max", verbose=True,
+                                params=params)
     print(f"gurobi benchmark @{r_grb_relax.true_obj}")
     print(f"gurobi benchmark x\n"
           f"{r_grb_relax.xval}")
     # b-b
-    r_bb = bb_box(qp, verbose=verbose, params=params)
+    # r_bb = bb_msc.bb_box(qp, verbose=verbose, params=params, rlt=False)
+    # print(f"branch-and-cut @{r_bb.true_obj}")
+    # print(f"branch-and-cut x\n"
+    #       f"{r_bb.xval.round(3)}")
 
-    print(f"gurobi benchmark @{r_grb_relax.true_obj}")
-    print(f"gurobi benchmark x\n"
-          f"{r_grb_relax.xval.round(3)}")
-    print(f"branch-and-cut @{r_bb.true_obj}")
+    r_bb_rlt = bb_msc.bb_box(qp, verbose=verbose, params=params, rlt=True, bool_use_shor=True)
+
+    print(f"branch-and-cut @{r_bb_rlt.true_obj}")
     print(f"branch-and-cut x\n"
-          f"{r_bb.xval.round(3)}")
+          f"{r_bb_rlt.xval.round(3)}")
