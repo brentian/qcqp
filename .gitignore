@@ -11,6 +11,9 @@
 *.raw
 *.bbl
 *.blg
+*.xml
+*.bcf
+docs/*.pdf
 
 # projects
 fig
