@@ -38,10 +38,10 @@ if __name__ == '__main__':
         "cvx_shor": r_cvx_shor.relax_obj,
         "msk_shor": r_shor.relax_obj,
         "msk_msc": r_msc.relax_obj,
-        "msk_msc_with_shor": r_msc_penalty.relax_obj,
+        "msk_msc_penalty": r_msc_penalty.relax_obj,
         # "msk_msc_with_d": r_msc_msk2.relax_obj,
         # "msk_msc_with_rlt": r_msc_msk3.relax_obj,
     }
 
-    r_msc_penalty.check(qp)
+    # r_msc_penalty.check(qp)
     print(json.dumps(obj_values, indent=2))

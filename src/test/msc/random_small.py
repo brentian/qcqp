@@ -43,12 +43,10 @@ if __name__ == '__main__':
     # start
     qp = QP.create_random_instance(int(n), int(m))
     qp.decompose()
-    Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
-
     #
-    r_grb_relax = grb.qp_gurobi(Q, q, A, a, b, sign, lb, ub, sense="max", verbose=verbose)
-    r_cvx_shor = bg_cvx.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
-    r_shor = bg_msk.shor_relaxation(Q, q, A, a, b, sign, lb, ub, solver='MOSEK', verbose=verbose)
+    r_grb_relax = grb.qp_gurobi(qp, sense="max", verbose=verbose)
+    r_cvx_shor = bg_cvx.shor_relaxation(qp, solver='MOSEK', verbose=verbose)
+    r_shor = bg_msk.shor_relaxation(qp, solver='MOSEK', verbose=verbose)
     r_msc = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose)
     r_msc_msk = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose, with_shor=r_shor)
     r_msc_msk2 = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose, constr_d=True)

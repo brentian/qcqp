@@ -79,10 +79,7 @@ class MSKMscResult(MSKResult):
 
 
 def shor_relaxation(
-        Q, q, A, a, b, sign,
-        lb, ub,
-        ylb=None, yub=None,
-        diagx=None,
+        qp: QP,
         solver="MOSEK", sense="max", verbose=True, relax=False, solve=True, **kwargs
 ):
     """
@@ -107,6 +104,7 @@ def shor_relaxation(
 
     """
     _unused = kwargs
+    Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
     m, n, d = a.shape
     xshape = (n, d)
     model = mf.Model('shor_msk')
@@ -345,9 +343,9 @@ def shor_relaxation(
 def msc_relaxation(
         qp: QP, bounds: MscBounds = None,
         sense="max", verbose=True, solve=True,
-        with_shor: Result = None, # if not None then use Shor relaxation as upper bound
-        constr_d=True, # True if we add d = y^Te >= z^Tz
-        rlt=False, # True add all rlt/secant cut: yi - (li + ui) zi + li * ui <= 0
+        with_shor: Result = None,  # if not None then use Shor relaxation as upper bound
+        constr_d=True,  # True if we add d = y^Te >= z^Tz
+        rlt=False,  # True add all rlt/secant cut: yi - (li + ui) zi + li * ui <= 0
         *args,
         **kwargs
 ):

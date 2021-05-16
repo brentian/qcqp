@@ -1,4 +1,8 @@
-# branch and bound tree implementations
+"""
+This file the branch-and-cut for Shor-like formulations
+- use Shor in the backend
+- trying to branch on x
+"""
 import json
 from dataclasses import dataclass
 from queue import PriorityQueue
@@ -11,7 +15,7 @@ from .classes import qp_obj_func, QP, Params, Result, Bounds, Branch, CuttingPla
 
 
 class BCParams(Params):
-    feas_eps = 1e-4
+    feas_eps = 1e-3
     opt_eps = 5e-4
     time_limit = 200
     backend_name = 'cvx'
@@ -126,11 +130,12 @@ class Cuts(object):
 
 @dataclass(order=True)
 class BBItem(object):
-    def __init__(self, qp, depth, node_id, parent_id, result, bound: Bounds, cuts: Cuts):
+    def __init__(self, qp, depth, node_id, parent_id, parent_bound, result, bound: Bounds, cuts: Cuts):
         self.priority = 0
         self.depth = depth
         self.node_id = node_id
         self.parent_id = parent_id
+        self.parent_bound = parent_bound
         self.result = result
         self.qp = qp
         self.cuts = cuts
@@ -150,7 +155,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
         Q, q, A, a, b, sign,
         *left_bounds.unpack()
     )
-    left_r = backend_func(*left_qp.unpack(), solver=sdp_solver, verbose=verbose, solve=False)
+    left_r = backend_func(left_qp, solver=sdp_solver, verbose=verbose, solve=False)
     if not left_succ:
         # problem is infeasible:
         left_r.solved = True
@@ -161,7 +166,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
         left_cuts = parent.cuts.generate_cuts(branch, left_bounds)
         left_cuts.add_cuts(left_r, backend_name)
 
-    left_item = BBItem(left_qp, parent.depth + 1, total_nodes, parent.node_id, left_r, left_bounds, left_cuts)
+    left_item = BBItem(left_qp, parent.depth + 1, total_nodes, parent.node_id, parent.result.relax_obj, left_r, left_bounds, left_cuts)
 
     # right >=
     right_bounds = Bounds(*parent.bound.unpack())
@@ -170,7 +175,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
         Q, q, A, a, b, sign,
         *right_bounds.unpack()
     )
-    right_r = backend_func(*right_qp.unpack(), solver=sdp_solver, verbose=verbose, solve=False)
+    right_r = backend_func(right_qp, solver=sdp_solver, verbose=verbose, solve=False)
     if not right_succ:
         # problem is infeasible
         right_r.solved = True
@@ -181,7 +186,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
         right_cuts = parent.cuts.generate_cuts(branch, right_bounds)
         right_cuts.add_cuts(right_r, backend_name)
 
-    right_item = BBItem(right_qp, parent.depth + 1, total_nodes + 1, parent.node_id, right_r, right_bounds, right_cuts)
+    right_item = BBItem(right_qp, parent.depth + 1, total_nodes + 1, parent.node_id, parent.result.relax_obj, right_r, right_bounds, right_cuts)
     return left_item, right_item
 
 
@@ -200,7 +205,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
     k = 0
     start_time = time.time()
     print("solving root node")
-    root_r = backend_func(*qp.unpack(), solver=params.sdp_solver, verbose=True, solve=True)
+    root_r = backend_func(qp, solver=params.sdp_solver, verbose=True, solve=True)
     best_r = root_r
     # root
     root_bound = Bounds(
@@ -210,11 +215,12 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
     # global cuts
     glc = Cuts()
 
-    root = BBItem(qp, 0, 0, -1, result=root_r, bound=root_bound, cuts=glc)
+    root = BBItem(qp, 0, 0, -1, 1e8, result=root_r, bound=root_bound, cuts=glc)
     total_nodes = 1
     ub = root_r.relax_obj
     lb = -1e6
 
+    ub_dict = {0: ub}
     queue = PriorityQueue()
     queue.put((-ub, root))
     feasible = {}
@@ -223,7 +229,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
         priority, item = queue.get()
         r = item.result
 
-        parent_sdp_val = - priority
+        parent_sdp_val = item.parent_bound
 
         if parent_sdp_val < lb:
             # prune this tree
@@ -281,5 +287,6 @@ def bb_box(qp: QP, verbose=False, params=BCParams()):
 
         k += 1
 
+    best_r.nodes = total_nodes
     best_r.solve_time = time.time() - start_time
     return best_r

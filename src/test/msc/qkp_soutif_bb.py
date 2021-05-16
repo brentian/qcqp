@@ -19,7 +19,7 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
-from pyqp import grb, bb_msc, bb
+from pyqp import grb, bb_msc, bb, bb_msc2
 from ..qkp_soutif import *
 
 if __name__ == '__main__':
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     qp = QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
 
     # benchmark by gurobi
-    r_grb_relax = grb.qp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=True, sense="max", verbose=True,
+    r_grb_relax = grb.qp_gurobi(qp, relax=True, sense="max", verbose=True,
                                 params=params)
     print(f"gurobi benchmark @{r_grb_relax.true_obj}")
     print(f"gurobi benchmark x\n"
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     # print(f"branch-and-cut x\n"
     #       f"{r_bb.xval.round(3)}")
 
-    r_bb_rlt = bb_msc.bb_box(qp, verbose=verbose, params=params, rlt=True, bool_use_shor=True)
+    r_bb_rlt = bb_msc2.bb_box(qp, verbose=verbose, params=params, rlt=True, bool_use_shor=False)
 
     print(f"branch-and-cut @{r_bb_rlt.true_obj}")
     print(f"branch-and-cut x\n"

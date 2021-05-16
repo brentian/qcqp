@@ -20,9 +20,10 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
 import pandas as pd
+import numpy as np
 import sys
-from pyqp.bb import *
-from pyqp.grb import *
+
+from pyqp import bb_msc, bb, grb
 
 np.random.seed(1)
 
@@ -36,28 +37,29 @@ if __name__ == '__main__':
         raise e
     verbose = False
     evals = []
-    params = BCParams()
+    params = bb.BCParams()
     params.backend_name = backend
 
     # problem
     problem_id = f"{n}:{m}:{0}"
     # start
-    qp = QP.create_random_instance(int(n), int(m))
-    Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
+    qp = bb.QP.create_random_instance(int(n), int(m))
+    qp.decompose()
 
     # benchmark by gurobi
-    r_grb_relax = qp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=True, sense="max", verbose=True,
-                            params=params)
+    r_grb_relax = grb.qp_gurobi(qp, relax=True, sense="max", verbose=True,
+                                params=params)
     eval_grb = r_grb_relax.eval(problem_id)
     print(eval_grb.__dict__)
 
-    # msc
-    r_msc = bg_cvx.msc_relaxation(qp, solver='MOSEK', verbose=True, params=params)
-    eval_msc= r_msc.eval(problem_id)
-    print(eval_msc.__dict__)
+    # shor bb
+    r_bb = bb.bb_box(qp, verbose=verbose, params=params)
+    eval_bb = r_bb.eval(problem_id)
 
-    # b-b
-    r_bb = bb_box(qp, verbose=verbose, params=params)
+    # msc
+    r_msc = bb_msc.bb_box(qp, verbose=verbose, params=params, bool_use_shor=True, rlt=True)
+    eval_msc = r_msc.eval(problem_id)
+    print(eval_msc.__dict__)
 
     print(f"gurobi benchmark @{r_grb_relax.true_obj}")
     print(f"gurobi benchmark x\n"
@@ -69,11 +71,10 @@ if __name__ == '__main__':
           f"{r_bb.xval.round(3)}")
     r_bb.check(qp)
 
-    eval_bb = r_bb.eval(problem_id)
-
     evals += [
         {**eval_grb.__dict__, "method": "gurobi_relax", "size": (n, m)},
         {**eval_bb.__dict__, "method": "qcq_bb", "size": (n, m)},
+        {**eval_msc.__dict__, "method": "qcq_bb_msc", "size": (n, m)},
     ]
 
     df_eval = pd.DataFrame.from_records(evals)

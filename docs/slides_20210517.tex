@@ -93,35 +93,63 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{MSC: Branch-and-Cut}
+\begin{frame}{MSC: Branch}
+  Branch:
   As usual we branch on current solution at iteration \(k\), compute maximum ``infeasibility'',
-  \[ \|y_k - z_k^2\|\]
-  for \(y_k\) in \((y^+, y^-, Y^+, Y^-)_k\) and \(z_k\) in corresponding values.
+  \[ \|y - z^2\|\]
   \begin{itemize}
-    \item Secant, RLT cuts after branching
-          \[y_k \le (u_k + l_k) z_k - l_k \cdot u_k\]
-    \item other cuts?
+    \item branch on \(z\):
+          \[ \left(z \le z^k \right)  \vee \left(z \ge z^k \right)  \]
+          % \item (*New) use the following branching since \(y \le z^2\) (cones already ensure the opposite):
+          %       \[z \ge \sqrt{y}  \vee  z \le -\sqrt{y}
+          %       \]
+    \item branch on \(y\; \& z\):
+          \[ \left(y \le y^k  \right)  \vee \left (y \ge y^k \right)  \]
+          since we expect \(l \le y \le z^2\), (with \(y \ge z^2\) already satisfied by cones)
+          where \(l\) is the lower bound of the corresponding child problem.
 
+          It implies,
+          \[
+            \left(z \ge \sqrt{l} \right) \vee \left( z \le -\sqrt{l} \right)
+          \]
+
+          and thus it produces 4 child problems in the branching procedure.
+          create too many children, need more sophisticated procedure.
+    \item some greedy combinations. \textcolor{red}{didn't help much}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{MSC: Cut}
+  Cut:
+
+  \begin{itemize}
+    \item  (Secant, RLT) For \(y\) in \((y^+, y^-, Y^+, Y^-)\) and \(z\) in corresponding values.
+          Secant, RLT cuts after BB,
+          \[y\le (u + l) \cdot z - l \cdot u\]
+          % \item (*New) use the following branching since \(y \le z^2\) (cones already ensure the opposite):
+          %       \[z \ge \sqrt{y}  \vee  z \le -\sqrt{y}
+          %       \]
+    \item other? ...
   \end{itemize}
 \end{frame}
 
 
 
-\begin{frame}{MSC: Possible Improvements}
-  \begin{itemize}
-    \item Alternative decomposition, see \cite{zheng_nonconvex_2011}
-    \item Combination of larger cones and small cones. We start at some larger cone (for better initial bound):
+\begin{frame}{Test: Max-Cut}
 
-          Let \(d^+ \ge (z^+)^T z^+\), we have:
-          \[\begin{aligned}
-              \begin{bmatrix}d^+ & (z^+)^T\\ z^+ & I_n \end{bmatrix} \succeq 0
-            \end{aligned}\]
+  \[\begin{aligned}
+      w^\star = \mathrm{Maximize: } \quad & \frac{1}{4} \sum_{i,j} w_{ij}(1-x_i\cdot x_j) \\
+      \mathrm{s.t. }       \quad          & x_i \in \{-1, 1\}
+    \end{aligned}
+  \]
 
-          We solve the above once for all, record optimal solution \( (d^+)^\star\)  then use the branch-and-cut iterations with MSC formulation plus the following cut:
-
-          \[(y^+)^Te \le (d^+)^\star\]
-  \end{itemize}
-
+  Let \(x_i = 2y_i-1, y_i \in [0, 1]\)
+  \[\begin{aligned}
+      w^\star  = \mathrm{Maximize: } \quad & \frac{1}{4} \sum_{i,j} w_{ij}(2y_i + 2y_j - 4y_iy_j) \\
+                                           & =        \frac{1}{2} (W+W^T)y - y^TWy                \\
+      \mathrm{s.t. }       \quad           & y_i \in \{0, 1\}
+    \end{aligned}
+  \]
 
 \end{frame}
 

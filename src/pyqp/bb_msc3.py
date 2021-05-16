@@ -1,8 +1,8 @@
 """
 This file the branch-and-cut for MSC formulation
 - use MSC in the backend
-- trying to branch on z = A.T @ x
-- derive bounds for y accordingly.
+- trying to branch on y = z • z
+- then branch for z ≥ √l ∨ z ≤ −√l
 
 """
 import json
@@ -31,11 +31,11 @@ class MscBranch(Branch):
     self.ypivot_val = yc[y_index]
     self.zpivot_val = zc[y_index]
 
-  def imply_bounds(self, bounds: MscBounds, qp: QP, left=True):
+  def imply_bounds(self, bounds: MscBounds, left=True):
     _succeed = False
     n, m = self.zpivot
     _pivot = (m, n)
-    _val = self.zpivot_val
+    _val = self.zpivot_val.round(4)
     newbl = MscBounds(*bounds.unpack())
     _lb, _ub = newbl.zlb[(*_pivot, 0)], newbl.zub[(*_pivot, 0)]
     if left and _val < _ub:
@@ -50,9 +50,75 @@ class MscBranch(Branch):
     # after update, check bound feasibility:
     if newbl.zlb[(*_pivot, 0)] > newbl.zub[(*_pivot, 0)]:
       _succeed = False
-    newbl.imply_y(qp)
     return _succeed, newbl
 
+  def imply_all_bounds(self, qp: QP, bounds: MscBounds):
+    """
+    :param bounds:
+    :return:
+    """
+    n, m = self.ypivot
+    _pivot = (m, n)
+    # pivot values
+    _val = self.ypivot_val
+    _lb, _ub = bounds.ylb[(*_pivot, 0)], bounds.yub[(*_pivot, 0)]
+    _zval = self.zpivot_val
+    _zlb, _zub = bounds.zlb[(*_pivot, 0)], bounds.zub[(*_pivot, 0)]
+
+    for _zzleft in (True, False):
+      _succeed, newbl = self.imply_bounds(bounds, left=_zzleft)
+      newbl.imply_y(qp)
+      yield _succeed, newbl
+
+  def imply_all_bounds2(self, qp: QP, bounds: MscBounds):
+    """
+    y ≤ y' (l=l') ∨ y ≥ y' (l=y')
+    z ≥ √l ∨ z ≤ −√l
+    :param bounds:
+    :return:
+    """
+    n, m = self.ypivot
+    _pivot = (m, n)
+    # pivot values
+    _val = self.ypivot_val
+    _lb, _ub = bounds.ylb[(*_pivot, 0)], bounds.yub[(*_pivot, 0)]
+    _zval = self.zpivot_val
+    _zlb, _zub = bounds.zlb[(*_pivot, 0)], bounds.zub[(*_pivot, 0)]
+
+    for _left in (True, False):
+      zlb, zub, ylb, yub, *_ = bounds.unpack()
+      _succeed = False
+      if _left and _val < _ub:
+        yub[(*_pivot, 0)] = _val
+      if not _left and _val > _lb:
+        ylb[(*_pivot, 0)] = _val
+      if ylb[(*_pivot, 0)] > yub[(*_pivot, 0)]:
+        yield False, None
+      # cal √l
+      for _zleft in (True, False):
+        newbl = MscBounds(zlb, zub, ylb, yub, *_)
+        newl = np.sqrt(newbl.ylb[(*_pivot, 0)]).round(4)
+        if _zleft and - newl < _zub:
+          # <= and a valid upper bound
+          newbl.zub[(*_pivot, 0)] = - newl
+          _succeed = True
+        if not _zleft and newl > _zlb:
+          newbl.zlb[(*_pivot, 0)] = newl
+          _succeed = True
+
+        if _succeed:
+          if newbl.zlb[(*_pivot, 0)] > newbl.zub[(*_pivot, 0)]:
+            _succeed = False
+          newbl.imply_y(qp)
+          yield _succeed, newbl
+        else:
+          # this means it is unchanged,
+          # at least for z, the cutting planes will not work
+          # this is the case for ( left x left ):
+          #   y ≤ y' (l=l') z ≥ √l
+          # since next time it will stops at the same solution
+          for _zzleft in (True, False):
+            self.imply_bounds(newbl, left=_zzleft)
 
 class MscBBItem(BBItem):
   pass
@@ -135,39 +201,31 @@ def generate_child_items(
     with_shor: Result = None
 ):
   # left <=
-  left_succ, left_bounds = branch.imply_bounds(parent.bound, parent.qp, left=True)
-  left_r = backend_func(parent.qp, bounds=left_bounds, solver=sdp_solver, verbose=verbose, solve=False,
+  _ = branch.imply_all_bounds(parent.qp, parent.bound)
+  _current_node = total_nodes
+  for _succ, _bounds in _:
+    # n, m = branch.ypivot
+    # _pivot = (m, n)
+    # print(_succ, _bounds.zlb[(*_pivot, 0)], _bounds.zub[(*_pivot, 0)], _bounds.ylb[(*_pivot, 0)],
+    #       _bounds.yub[(*_pivot, 0)])
+    if not _succ:
+      # problem is infeasible:
+      _r = Result()
+      _r.solved = True
+      _r.relax_obj = -1e6
+      _cuts = MscCuts()
+    else:
+      _r = backend_func(parent.qp, bounds=_bounds, solver=sdp_solver, verbose=verbose, solve=False,
                         with_shor=with_shor, constr_d=False, rlt=True)
-  if not left_succ:
-    # problem is infeasible:
-    left_r.solved = True
-    left_r.relax_obj = -1e6
-    left_cuts = MscCuts()
-  else:
-    # add cuts to cut off
-    left_cuts = parent.cuts.generate_cuts(branch, left_bounds)
-    left_cuts.add_cuts(left_r, backend_name)
+      # add cuts to cut off
+      _cuts = parent.cuts.generate_cuts(branch, _bounds)
+      _cuts.add_cuts(_r, backend_name)
 
-  left_item = MscBBItem(parent.qp, parent.depth + 1, total_nodes, parent.node_id, parent.result.relax_obj,
-                        left_r, left_bounds, left_cuts)
-
-  # right >=
-  right_succ, right_bounds = branch.imply_bounds(parent.bound, parent.qp, left=False)
-  right_r = backend_func(parent.qp, bounds=right_bounds, solver=sdp_solver, verbose=verbose, solve=False,
-                         with_shor=with_shor, constr_d=False, rlt=True)
-  if not right_succ:
-    # problem is infeasible
-    right_r.solved = True
-    right_r.relax_obj = -1e6
-    right_cuts = MscCuts()
-  else:
-    # add cuts to cut off
-    right_cuts = parent.cuts.generate_cuts(branch, right_bounds)
-    right_cuts.add_cuts(right_r, backend_name)
-
-  right_item = MscBBItem(parent.qp, parent.depth + 1, total_nodes + 1, parent.node_id, parent.result.relax_obj,
-                         right_r, right_bounds, right_cuts)
-  return left_item, right_item
+    _item = MscBBItem(parent.qp, parent.depth + 1, _current_node,
+                      parent.node_id, parent.result.relax_obj,
+                      _r, _bounds, _cuts)
+    _current_node += 1
+    yield _item
 
 
 def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr_d=False, rlt=True):
@@ -208,12 +266,14 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
   ub = root_r.relax_obj
   lb = -1e6
 
+  ub_dict = {0: ub}
   queue = PriorityQueue()
   queue.put((-ub, root))
   feasible = {}
 
   while not queue.empty():
     priority, item = queue.get()
+    del ub_dict[item.node_id]
     r = item.result
 
     parent_sdp_val = item.parent_bound
@@ -246,13 +306,13 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
     r.true_obj = 0 if resc_feasC > params.feas_eps \
       else qp_obj_func(item.qp.Q, item.qp.q, r.xval)
 
-    ub = min(parent_sdp_val, ub)
-    r.bound = ub
+    r.bound = r.relax_obj
     if r.true_obj > lb:
       best_r = r
       lb = r.true_obj
 
-    gap = (ub - lb) / lb
+    ub = max([r.relax_obj, max(ub_dict.values()) if len(ub_dict) > 0 else 0])
+    gap = (ub - lb) / (lb + 1e-3)
 
     print(
       f"time: {r.solve_time: .2f} #{item.node_id}, "
@@ -272,10 +332,9 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
       continue
 
     ## branching
-
     br = MscBranch()
     br.simple_vio_branch(y, z, yc, zc, resc)
-    left_item, right_item = generate_child_items(
+    _ = generate_child_items(
       total_nodes, item, br,
       sdp_solver=params.sdp_solver,
       verbose=verbose,
@@ -283,12 +342,12 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
       backend_func=backend_func,
       with_shor=r_shor,
     )
-    total_nodes += 2
-    next_priority = - r.relax_obj.round(3)
-    queue.put((next_priority, right_item))
-    queue.put((next_priority, left_item))
+    for next_item in _:
+      total_nodes += 1
+      next_priority = - r.relax_obj.round(3)
+      queue.put((next_priority, next_item))
+      ub_dict[next_item.node_id] = r.relax_obj
     #
-
     k += 1
 
   best_r.nodes = total_nodes

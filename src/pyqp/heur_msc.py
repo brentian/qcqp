@@ -14,6 +14,11 @@ def penalty_method(r: MSKMscResult, qp: QP) -> MSKMscResult:
     delta_max = 1e3
     delta = 1e-1 * np.zeros((len(y), 2))
     delta[0, 0] = 1.1
+    delta[1, 0] = 1.1
+    delta[1, 1] = 1.1
+    delta[2, :] = 1.1
+    delta[3, :] = 1.1
+
     penalty_expr = 0
 
     y_shape = y[0].getShape()
@@ -34,4 +39,4 @@ def penalty_method(r: MSKMscResult, qp: QP) -> MSKMscResult:
 
     r.solve()
 
-    print(1)
+    return r

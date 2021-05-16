@@ -50,23 +50,7 @@ class CVXMscResult(CVXResult):
         self.solved = True
 
 
-def cvx_sdp(*params, sense="max", rel_type=1, **kwargs):
-    Q, q, A, a, b, sign, lb, ub = params
-
-    if rel_type == 1:
-        _ = shor_relaxation(Q, q, A, a, b, sign, lb, ub, sense="max", **kwargs)
-    elif rel_type == 2:
-        _ = compact_relaxation(Q, q, A, a, b, sign, lb, ub, sense="max", **kwargs)
-    else:
-        raise ValueError("no such SDP defined")
-    return _
-
-
-def shor_relaxation(Q, q, A, a, b, sign,
-                    lb, ub,
-                    ylb=None, yub=None,
-                    diagx=None,
-                    solver="SCS", sense="max", verbose=True, solve=True, **kwargs):
+def shor_relaxation(qp: QP, solver="SCS", sense="max", verbose=True, solve=True, **kwargs):
     """
     use a Y along with x in the SDP
         for basic 0 <= x <= e, diag(Y) <= x
@@ -89,6 +73,8 @@ def shor_relaxation(Q, q, A, a, b, sign,
 
     """
     _unused = kwargs
+    Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
+
     m, n, d = a.shape
     xshape = (n, d)
 
@@ -134,9 +120,7 @@ def shor_relaxation(Q, q, A, a, b, sign,
     return r
 
 
-def srlt_relaxation(Q, q, A, a, b, sign,
-                    lb, ub,
-                    ylb=None, yub=None,
+def srlt_relaxation(qp: QP,
                     solver="MOSEK", sense="max", verbose=True, solve=True, **kwargs):
     """
     use a Y along with x in the SDP
@@ -159,7 +143,9 @@ def srlt_relaxation(Q, q, A, a, b, sign,
     -------
 
     """
+
     _unused = kwargs
+    Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
     m, n, d = a.shape
     xshape = (n, d)
 
@@ -229,7 +215,7 @@ def msc_relaxation(qp: QP, bounds: MscBounds = None, solver="MOSEK", sense="max"
     Y, Z = [y], [z]
     # bounds
     if bounds is None:
-        bounds = MscBounds.construct_constant_bound(qp)
+        bounds = MscBounds.construct(qp)
     zlb = bounds.zlb
     zub = bounds.zub
     constrs = [x <= qp.ub, x >= qp.lb]
@@ -278,8 +264,6 @@ def msc_relaxation(qp: QP, bounds: MscBounds = None, solver="MOSEK", sense="max"
         # if ineg.shape[0] > 0:
         #     constrs += [aneg[:, ineg].T @ x == zi[ineg, :]]
         #     # constrs += [yi[ineg] <= ynegub[ineg]]
-
-
 
         # y+^Te - y-^Te + q^Tx - b
         expr = cvx.trace(a[i].T @ x) - b[i]
@@ -348,42 +332,43 @@ def compact_relaxation(Q, q, A, a, b, sign, lb, ub, solver="MOSEK", sense="max",
 
     """
     raise ValueError("to be checked")
-    _unused = kwargs
-    m, n, d = a.shape
-    xshape = (n, d)
 
-    Y = cvx.Variable((n + 1, n + 1), PSD=True)
-    _Q = np.bmat([[Q, q / 2], [q.T / 2, np.zeros((1, 1))]])
-    constrs = []
-    for i in range(m):
-        # build block matrix
-        _A = np.bmat([[A[i], a[i] / 2], [a[i].T / 2, np.zeros((1, 1))]])
-        if sign[i] == 0:
-            constrs += [cvx.trace(_A.T @ Y) == b[i]]
-        elif sign[i] == -1:
-            constrs += [cvx.trace(_A.T @ Y) >= b[i]]
-        else:
-            constrs += [cvx.trace(_A.T @ Y) <= b[i]]
-    # boxes
-    _Y_flatten = cvx.diag(Y)
-    constrs += [_Y_flatten[:-1] >= lb.flatten(),
-                _Y_flatten[:-1] <= ub.flatten(),
-                _Y_flatten[-1] >= -1,
-                _Y_flatten[-1] <= 1]
-    obj_expr = cvx.trace(_Q @ Y)
-    obj_expr_cp = cvx.Maximize(obj_expr) if sense == 'max' else cvx.Minimize(
-        obj_expr)
-    problem = cvx.Problem(objective=obj_expr_cp, constraints=constrs)
-    problem.solve(verbose=verbose, solver=solver)
-    xtval = np.sqrt(_Y_flatten.value)
-    xval = xtval[:-1].reshape(xshape)
-
-    r = CVXResult()
-    r.problem = problem
-    r.xvar = x
-    r.yvar = Y
-    r.yval = Y.value
-    r.xval = xval
-    r.relax_obj = problem.value
-    r.true_obj = qp_obj_func(Q, q, xval)
-    return r
+    # _unused = kwargs
+    # m, n, d = a.shape
+    # xshape = (n, d)
+    #
+    # Y = cvx.Variable((n + 1, n + 1), PSD=True)
+    # _Q = np.bmat([[Q, q / 2], [q.T / 2, np.zeros((1, 1))]])
+    # constrs = []
+    # for i in range(m):
+    #     # build block matrix
+    #     _A = np.bmat([[A[i], a[i] / 2], [a[i].T / 2, np.zeros((1, 1))]])
+    #     if sign[i] == 0:
+    #         constrs += [cvx.trace(_A.T @ Y) == b[i]]
+    #     elif sign[i] == -1:
+    #         constrs += [cvx.trace(_A.T @ Y) >= b[i]]
+    #     else:
+    #         constrs += [cvx.trace(_A.T @ Y) <= b[i]]
+    # # boxes
+    # _Y_flatten = cvx.diag(Y)
+    # constrs += [_Y_flatten[:-1] >= lb.flatten(),
+    #             _Y_flatten[:-1] <= ub.flatten(),
+    #             _Y_flatten[-1] >= -1,
+    #             _Y_flatten[-1] <= 1]
+    # obj_expr = cvx.trace(_Q @ Y)
+    # obj_expr_cp = cvx.Maximize(obj_expr) if sense == 'max' else cvx.Minimize(
+    #     obj_expr)
+    # problem = cvx.Problem(objective=obj_expr_cp, constraints=constrs)
+    # problem.solve(verbose=verbose, solver=solver)
+    # xtval = np.sqrt(_Y_flatten.value)
+    # xval = xtval[:-1].reshape(xshape)
+    #
+    # r = CVXResult()
+    # r.problem = problem
+    # r.xvar = x
+    # r.yvar = Y
+    # r.yval = Y.value
+    # r.xval = xval
+    # r.relax_obj = problem.value
+    # r.true_obj = qp_obj_func(Q, q, xval)
+    # return r
