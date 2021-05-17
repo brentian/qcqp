@@ -35,7 +35,7 @@ def qp_gurobi(qp: QP, sense="max", relax=True, verbose=True, params: Params = Pa
     Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
     m, n, d = a.shape
     model = grb.Model()
-    model.setParam(grb.GRB.Param.OutputFlag, verbose)
+    model.setParam(grb.GRB.Param.OutputFlag, True)
 
     indices = range(q.shape[0])
 

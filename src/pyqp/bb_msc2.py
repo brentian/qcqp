@@ -186,7 +186,7 @@ def generate_child_items(
     yield _item
 
 
-def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr_d=False, rlt=True):
+def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr_d=False, rlt=True, **kwargs):
   print(json.dumps(params.__dict__(), indent=2))
   backend_name = params.backend_name
   if backend_name == 'msk':
@@ -231,8 +231,6 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
 
   while not queue.empty():
     priority, item = queue.get()
-    if item.node_id == 39:
-      print(1)
     del ub_dict[item.node_id]
     r = item.result
 
@@ -247,6 +245,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
       r.solve(verbose=verbose)
       r.solve_time = time.time() - start_time
 
+    ub = max([r.relax_obj, max(ub_dict.values()) if len(ub_dict) > 0 else 0])
     if r.relax_obj < lb:
       # prune this tree
       print(f"prune #{item.node_id} @{r.relax_obj :.4f} by bound")
@@ -271,7 +270,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
       best_r = r
       lb = r.true_obj
 
-    ub = max([r.relax_obj, max(ub_dict.values()) if len(ub_dict) > 0 else 0])
+
     gap = (ub - lb) / (lb + 1e-3)
 
     print(
@@ -305,7 +304,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
     )
     for next_item in _:
       total_nodes += 1
-      next_priority = -next_item.node_id # - r.relax_obj.round(3)
+      next_priority = - r.relax_obj.round(3) #- next_item.node_id #
       queue.put((next_priority, next_item))
       ub_dict[next_item.node_id] = r.relax_obj
     #
@@ -313,6 +312,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
 
   best_r.nodes = total_nodes
   best_r.solve_time = time.time() - start_time
+  best_r.bound = ub
   return best_r
 
 

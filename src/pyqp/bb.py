@@ -190,7 +190,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
     return left_item, right_item
 
 
-def bb_box(qp: QP, verbose=False, params=BCParams()):
+def bb_box(qp: QP, verbose=False, params=BCParams(), **kwargs):
     print(json.dumps(params.__dict__(), indent=2))
     backend_name = params.backend_name
     if backend_name == 'msk':

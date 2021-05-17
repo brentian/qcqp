@@ -20,9 +20,9 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
 import pandas as pd
+import numpy as np
 import sys
-from pyqp import bb_msc, bb_msc2, bb, bb_msc3
-from pyqp.grb import *
+from pyqp import grb, bb_msc, bb_msc2, bb, bb_msc3
 from .. import max_cut
 
 np.random.seed(1)
@@ -36,54 +36,43 @@ if __name__ == '__main__':
           "python tests/-.py n (number of variables) backend")
     raise e
   verbose = False
-  bool_use_shor = True
+  bool_use_shor = False
   evals = []
   params = bb_msc.BCParams()
   params.backend_name = backend
+  params.time_limit = 300
+  kwargs = dict(
+    relax=False, sense="max", verbose=verbose,
+    params=params,
+    bool_use_shor=bool_use_shor,
+    rlt=True
+  )
+  methods = {
+    "grb": grb.qp_gurobi,
+    # "bb_shor": bb.bb_box,
+    "bb_msc": bb_msc.bb_box,
+    "bb_msc2": bb_msc2.bb_box
+  }
 
   # problem
   problem_id = f"max-cut:{n}:{0}"
   # start
   qp = max_cut.create_random_mc(int(n))
 
-  # benchmark by gurobi
-  r_grb_relax = qp_gurobi(qp, relax=True, sense="max", verbose=True,
-                          params=params)
-  eval_grb = r_grb_relax.eval(problem_id)
+  evals = []
+  results = {}
+  # run methods
+  for k, func in methods.items():
+    r = func(qp, **kwargs)
+    reval = r.eval(problem_id)
+    evals.append({**reval.__dict__, "method": k})
+    results[k] = r
 
-  # shor bb
-  r_bb_shor = bb.bb_box(qp, verbose=verbose, params=params)
-  eval_shor = r_bb_shor.eval(problem_id)
-
-  # # b-b
-  # r_bb_msc = bb_msc.bb_box(qp, verbose=verbose, params=params, bool_use_shor=bool_use_shor, rlt=True)
-  # eval_bb = r_bb_msc.eval(problem_id)
-
-  # b-b
-  r_bb_msc3 = bb_msc3.bb_box(qp, verbose=verbose, params=params, bool_use_shor=bool_use_shor, rlt=True)
-  eval_bb3 = r_bb_msc3.eval(problem_id)
-
-  print(f"gurobi benchmark @{r_grb_relax.true_obj}")
-  print(f"gurobi benchmark x\n"
-        f"{r_grb_relax.xval.round(3)}")
-  r_grb_relax.check(qp)
-
-  print(f"branch-and-cut @{r_bb_msc3.true_obj}")
-  print(f"branch-and-cut x\n"
-        f"{r_bb_msc3.xval.round(3)}")
-  r_bb_msc3.check(qp)
-
-  # print(f"branch-and-cut @{r_bb2.true_obj}")
-  # print(f"branch-and-cut x\n"
-  #       f"{r_bb2.xval.round(3)}")
-  # r_bb2.check(qp)
-
-  evals += [
-    {**eval_grb.__dict__, "method": "gurobi_relax", },
-    {**eval_shor.__dict__, "method": "qcq_shor", },
-    # {**eval_bb.__dict__, "method": "qcq_bb", },
-    {**eval_bb3.__dict__, "method": "qcq_bb3", },
-  ]
+  for k, r in results.items():
+    print(f"{k} benchmark @{r.true_obj}")
+    print(f"{k} benchmark x\n"
+          f"{r.xval.round(3)}")
+    r.check(qp)
 
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)

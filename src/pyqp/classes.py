@@ -47,8 +47,8 @@ class QP(object):
 
   @staticmethod
   def create_random_instance(n, m):
-    Q = np.random.randint(0, 10, (n, n))
-    A = np.random.randint(0, 2, (m, n, n))
+    Q = np.random.randint(-10, 10, (n, n))
+    A = np.random.randint(-2, 2, (m, n, n))
     q = np.random.randint(0, 5, (n, 1))
     a = np.random.randint(0, 5, (m, n, 1))
     b = np.random.randint(n, 3 * n, (m))
