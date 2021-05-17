@@ -74,7 +74,7 @@ def qp_gurobi(qp: QP, sense="max", relax=True, verbose=True, params: Params = Pa
     r = Result()
     r.solve_time = model.Runtime
     r.bound = model.ObjBoundC
-    r.relax_obj = model.ObjVal
+    r.relax_obj = model.ObjBoundC
     r.true_obj = model.ObjVal
     r.xval = np.array([i.x for i in x.values()]).reshape(q.shape)
 

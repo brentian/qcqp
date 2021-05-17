@@ -19,10 +19,10 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
+import numpy as np
 import pandas as pd
 import sys
-from pyqp.bb_msc import *
-from pyqp import grb
+from pyqp import grb, bb, bb_msc, bb_msc2, bb_msc3, bg_msk
 
 np.random.seed(1)
 
@@ -34,33 +34,42 @@ if __name__ == '__main__':
         print("usage:\n"
               "python tests/random_bb.py n (number of variables) m (num of constraints)")
         raise e
-    verbose = False
+    verbose = True
+    bool_use_shor = False
     evals = []
-    params = BCParams()
-
+    params = bb_msc.BCParams()
+    params.time_limit = 50
+    kwargs = dict(
+        relax=True, sense="max", verbose=verbose,
+        params=params,
+        bool_use_shor=bool_use_shor,
+        rlt=True
+    )
+    methods = {
+        "grb": grb.qp_gurobi,
+        # "shor": bg_msk.shor_relaxation,
+        "msc": bg_msk.msc_relaxation,
+        "socp": bg_msk.socp_relaxation
+    }
     # problem
     problem_id = f"{n}:{m}:{0}"
     # start
-    qp = QP.create_random_instance(int(n), int(m))
-    qp.decompose()
-    #
-    r_grb_relax = grb.qp_gurobi(qp, sense="max", verbose=verbose)
-    r_cvx_shor = bg_cvx.shor_relaxation(qp, solver='MOSEK', verbose=verbose)
-    r_shor = bg_msk.shor_relaxation(qp, solver='MOSEK', verbose=verbose)
-    r_msc = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose)
-    r_msc_msk = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose, with_shor=r_shor)
-    r_msc_msk2 = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose, constr_d=True)
-    r_msc_msk3 = bg_msk.msc_relaxation(qp, bounds=None, solver='MOSEK', verbose=verbose, rlt=True)
-
-    obj_values = {
-        "gurobi_rel": r_grb_relax.relax_obj,
-        "cvx_shor": r_cvx_shor.relax_obj,
-        "msk_shor": r_shor.relax_obj,
-        "msk_msc": r_msc.relax_obj,
-        "msk_msc_with_shor": r_msc_msk.relax_obj,
-        "msk_msc_with_d": r_msc_msk2.relax_obj,
-        "msk_msc_with_rlt": r_msc_msk3.relax_obj,
-    }
-
-    r_msc_msk.check(qp)
-    print(json.dumps(obj_values, indent=2))
+    qp = bb_msc.QP.create_random_instance(int(n), int(m))
+    
+    evals = []
+    results = {}
+    # run methods
+    for k, func in methods.items():
+        r = func(qp, **kwargs)
+        reval = r.eval(problem_id)
+        evals.append({**reval.__dict__, "method": k})
+        results[k] = r
+    
+    for k, r in results.items():
+        print(f"{k} benchmark @{r.relax_obj}")
+        print(f"{k} benchmark x\n"
+              f"{r.xval.round(3)}")
+        r.check(qp)
+    
+    df_eval = pd.DataFrame.from_records(evals)
+    print(df_eval)
