@@ -252,7 +252,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
       best_r = r
       lb = r.true_obj
 
-    gap = (ub - lb) / lb
+    gap = (ub - lb) / (abs(lb) + 1e-3)
 
     print(
       f"time: {r.solve_time: .2f} #{item.node_id}, "

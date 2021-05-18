@@ -22,7 +22,9 @@
 import pandas as pd
 import numpy as np
 import sys
-from pyqp import grb, bb_msc, bb_msc2, bb, bb_msc3
+from pyqp import grb
+from pyqp import bb_msc, bb_msc2, bb, bb_msc3, bb_msc4
+from pyqp import bb_socp
 from .. import max_cut
 
 np.random.seed(1)
@@ -42,7 +44,9 @@ if __name__ == '__main__':
   params.backend_name = backend
   params.time_limit = 300
   kwargs = dict(
-    relax=False, sense="max", verbose=verbose,
+    relax=True,
+    sense="max",
+    verbose=verbose,
     params=params,
     bool_use_shor=bool_use_shor,
     rlt=True
@@ -50,15 +54,16 @@ if __name__ == '__main__':
   methods = {
     "grb": grb.qp_gurobi,
     # "bb_shor": bb.bb_box,
-    "bb_msc": bb_msc.bb_box,
-    "bb_msc2": bb_msc2.bb_box
+    "bb_msc": bb_msc3.bb_box,
+    "bb_msc2": bb_msc4.bb_box,
+    # "bb_socp": bb_socp.bb_box
   }
-
+  
   # problem
   problem_id = f"max-cut:{n}:{0}"
   # start
   qp = max_cut.create_random_mc(int(n))
-
+  
   evals = []
   results = {}
   # run methods
@@ -67,12 +72,12 @@ if __name__ == '__main__':
     reval = r.eval(problem_id)
     evals.append({**reval.__dict__, "method": k})
     results[k] = r
-
+  
   for k, r in results.items():
     print(f"{k} benchmark @{r.true_obj}")
     print(f"{k} benchmark x\n"
           f"{r.xval.round(3)}")
     r.check(qp)
-
+  
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)

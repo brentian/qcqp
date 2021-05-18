@@ -97,13 +97,13 @@
     \item Suppose \(Y_s, x_s\) are solution by Shor relaxation (and thus an upper bound and lower bound if \(x_s\) feasible).
           \[e^Ty^+ - e^Ty^- +  q^Tx \le Q\bullet Y_s  + q^T x_s\]
           \textcolor{red}{Not used since Shor is needed}
-    \item We notice, with auxillary \(d^+\), we can lift the MSC to a SOCP:
+    \item We notice, with auxillary \(d^+\), we can relax the MSC to a SOCP:
           \[\begin{aligned}
                           & d^+ (= e^Ty^+) \ge \|z^+\|^2                    \\
               \Rightarrow & (\frac{1}{2}, d^+, z^+) \in \mathcal{Q}^{n+2}_r
             \end{aligned}
           \]
-    \item Similarly, the RLT or secant cuts:
+          Similarly, the RLT or secant cuts:
           \[
             d - (l + u)^Tz + l^Tu \le 0
           \]
@@ -111,29 +111,29 @@
 
 \end{frame}
 
-\begin{frame}{SOCP}
-  \[\begin{aligned}
-      \mathrm{Maximize}\quad & d^+ - d^- + q^Tx                                                \\
-      \mathrm{s.t.} \quad    & (U^+)^Tx = z^+, (U^-)^Tx = z^-                                  \\
-                             & (U^+_j)^Tx = Z^+_j, (U^-_j)^Tx = Z^-_j              & \forall j \\
-                             & D^+_j - D^-_j +  a_j^Tx (\le, =, \ge) \; b_j        & \forall j \\
-                             & (\frac{1}{2}, d^+, z^+) \in \mathcal{Q}^{n+2}_r                 \\
-                             & (\frac{1}{2}, d^-, z^-) \in \mathcal{Q}^{n+2}_r                 \\
-                             & (\frac{1}{2}, D^+_j, Z^+_j) \in \mathcal{Q}^{n+2}_r & \forall j \\
-                             & (\frac{1}{2}, D^-_j, Z^-_j) \in \mathcal{Q}^{n+2}_r & \forall j \\
-    \end{aligned}\]
+% \begin{frame}{SOCP}
+%   \[\begin{aligned}
+%       \mathrm{Maximize}\quad & d^+ - d^- + q^Tx                                                \\
+%       \mathrm{s.t.} \quad    & (U^+)^Tx = z^+, (U^-)^Tx = z^-                                  \\
+%                              & (U^+_j)^Tx = Z^+_j, (U^-_j)^Tx = Z^-_j              & \forall j \\
+%                              & D^+_j - D^-_j +  a_j^Tx (\le, =, \ge) \; b_j        & \forall j \\
+%                              & (\frac{1}{2}, d^+, z^+) \in \mathcal{Q}^{n+2}_r                 \\
+%                              & (\frac{1}{2}, d^-, z^-) \in \mathcal{Q}^{n+2}_r                 \\
+%                              & (\frac{1}{2}, D^+_j, Z^+_j) \in \mathcal{Q}^{n+2}_r & \forall j \\
+%                              & (\frac{1}{2}, D^-_j, Z^-_j) \in \mathcal{Q}^{n+2}_r & \forall j \\
+%     \end{aligned}\]
 
-  Using the same factorization method.
-\end{frame}
+%   Using the same factorization method.
+% \end{frame}
 
-\begin{frame}{SOCP: Branching}
-  We now extend branching method based on ``quadratic errors'', for every \((d, z, x)\)
-  \[ d - z^Tz\]
+% \begin{frame}{SOCP: Branching}
 
-  We first pivot on \(d\) for largest error, by which 
-  \begin{itemize}
-    \item a
-  \end{itemize}
-\end{frame}
+%   \begin{itemize}
+%     \item Extend branching method based on ``quadratic errors'', for every \((d, z, x)\),
+%           \[ d - z^Tz\]
+%           first pivot on \(d\) for largest error, by which we find some \(z\).
+
+%   \end{itemize}
+% \end{frame}
 
 \end{document}

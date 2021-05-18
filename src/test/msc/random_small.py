@@ -51,6 +51,7 @@ if __name__ == '__main__':
         "grb": grb.qp_gurobi,
         # "shor": bg_msk.shor_relaxation,
         "msc": bg_msk.msc_relaxation,
+        "msc_socp": bg_msk.msc_socp_relaxation,
         "socp": bg_msk.socp_relaxation
     }
     # problem

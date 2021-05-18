@@ -22,7 +22,8 @@
 import numpy as np
 import pandas as pd
 import sys
-from pyqp import grb, bb, bb_msc, bb_msc2, bb_msc3, bb_socp
+from pyqp import grb, bb, bb_msc, \
+  bb_msc2, bb_msc3, bb_msc4, bb_socp
 
 np.random.seed(1)
 
@@ -39,9 +40,11 @@ if __name__ == '__main__':
   evals = []
   params = bb_msc.BCParams()
   params.backend_name = backend
-  params.time_limit = 50
+  params.time_limit = 20
   kwargs = dict(
-    relax=True, sense="max", verbose=verbose,
+    relax=True,
+    sense="max",
+    verbose=verbose,
     params=params,
     bool_use_shor=bool_use_shor,
     rlt=True
@@ -50,14 +53,14 @@ if __name__ == '__main__':
     "grb": grb.qp_gurobi,
     # "bb_shor": bb.bb_box,
     "bb_msc": bb_msc3.bb_box,
-    # "bb_msc2": bb_msc2.bb_box,
-    "bb_socp": bb_socp.bb_box
+    "bb_msc_socp": bb_msc4.bb_box,
+    # "bb_socp": bb_socp.bb_box
   }
   # problem
   problem_id = f"{n}:{m}:{0}"
   # start
   qp = bb_msc.QP.create_random_instance(int(n), int(m))
-
+  
   evals = []
   results = {}
   # run methods
@@ -66,12 +69,12 @@ if __name__ == '__main__':
     reval = r.eval(problem_id)
     evals.append({**reval.__dict__, "method": k})
     results[k] = r
-
+  
   for k, r in results.items():
     print(f"{k} benchmark @{r.true_obj}")
     print(f"{k} benchmark x\n"
           f"{r.xval.round(3)}")
     r.check(qp)
-
+  
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)

@@ -17,19 +17,20 @@ from .classes import MscBounds, Branch
 from .classes import QP, qp_obj_func, Result
 
 
-class MscBranch(Branch):
+class SOCPBranch(Branch):
   def __init__(self):
 
     self.ypivot = None
     self.ypivot_val = None
     self.zpivot = None
     self.zpivot_val = None
+    self.dpivot_arr = None
 
   def simple_vio_branch(self, x, zc, dc, res, decom_arr):
     n, m = dindex = np.unravel_index(np.argmax(res, axis=None), res.shape)
     self.dpivot = dindex
-    zpivot_arr = self.zpivot_arr = decom_arr[m][n]
-    ypivot = self.ypivot = self.zpivot = zpivot_arr[-1], m
+    dpivot_arr = self.dpivot_arr = decom_arr[m][n]
+    ypivot = self.ypivot = self.zpivot = np.random.choice(dpivot_arr[-1]), m
     self.zpivot_val = zc[ypivot]
 
   def imply_bounds(self, bounds: MscBounds, left=True):
@@ -39,17 +40,17 @@ class MscBranch(Branch):
     _val = self.zpivot_val.round(4)
     newbl = MscBounds(*bounds.unpack())
     _lb, _ub = newbl.zlb[(*_pivot, 0)], newbl.zub[(*_pivot, 0)]
-    if left and _val < _ub:
+    if left and _val <= _ub:
       # <= and a valid upper bound
       newbl.zub[(*_pivot, 0)] = _val
       _succeed = True
-    if not left and _val > _lb:
+    if not left and _val >= _lb:
       newbl.zlb[(*_pivot, 0)] = _val
       # newbl.ylb = newbl.xlb @ newbl.xlb.T
       _succeed = True
 
     # after update, check bound feasibility:
-    if newbl.zlb[(*_pivot, 0)] > newbl.zub[(*_pivot, 0)]:
+    if newbl.zlb[(*_pivot, 0)] >= newbl.zub[(*_pivot, 0)]:
       _succeed = False
     return _succeed, newbl
 
@@ -72,11 +73,11 @@ class MscBranch(Branch):
       yield _succeed, newbl
 
 
-class MscBBItem(BBItem):
+class SOCPBBItem(BBItem):
   pass
 
 
-class MscRLT(RLTCuttingPlane):
+class SOCPRLT(RLTCuttingPlane):
   def serialize_to_cvx(self, zvar, yvar, dvar):
     raise ValueError("not implemented cvx backend")
 
@@ -96,9 +97,9 @@ class MscRLT(RLTCuttingPlane):
 
 def add_rlt_cuts(branch, bounds):
   n, m = branch.dpivot
-  y_indicator_arr = branch.ypivot
-  u_i, l_i = bounds.zub[m, y_indicator_arr], bounds.zlb[m, y_indicator_arr]
-  return MscRLT((n, m, u_i, l_i, y_indicator_arr))
+  d_indicator_arr = branch.dpivot_arr
+  u_i, l_i = bounds.zub[m, d_indicator_arr], bounds.zlb[m, d_indicator_arr]
+  return SOCPRLT((n, m, u_i, l_i, d_indicator_arr))
 
 
 cutting_method = {
@@ -144,7 +145,7 @@ class MscCuts(Cuts):
 
 
 def generate_child_items(
-    total_nodes, parent: MscBBItem, branch: MscBranch,
+    total_nodes, parent: SOCPBBItem, branch: SOCPBranch,
     verbose=False, backend_name='msk',
     backend_func=None, sdp_solver="MOSEK",
     with_shor: Result = None
@@ -153,10 +154,12 @@ def generate_child_items(
   _ = branch.imply_all_bounds(parent.qp, parent.bound)
   _current_node = total_nodes
   for _succ, _bounds in _:
-    # n, m = branch.ypivot
-    # _pivot = (m, n)
-    # print(_succ, _bounds.zlb[(*_pivot, 0)], _bounds.zub[(*_pivot, 0)], _bounds.ylb[(*_pivot, 0)],
-    #       _bounds.yub[(*_pivot, 0)])
+    # n, m = branch.dpivot
+    # arr = branch.dpivot_arr
+    # nn, mm = branch.zpivot
+    #
+    # _pivot = (mm, nn)
+    # print(_succ, _bounds.zlb[(*_pivot, 0)], _bounds.zub[(*_pivot, 0)])
     if not _succ:
       # problem is infeasible:
       _r = Result()
@@ -170,9 +173,9 @@ def generate_child_items(
       _cuts = parent.cuts.generate_cuts(branch, _bounds)
       _cuts.add_cuts(_r, backend_name)
 
-    _item = MscBBItem(parent.qp, parent.depth + 1, _current_node,
-                      parent.node_id, parent.result.relax_obj,
-                      _r, _bounds, _cuts)
+    _item = SOCPBBItem(parent.qp, parent.depth + 1, _current_node,
+                       parent.node_id, parent.result.relax_obj,
+                       _r, _bounds, _cuts)
     _current_node += 1
     yield _item
 
@@ -208,7 +211,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
 
   # global cuts
   glc = MscCuts()
-  root = MscBBItem(qp, 0, 0, -1, 1e8, result=root_r, bound=root_bound, cuts=glc)
+  root = SOCPBBItem(qp, 0, 0, -1, 1e8, result=root_r, bound=root_bound, cuts=glc)
   total_nodes = 1
   ub = root_r.relax_obj
   lb = -1e6
@@ -262,7 +265,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
       lb = r.true_obj
 
     ub = max([r.relax_obj, max(ub_dict.values()) if len(ub_dict) > 0 else 0])
-    gap = (ub - lb) / (lb + 1e-3)
+    gap = (ub - lb) / (abs(lb) + 1e-3)
 
     print(
       f"time: {r.solve_time: .2f} #{item.node_id}, "
@@ -282,7 +285,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
       continue
 
     ## branching
-    br = MscBranch()
+    br = SOCPBranch()
     br.simple_vio_branch(x, zc, dc, resc_feas_dc, qp.decom_arr)
     _ = generate_child_items(
       total_nodes, item, br,
