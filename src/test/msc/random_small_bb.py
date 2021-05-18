@@ -22,7 +22,7 @@
 import numpy as np
 import pandas as pd
 import sys
-from pyqp import grb, bb_msc, bb_msc2, bb, bb_msc3
+from pyqp import grb, bb, bb_msc, bb_msc2, bb_msc3, bb_socp
 
 np.random.seed(1)
 
@@ -48,9 +48,10 @@ if __name__ == '__main__':
   )
   methods = {
     "grb": grb.qp_gurobi,
-    "bb_shor": bb.bb_box,
+    # "bb_shor": bb.bb_box,
     "bb_msc": bb_msc3.bb_box,
-    "bb_msc2": bb_msc2.bb_box
+    # "bb_msc2": bb_msc2.bb_box,
+    "bb_socp": bb_socp.bb_box
   }
   # problem
   problem_id = f"{n}:{m}:{0}"
@@ -71,7 +72,6 @@ if __name__ == '__main__':
     print(f"{k} benchmark x\n"
           f"{r.xval.round(3)}")
     r.check(qp)
-
 
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)

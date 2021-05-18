@@ -25,11 +25,12 @@ class MscBranch(Branch):
     self.zpivot = None
     self.zpivot_val = None
 
-  def simple_vio_branch(self, y, z, yc, zc, res):
-    y_index = np.unravel_index(np.argmax(res, axis=None), res.shape)
-    self.ypivot = self.zpivot = y_index
-    self.ypivot_val = yc[y_index]
-    self.zpivot_val = zc[y_index]
+  def simple_vio_branch(self, x, zc, dc, res, decom_arr):
+    n, m = dindex = np.unravel_index(np.argmax(res, axis=None), res.shape)
+    self.dpivot = dindex
+    zpivot_arr = self.zpivot_arr = decom_arr[m][n]
+    ypivot = self.ypivot = self.zpivot = zpivot_arr[-1], m
+    self.zpivot_val = zc[ypivot]
 
   def imply_bounds(self, bounds: MscBounds, left=True):
     _succeed = False
@@ -70,36 +71,34 @@ class MscBranch(Branch):
       newbl.imply_y(qp)
       yield _succeed, newbl
 
+
 class MscBBItem(BBItem):
   pass
 
 
 class MscRLT(RLTCuttingPlane):
-  def serialize_to_cvx(self, zvar, yvar):
-    n, i, ui, li = self.data
-    # (xi - li)(xi - ui) <= 0
-    expr1 = yvar[n][i, 0] - zvar[n][i, 0] * ui - li * zvar[n][i, 0] + ui * li <= 0
-    yield expr1
+  def serialize_to_cvx(self, zvar, yvar, dvar):
+    raise ValueError("not implemented cvx backend")
 
-  def serialize_to_msk(self, zvar, yvar):
+  def serialize_to_msk(self, zvar, yvar, dvar):
     expr = bg_msk.expr
     exprs = expr.sub
     exprm = expr.mul
 
-    m, n, ui, li = self.data
-    # n = yvar.getShape()[0]
-    yi = yvar[m].index(n, 0)
-    zi = zvar[m].index(n, 0)
+    n, m, ui, li, y_indicator_arr = self.data
+    di = dvar[m].index(n)
+    zi = zvar[m].pick([[i, 0] for i in y_indicator_arr])
     # (xi - li)(xi - ui) <= 0
-    expr1, dom1 = exprs(exprs(yi, exprm(ui, zi)),
-                        exprm(li, zi)), bg_msk.dom.lessThan(- ui * li)
+    expr1 = exprs(di, expr.dot(ui + li, zi))
+    dom1 = bg_msk.dom.lessThan((- li.T @ ui).trace())
     yield expr1, dom1
 
 
 def add_rlt_cuts(branch, bounds):
-  n, m = branch.zpivot
-  u_i, l_i = bounds.zub[m, n, 0], bounds.zlb[m, n, 0]
-  return MscRLT((m, n, u_i, l_i))
+  n, m = branch.dpivot
+  y_indicator_arr = branch.ypivot
+  u_i, l_i = bounds.zub[m, y_indicator_arr], bounds.zlb[m, y_indicator_arr]
+  return MscRLT((n, m, u_i, l_i, y_indicator_arr))
 
 
 cutting_method = {
@@ -133,14 +132,14 @@ class MscCuts(Cuts):
         for expr in ct.serialize_to_cvx(z, y):
           _problem._constraints.append(expr)
 
-  def add_cuts_to_msk(self, r: bg_cvx.CVXMscResult):
+  def add_cuts_to_msk(self, r: bg_msk.MSKMscResult):
 
     _problem: bg_msk.mf.Model = r.problem
-    z, y = r.Zvar, r.Yvar
+    z, y, d = r.Zvar, r.Yvar, r.Dvar
 
     for cut_type, cut_list in self.cuts.items():
       for ct in cut_list:
-        for expr, dom in ct.serialize_to_msk(z, y):
+        for expr, dom in ct.serialize_to_msk(z, y, d):
           _problem.constraint(expr, dom)
 
 
@@ -182,9 +181,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
   print(json.dumps(params.__dict__(), indent=2))
   backend_name = params.backend_name
   if backend_name == 'msk':
-    backend_func = bg_msk.msc_relaxation
-  elif backend_name == 'cvx':
-    backend_func = bg_cvx.msc_relaxation
+    backend_func = bg_msk.socp_relaxation
   else:
     raise ValueError("not implemented")
   # choose branching
@@ -247,10 +244,13 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
     y = r.yval
     zc = r.Zval
     yc = r.Yval
-    resc = np.abs(yc - zc ** 2)
-    resc_feas = resc.max()
-    resc_feasC = resc[:, 1:].max() if resc.shape[1] > 1 else 0
-
+    dc = r.Dval
+    quad_zc = zc ** 2
+    resc_feas_dc = np.zeros(dc.shape)
+    for i in range(qp.m + 1):
+      resc_feas_dc[:, i] = dc[:, i] - qp.decom_map[i] @ quad_zc[:, i]
+    resc_feas = resc_feas_dc.max()
+    resc_feasC = resc_feas_dc[:, 1:].max() if resc_feas_dc.shape[1] > 1 else 0
     # it is for real a lower bound by real objective
     #   if and only if it is feasible
     r.true_obj = 0 if resc_feasC > params.feas_eps \
@@ -283,7 +283,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
 
     ## branching
     br = MscBranch()
-    br.simple_vio_branch(y, z, yc, zc, resc)
+    br.simple_vio_branch(x, zc, dc, resc_feas_dc, qp.decom_arr)
     _ = generate_child_items(
       total_nodes, item, br,
       sdp_solver=params.sdp_solver,

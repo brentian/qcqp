@@ -40,7 +40,9 @@ if __name__ == '__main__':
     params = bb_msc.BCParams()
     params.time_limit = 50
     kwargs = dict(
-        relax=True, sense="max", verbose=verbose,
+        relax=True,
+        sense="max",
+        verbose=verbose,
         params=params,
         bool_use_shor=bool_use_shor,
         rlt=True
