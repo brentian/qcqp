@@ -224,8 +224,9 @@ def msc_relaxation(
   qneg, qineg = qp.Qneg
   
   # build a vector of signs
-  qel = np.ones([*xshape])
-  qel[qineg] = -1
+  # qel = np.ones([*xshape])
+  # qel[qineg] = -1
+  qel = qp.Qmul
   
   x = model.variable("x", [*xshape], dom.inRange(qp.lb, qp.ub))
   zcone = model.variable("zc", dom.inPSDCone(2, n))
@@ -244,23 +245,12 @@ def msc_relaxation(
     model.constraint(y, dom.lessThan(bounds.yub[0]))
   else:
     model.constraint(y, dom.lessThan(1e5))
-  #
+  
+  # Q.T x = Z
   model.constraint(
     expr.sub(
       expr.mul((qneg + qpos).T, x),
       z), dom.equalsTo(0))
-  
-  # y^Te \le [(q @ q.T) > 0]
-  qqpos = qpos @ qpos.T
-  qqneg = qneg @ qneg.T
-  yposs = expr.sum(y.pick([[j, 0] for j in qipos]))
-  ynegs = expr.sum(y.pick([[j, 0] for j in qineg]))
-  model.constraint(
-    yposs, dom.lessThan((qqpos * (qqpos > 0)).sum().round(4))
-  )
-  model.constraint(
-    ynegs, dom.lessThan((qqneg * (qqneg > 0)).sum().round(4))
-  )
   
   if rlt:
     rlt_expr = expr.sub(y, expr.mulElm(zlb[0] + zub[0], z))
@@ -280,9 +270,7 @@ def msc_relaxation(
       Y.append(yi)
       Z.append(zi)
       
-      # build a vector of signs
-      el = np.ones([n, 1])
-      el[ineg] = -1
+      el = qp.Amul[i]
       
       # bounds
       model.constraint(zi, dom.inRange(zlb[i + 1], zub[i + 1]))
@@ -384,8 +372,9 @@ def msc_socp_relaxation(
   qneg, qineg = qp.Qneg
   
   # build a vector of signs
-  qel = np.ones([*xshape])
-  qel[qineg] = -1
+  # qel = np.ones([*xshape])
+  # qel[qineg] = -1
+  qel = qp.Qmul
   
   x = model.variable("x", [*xshape], dom.inRange(qp.lb, qp.ub))
   y = model.variable("y", [*xshape], dom.inRange(ylb[0], yub[0]))
@@ -426,8 +415,9 @@ def msc_socp_relaxation(
       Y.append(yi)
       
       # build a vector of signs
-      el = np.ones([n, 1])
-      el[ineg] = -1
+      # el = np.ones([n, 1])
+      # el[ineg] = -1
+      el = qp.Amul[i]
       
       # A.T @ x == z
       model.constraint(
@@ -514,8 +504,9 @@ def socp_relaxation(
   qneg, qineg = qp.Qneg
   
   # build a vector of signs
-  qel = np.ones([*xshape])
-  qel[qineg] = -1
+  # qel = np.ones([*xshape])
+  # qel[qineg] = -1
+  qel = qp.Qmul
   
   x = model.variable("x", [*xshape], dom.inRange(qp.lb, qp.ub))
   z = model.variable("z", [*xshape], dom.inRange(zlb[0], zub[0]))
@@ -567,8 +558,9 @@ def socp_relaxation(
       D.append(di)
       
       # build a vector of signs
-      el = np.ones([n, 1])
-      el[ineg] = -1
+      # el = np.ones([n, 1])
+      # el[ineg] = -1
+      el = qp.Amul[i]
       
       # A.T @ x == z
       model.constraint(

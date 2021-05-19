@@ -27,9 +27,10 @@ class QP(object):
       self.n, self.d = q.shape
       self.m, *_ = a.shape
     self.description = self.__str__()
-    self.Qpos, self.Qneg = None, None
+    self.Qpos, self.Qneg, self.Qmul = None, None, None
     self.Apos = None
     self.Aneg = None
+    self.Amul = None
     self.zlb = None
     self.zub = None
     self.decom_map = None
@@ -57,16 +58,25 @@ class QP(object):
     ub = np.ones(shape=(n, 1))
     return QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
   
-  def decompose(self, validate=False):
+  def decompose(self, validate=False, decompose_method='eig-type1', **kwargs):
     """
     decompose into positive and negative part
     Returns
     -------
     """
+    __unused = kwargs
     self.Apos = {}
     self.Aneg = {}
-    (upos, ipos), (uneg, ineg) = self._decompose_matrix(self.Q)
+    self.Amul = {}
+    if decompose_method == 'eig-type1':
+      func = self._decompose_matrix
+    elif decompose_method == 'eig-type2':
+      func = self._decompose_matrix_eig
+    else:
+      raise ValueError("not such decomposition method")
+    (upos, ipos), (uneg, ineg), mul = func(self.Q)
     self.Qpos, self.Qneg = (upos, ipos), (uneg, ineg)
+    self.Qmul = mul
     decom_arr = []
     decom_map = np.zeros((self.m + 1, 2, self.n))
     decom_map[0, 0, ipos] = 1
@@ -74,9 +84,10 @@ class QP(object):
     decom_arr.append([ipos, ineg])
     
     for i in range(self.m):
-      (ap, ip), (an, inn) = self._decompose_matrix(self.A[i])
+      (ap, ip), (an, inn), mul = func(self.A[i])
       self.Apos[i] = (ap, ip)
       self.Aneg[i] = (an, inn)
+      self.Amul[i] = mul
       decom_map[i + 1, 0, ip] = 1
       decom_map[i + 1, 1, inn] = 1
       decom_arr.append([ip, inn])
@@ -96,8 +107,24 @@ class QP(object):
     #
     ipos, *_ = np.nonzero(ipos)
     ineg, *_ = np.nonzero(ineg)
+    mul = np.ones(shape=(self.n, 1))  # todo: fix this for matrix case
+    mul[ineg] = -1
     
-    return (upos, ipos), (uneg, ineg)
+    return (upos, ipos), (uneg, ineg), mul
+  
+  def _decompose_matrix_eig(self, A):
+    gamma, u = nl.eig(A)
+    ipos = (gamma > 0).astype(int)
+    ineg = (gamma < 0).astype(int)
+    eig = np.diag(gamma)
+    upos = u @ np.diag(ipos)
+    uneg = u @ np.diag(ineg)
+    #
+    ipos, *_ = np.nonzero(ipos)
+    ineg, *_ = np.nonzero(ineg)
+    mul = gamma.reshape((self.n, 1))
+    
+    return (upos, ipos), (uneg, ineg), mul
 
 
 class Eval(object):

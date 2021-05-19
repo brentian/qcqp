@@ -22,8 +22,9 @@
 import numpy as np
 import pandas as pd
 import sys
-from pyqp import grb, bb, bb_msc, \
-  bb_msc2, bb_msc3, bb_msc4, bb_socp
+from pyqp import grb, bg_msk
+from pyqp import bb_msc, \
+  bb_msc2, bb_msc, bb_socp
 
 np.random.seed(1)
 
@@ -38,6 +39,7 @@ if __name__ == '__main__':
   verbose = False
   bool_use_shor = False
   evals = []
+  # global args
   params = bb_msc.BCParams()
   params.backend_name = backend
   params.time_limit = 20
@@ -52,10 +54,19 @@ if __name__ == '__main__':
   methods = {
     "grb": grb.qp_gurobi,
     # "bb_shor": bb.bb_box,
-    "bb_msc": bb_msc3.bb_box,
-    "bb_msc_socp": bb_msc4.bb_box,
+    "bb_msc": bb_msc.bb_box,
+    "bb_msc_eig": bb_msc.bb_box,
+    "bb_msc_socp": bb_msc.bb_box,
     # "bb_socp": bb_socp.bb_box
   }
+  # personal
+  pkwargs = {k: kwargs for k in methods}
+  pkwargs_dtl = {
+    "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2"},
+    "bb_msc_socp": {**kwargs, "func": bg_msk.msc_socp_relaxation}
+  }
+  pkwargs.update(pkwargs_dtl)
+  
   # problem
   problem_id = f"{n}:{m}:{0}"
   # start
@@ -65,7 +76,7 @@ if __name__ == '__main__':
   results = {}
   # run methods
   for k, func in methods.items():
-    r = func(qp, **kwargs)
+    r = func(qp, **pkwargs[k])
     reval = r.eval(problem_id)
     evals.append({**reval.__dict__, "method": k})
     results[k] = r

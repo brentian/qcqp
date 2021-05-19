@@ -4,6 +4,8 @@ This file the branch-and-cut for MSC formulation
 - trying to branch on y = z • z
 - then branch for z ≥ √l ∨ z ≤ −√l
 
+and thus 4 branches.
+
 """
 import json
 from queue import PriorityQueue
