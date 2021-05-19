@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="msc.random_small" type="PythonConfigurationType" factoryName="Python" singleton="false">
+  <configuration default="false" name="random_small" type="PythonConfigurationType" factoryName="Python" singleton="false">
     <module name="qcqp" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -12,7 +12,7 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/test/msc/random_small.py" />
-    <option name="PARAMETERS" value="6 1" />
+    <option name="PARAMETERS" value="6 0" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

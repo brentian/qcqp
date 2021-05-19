@@ -54,16 +54,16 @@ if __name__ == '__main__':
   methods = {
     "grb": grb.qp_gurobi,
     # "bb_shor": bb.bb_box,
-    "bb_msc": bb_msc.bb_box,
+    # "bb_msc": bb_msc.bb_box,
     "bb_msc_eig": bb_msc.bb_box,
-    "bb_msc_socp": bb_msc.bb_box,
+    # "bb_msc_socp": bb_msc.bb_box,
     # "bb_socp": bb_socp.bb_box
   }
   # personal
   pkwargs = {k: kwargs for k in methods}
   pkwargs_dtl = {
     "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2"},
-    "bb_msc_socp": {**kwargs, "func": bg_msk.msc_socp_relaxation}
+    # "bb_msc_socp": {**kwargs, "func": bg_msk.msc_socp_relaxation}
   }
   pkwargs.update(pkwargs_dtl)
   

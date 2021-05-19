@@ -66,12 +66,6 @@
 
 \end{frame}
 
-\begin{frame}{MSC: Alternative}
-  Allow eigenvalue decomposition for \(Q\),
-  \[x^TQx = \sum_j \lambda_j x^Tv_jv_j^Tx = \sum_j \lambda_j (x^Tv_j)^2\]
-
-\end{frame}
-
 \begin{frame}{MSC: Branching}
   Branch:
   As usual we branch on current solution at iteration \(k\), compute maximum ``infeasibility'',
@@ -141,5 +135,29 @@
 
 %   \end{itemize}
 % \end{frame}
+
+\begin{frame}{MSCA: MSC Alternative}
+
+  Allow eigenvalue decomposition for \(Q\),
+  \[x^TQx = \sum_j \lambda_j x^Tv_jv_j^Tx = \sum_j \lambda_j (x^Tv_j)^2\]
+
+  So if we let \(z_i = x^Tv_i, y_i = z_i^2\), Take \(V\) as the matrix of \(v_i\) so we have \(z = V^Tx\),
+
+  \[x^TQx = \lambda^Ty\]
+\end{frame}
+
+\begin{frame}{MSCA: MSC Alternative}
+
+  This formulation improves MSC \textcolor{red}{a lot}.
+  \begin{itemize}
+    \item Since \(V\) is an orthonormal basis, we have,
+          \[\|z\|^2 = \|x\|^2\]
+          this allows,
+          \[\sum_i y_i = z^Tz \le x^Tx\]
+          the inequality is attained if \(V\) is of rank \(n\)
+    \item Since \(\sum_i y_i \ge z^Tz\) by small cones, our goal is to reduce over-estimation of \(y_i\)
+    \item RLT, Secant, branching, cuts, ..., anything from Shor also works here, but much faster.
+  \end{itemize}
+\end{frame}
 
 \end{document}

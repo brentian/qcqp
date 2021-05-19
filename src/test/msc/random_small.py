@@ -53,10 +53,10 @@ if __name__ == '__main__':
     "shor": bg_msk.shor_relaxation,
     "msc": bg_msk.msc_relaxation,
     "msc_eig": bg_msk.msc_relaxation,
-    "msc_socp": bg_msk.msc_socp_relaxation,
+    # "msc_socp": bg_msk.msc_socp_relaxation,
     # "socp": bg_msk.socp_relaxation
   }
-  
+
   # personal
   pkwargs = {k: {**kwargs} for k in methods}
   pkwargs_dtl = {
@@ -68,7 +68,7 @@ if __name__ == '__main__':
   problem_id = f"{n}:{m}:{0}"
   # start
   qp = bb_msc.QP.create_random_instance(int(n), int(m))
-  
+
   evals = []
   results = {}
   # run methods
@@ -80,12 +80,12 @@ if __name__ == '__main__':
     reval = r.eval(problem_id)
     evals.append({**reval.__dict__, "method": k})
     results[k] = r
-  
+
   for k, r in results.items():
     print(f"{k} benchmark @{r.relax_obj}")
     print(f"{k} benchmark x\n"
           f"{r.xval.round(3)}")
     r.check(qp)
-  
+
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)

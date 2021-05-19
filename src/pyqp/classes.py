@@ -34,7 +34,8 @@ class QP(object):
     self.zlb = None
     self.zub = None
     self.decom_map = None
-  
+    self.decom_method = ""
+
   def __str__(self):
     # todo add a description
     return ""
@@ -52,7 +53,7 @@ class QP(object):
     A = np.random.randint(-5, 5, (m, n, n))
     q = np.random.randint(0, 5, (n, 1))
     a = np.random.randint(0, 5, (m, n, 1))
-    b = np.random.randint(- 2 * n, 2 * n, (m))
+    b = np.random.randint(0, 2 * n, (m))
     sign = np.ones(shape=m)
     lb = np.zeros(shape=(n, 1))
     ub = np.ones(shape=(n, 1))
@@ -74,6 +75,7 @@ class QP(object):
       func = self._decompose_matrix_eig
     else:
       raise ValueError("not such decomposition method")
+    self.decom_method = decompose_method
     (upos, ipos), (uneg, ineg), mul = func(self.Q)
     self.Qpos, self.Qneg = (upos, ipos), (uneg, ineg)
     self.Qmul = mul
