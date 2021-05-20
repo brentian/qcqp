@@ -19,39 +19,70 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
-from pyqp import grb, bb_msc, bb, bb_msc2
+from pyqp import grb, bb_msc, bb, bb_msc2, bb_diag
 from ..qkp_soutif import *
 
 if __name__ == '__main__':
-    pd.set_option("display.max_columns", None)
-    try:
-        fp, n, backend = sys.argv[1:]
-    except Exception as e:
-        print("usage:\n"
-              "python tests/qkp_soutif.py filepath n (number of variables)")
-        raise e
-    verbose = False
-    params = bb.BCParams()
-    params.backend_name = backend
-    params.opt_eps = 5e-3
-    # start
-    Q, q, A, a, b, sign, lb, ub = read_qkp_soutif(filepath=fp, n=int(n))
-    qp = QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
-
-    # benchmark by gurobi
-    r_grb_relax = grb.qp_gurobi(qp, relax=True, sense="max", verbose=True,
-                                params=params)
-    print(f"gurobi benchmark @{r_grb_relax.true_obj}")
-    print(f"gurobi benchmark x\n"
-          f"{r_grb_relax.xval}")
-    # b-b
-    # r_bb = bb_msc.bb_box(qp, verbose=verbose, params=params, rlt=False)
-    # print(f"branch-and-cut @{r_bb.true_obj}")
-    # print(f"branch-and-cut x\n"
-    #       f"{r_bb.xval.round(3)}")
-
-    r_bb_rlt = bb_msc2.bb_box(qp, verbose=verbose, params=params, rlt=True, bool_use_shor=False)
-
-    print(f"branch-and-cut @{r_bb_rlt.true_obj}")
-    print(f"branch-and-cut x\n"
-          f"{r_bb_rlt.xval.round(3)}")
+  pd.set_option("display.max_columns", None)
+  try:
+    fp, n, backend = sys.argv[1:]
+  except Exception as e:
+    print("usage:\n"
+          "python tests/qkp_soutif.py filepath n (number of variables)")
+    raise e
+  params = bb.BCParams()
+  # params.opt_eps = 5e-3
+  verbose = False
+  bool_use_shor = False
+  
+  # start
+  Q, q, A, a, b, sign, lb, ub = read_qkp_soutif(filepath=fp, n=int(n))
+  qp = QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
+  
+  # global args
+  params = bb_msc.BCParams()
+  params.backend_name = backend
+  params.time_limit = 30
+  params.opt_eps = 1e-2
+  kwargs = dict(
+    relax=True,
+    sense="max",
+    verbose=verbose,
+    params=params,
+    bool_use_shor=bool_use_shor,
+    rlt=True
+  )
+  methods = {
+    "grb": grb.qp_gurobi,
+    # "bb_shor": bb.bb_box,
+    # "bb_msc": bb_msc.bb_box,
+    "bb_msc_eig": bb_msc.bb_box,
+    "bb_msc_diag": bb_diag.bb_box,
+    # "bb_socp": bb_socp.bb_box
+  }
+  # personal
+  pkwargs = {k: kwargs for k in methods}
+  pkwargs_dtl = {
+    "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2"},
+    "bb_msc_diag": {**kwargs, "decompose_method": "eig-type2"},
+    # "bb_msc_socp": {**kwargs, "func": bg_msk.msc_socp_relaxation}
+  }
+  pkwargs.update(pkwargs_dtl)
+  
+  evals = []
+  results = {}
+  # run methods
+  for k, func in methods.items():
+    r = func(qp, **pkwargs[k])
+    reval = r.eval(n)
+    evals.append({**reval.__dict__, "method": k})
+    results[k] = r
+  
+  for k, r in results.items():
+    print(f"{k} benchmark @{r.true_obj}")
+    print(f"{k} benchmark x\n"
+          f"{r.xval.round(3)}")
+    r.check(qp)
+  
+  df_eval = pd.DataFrame.from_records(evals)
+  print(df_eval)

@@ -53,7 +53,7 @@ if __name__ == '__main__':
     "shor": bg_msk.shor_relaxation,
     "msc": bg_msk.msc_relaxation,
     "msc_eig": bg_msk.msc_relaxation,
-    # "msc_socp": bg_msk.msc_socp_relaxation,
+    "msc_diag": bg_msk.msc_diag_relaxation,
     # "socp": bg_msk.socp_relaxation
   }
 
@@ -61,6 +61,7 @@ if __name__ == '__main__':
   pkwargs = {k: {**kwargs} for k in methods}
   pkwargs_dtl = {
     "msc_eig": {**kwargs, "decompose_method": "eig-type2"},
+    "msc_diag": {**kwargs, "decompose_method": "eig-type2"},
     # "socp": {**kwargs, "decompose_method": "eig-type2"},
   }
   pkwargs.update(pkwargs_dtl)

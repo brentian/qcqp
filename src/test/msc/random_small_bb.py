@@ -23,8 +23,8 @@ import numpy as np
 import pandas as pd
 import sys
 from pyqp import grb, bg_msk
-from pyqp import bb_msc, \
-  bb_msc2, bb_msc, bb_socp
+from pyqp import bb, bb_msc, \
+  bb_msc2, bb_diag, bb_socp
 
 np.random.seed(1)
 
@@ -39,10 +39,15 @@ if __name__ == '__main__':
   verbose = False
   bool_use_shor = False
   evals = []
+  # problem
+  problem_id = f"{n}:{m}:{0}"
+  # start
+  qp = bb_msc.QP.create_random_instance(int(n), int(m))
+  
   # global args
   params = bb_msc.BCParams()
   params.backend_name = backend
-  params.time_limit = 20
+  params.time_limit = 30
   kwargs = dict(
     relax=True,
     sense="max",
@@ -56,21 +61,17 @@ if __name__ == '__main__':
     # "bb_shor": bb.bb_box,
     # "bb_msc": bb_msc.bb_box,
     "bb_msc_eig": bb_msc.bb_box,
-    # "bb_msc_socp": bb_msc.bb_box,
+    "bb_msc_diag": bb_diag.bb_box,
     # "bb_socp": bb_socp.bb_box
   }
   # personal
   pkwargs = {k: kwargs for k in methods}
   pkwargs_dtl = {
     "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2"},
+    "bb_msc_diag": {**kwargs, "decompose_method": "eig-type2"},
     # "bb_msc_socp": {**kwargs, "func": bg_msk.msc_socp_relaxation}
   }
   pkwargs.update(pkwargs_dtl)
-  
-  # problem
-  problem_id = f"{n}:{m}:{0}"
-  # start
-  qp = bb_msc.QP.create_random_instance(int(n), int(m))
   
   evals = []
   results = {}
