@@ -25,27 +25,32 @@ from ..qkp_soutif import *
 if __name__ == '__main__':
   pd.set_option("display.max_columns", None)
   try:
-    fp, n, backend = sys.argv[1:]
+    fp, n, relax = sys.argv[1:]
   except Exception as e:
     print("usage:\n"
           "python tests/qkp_soutif.py filepath n (number of variables)")
     raise e
+  
   params = bb.BCParams()
   # params.opt_eps = 5e-3
   verbose = False
   bool_use_shor = False
-  
+  relax = int(relax)
+
+  # problem
+  problem_id = f"qkp:{n}:{0}"
   # start
   Q, q, A, a, b, sign, lb, ub = read_qkp_soutif(filepath=fp, n=int(n))
   qp = QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
   
   # global args
   params = bb_msc.BCParams()
-  params.backend_name = backend
+  params.backend_name = 'msk'
+  params.relax = relax
   params.time_limit = 30
   params.opt_eps = 1e-2
   kwargs = dict(
-    relax=True,
+    relax=relax,
     sense="max",
     verbose=verbose,
     params=params,
@@ -56,15 +61,16 @@ if __name__ == '__main__':
     "grb": grb.qp_gurobi,
     # "bb_shor": bb.bb_box,
     # "bb_msc": bb_msc.bb_box,
-    "bb_msc_eig": bb_msc.bb_box,
+    # "bb_msc_eig": bb_msc.bb_box,
     "bb_msc_diag": bb_diag.bb_box,
+    "bb_msc_eig": bb_diag.bb_box,
     # "bb_socp": bb_socp.bb_box
   }
   # personal
   pkwargs = {k: kwargs for k in methods}
   pkwargs_dtl = {
-    "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2"},
-    "bb_msc_diag": {**kwargs, "decompose_method": "eig-type2"},
+    "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2", "branch_name": "vio"},
+    "bb_msc_diag": {**kwargs, "decompose_method": "eig-type2", "branch_name": "bound"},
     # "bb_msc_socp": {**kwargs, "func": bg_msk.msc_socp_relaxation}
   }
   pkwargs.update(pkwargs_dtl)
@@ -73,8 +79,11 @@ if __name__ == '__main__':
   results = {}
   # run methods
   for k, func in methods.items():
-    r = func(qp, **pkwargs[k])
-    reval = r.eval(n)
+    print(k, pkwargs[k])
+    qp1 = bb_msc.QP(*qp.unpack())
+    qp1.decompose(**pkwargs[k])
+    r = func(qp1, **pkwargs[k])
+    reval = r.eval(problem_id)
     evals.append({**reval.__dict__, "method": k})
     results[k] = r
   

@@ -35,7 +35,7 @@ class QP(object):
     self.zub = None
     self.decom_map = None
     self.decom_method = ""
-
+  
   def __str__(self):
     # todo add a description
     return ""
@@ -199,17 +199,6 @@ class Branch(object):
     self.xminor_val = x[x_minor, 0].round(6)
     self.ypivot = x_index, x_minor
     self.ypivot_val = y[x_index, x_minor].round(6)
-  
-  def simple_vio_branch(self, x, y, res):
-    res_sum = res.sum(0)
-    x_index = res_sum.argmax()
-    self.xpivot = x_index
-    self.xpivot_val = x[self.xpivot, 0].round(6)
-    x_minor = res[x_index].argmax()
-    self.xminor = x_minor
-    self.xminor_val = x[x_minor, 0].round(6)
-    self.ypivot = x_index, x_minor
-    self.ypivot_val = y[x_index, x_minor].round(6)
 
 
 class Bounds(object):
@@ -264,8 +253,10 @@ class CuttingPlane(object):
 
 
 class MscBounds(Bounds):
-  def __init__(self, zlb=None, zub=None, ylb=None, yub=None, dlb=None, dub=None):
+  def __init__(self, xlb=None, xub=None, zlb=None, zub=None, ylb=None, yub=None, dlb=None, dub=None):
     # sparse implementation
+    self.xlb = xlb.copy()
+    self.xub = xub.copy()
     self.zlb = zlb.copy()
     self.zub = zub.copy()
     if ylb is not None:
@@ -286,12 +277,17 @@ class MscBounds(Bounds):
       self.dub = None
   
   def unpack(self):
-    return self.zlb.copy(), self.zub.copy(), \
+    return self.xlb.copy(), self.xub.copy(), \
+           self.zlb.copy(), self.zub.copy(), \
            self.ylb.copy(), self.yub.copy(), \
            self.dlb.copy(), self.dub.copy()
   
   @classmethod
-  def construct(cls, qp, imply_y=True):
+  def construct(cls, qp:QP, imply_y=True):
+    # for x
+    xlb = np.zeros((qp.n, qp.d))
+    xub = np.ones((qp.n, qp.d))
+    # for z and y's
     zlb = []
     zub = []
     qpos, qipos = qp.Qpos
@@ -313,7 +309,7 @@ class MscBounds(Bounds):
       zlb.append(
         ((apos.T * (apos.T < 0)).sum(axis=1)
          + (aneg.T * (aneg.T < 0)).sum(axis=1)).reshape(qp.q.shape))
-    newbl = cls(np.array(zlb).round(4), np.array(zub).round(4))
+    newbl = cls(xlb, xub, np.array(zlb).round(4), np.array(zub).round(4))
     if imply_y:
       newbl.imply_y(qp)
     return newbl

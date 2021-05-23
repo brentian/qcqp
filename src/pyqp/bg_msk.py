@@ -225,7 +225,7 @@ def msc_relaxation(
 
   qel = qp.Qmul
 
-  x = model.variable("x", [*xshape], dom.inRange(qp.lb, qp.ub))
+  x = model.variable("x", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
   zcone = model.variable("zc", dom.inPSDCone(2, n))
   y = zcone.slice([0, 0, 0], [n, 1, 1]).reshape([n, 1])
   z = zcone.slice([0, 0, 1], [n, 1, 2]).reshape([n, 1])
@@ -264,8 +264,8 @@ def msc_relaxation(
       model.constraint(rlt_expr, dom.lessThan(- zlb[0] * zub[0]))
     elif qp.decom_method == 'eig-type2':
       # this means you can place on x directly.
-      rlt_expr = expr.sub(expr.sum(y), expr.dot(qp.lb + qp.ub, x))
-      model.constraint(rlt_expr, dom.lessThan(- (qp.lb * qp.ub).sum()))
+      rlt_expr = expr.sub(expr.sum(y), expr.dot(bounds.xlb + bounds.xub, x))
+      model.constraint(rlt_expr, dom.lessThan(- (bounds.xlb * bounds.xub).sum()))
     else:
       raise ValueError("Decompose first!")
 
@@ -306,8 +306,8 @@ def msc_relaxation(
           model.constraint(rlt_expr, dom.lessThan(- zlb[i + 1] * zub[i + 1]))
         elif qp.decom_method == 'eig-type2':
           # this means you can place on x directly.
-          rlt_expr = expr.sub(expr.sum(yi), expr.dot(qp.lb + qp.ub, x))
-          model.constraint(rlt_expr, dom.lessThan(- (qp.lb * qp.ub).sum()))
+          rlt_expr = expr.sub(expr.sum(yi), expr.dot(bounds.xlb + bounds.xub, x))
+          model.constraint(rlt_expr, dom.lessThan(- (bounds.xlb * bounds.xub).sum()))
         else:
           raise ValueError("Decompose first!")
 
@@ -391,7 +391,7 @@ def msc_diag_relaxation(
   
   qel = qp.Qmul
   
-  x = model.variable("x", [*xshape], dom.inRange(qp.lb, qp.ub))
+  x = model.variable("x", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
   zcone = model.variable("zc", dom.inPSDCone(2, n))
   y = zcone.slice([0, 0, 0], [n, 1, 1]).reshape([n, 1])
   z = zcone.slice([0, 0, 1], [n, 1, 2]).reshape([n, 1])
@@ -406,12 +406,11 @@ def msc_diag_relaxation(
       expr.mul((qneg + qpos), z),
       x), dom.equalsTo(0))
 
-  
   # RLT cuts
   if rlt:
     # this means you can place on x directly.
-    rlt_expr = expr.sub(expr.sum(y), expr.dot(qp.lb + qp.ub, x))
-    model.constraint(rlt_expr, dom.lessThan(- (qp.lb * qp.ub).sum()))
+    rlt_expr = expr.sub(expr.sum(y), expr.dot(bounds.xlb + bounds.xub, x))
+    model.constraint(rlt_expr, dom.lessThan(- (bounds.xlb * bounds.xub).sum()))
   
   for i in range(m):
     apos, ipos = qp.Apos[i]
@@ -441,8 +440,8 @@ def msc_diag_relaxation(
       
       if rlt:
         # this means you can place on x directly.
-        rlt_expr = expr.sub(expr.sum(yi), expr.dot(qp.lb + qp.ub, x))
-        model.constraint(rlt_expr, dom.lessThan(- (qp.lb * qp.ub).sum()))
+        rlt_expr = expr.sub(expr.sum(yi), expr.dot(bounds.xlb + bounds.xub, x))
+        model.constraint(rlt_expr, dom.lessThan(- (bounds.xlb * bounds.xub).sum()))
       
       quad_terms = expr.dot(el, yi)
       
@@ -531,7 +530,7 @@ def msc_socp_relaxation(
   # qel[qineg] = -1
   qel = qp.Qmul
 
-  x = model.variable("x", [*xshape], dom.inRange(qp.lb, qp.ub))
+  x = model.variable("x", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
   y = model.variable("y", [*xshape], dom.inRange(ylb[0], yub[0]))
   z = model.variable("z", [*xshape], dom.inRange(zlb[0], zub[0]))
 
@@ -663,7 +662,7 @@ def socp_relaxation(
   # qel[qineg] = -1
   qel = qp.Qmul
 
-  x = model.variable("x", [*xshape], dom.inRange(qp.lb, qp.ub))
+  x = model.variable("x", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
   z = model.variable("z", [*xshape], dom.inRange(zlb[0], zub[0]))
   d = model.variable("d", 2, dom.inRange(bounds.dlb[0], bounds.dub[0]))
 

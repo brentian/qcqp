@@ -136,7 +136,7 @@
 %   \end{itemize}
 % \end{frame}
 
-\begin{frame}{MSCA: MSC Alternative}
+\begin{frame}{EMSC: Eigenvalue-based MSC}
 
   Allow eigenvalue decomposition for \(Q\),
   \[x^TQx = \sum_j \lambda_j x^Tv_jv_j^Tx = \sum_j \lambda_j (x^Tv_j)^2\]
@@ -146,33 +146,20 @@
   \[x^TQx = \lambda^Ty\]
 \end{frame}
 
-\begin{frame}{MSCA: MSC Alternative}
+\begin{frame}{EMSC: Eigenvalue-based MSC}
 
   This formulation improves MSC \textcolor{red}{a lot}.
   \begin{itemize}
+
+    \item Produce a full-rank \(V\) then \(0 \le Vz \le e \)
     \item Since \(V\) is an orthonormal basis, we have,
           \[\|z\|^2 = \|x\|^2\]
           this allows,
           \[\sum_i y_i = z^Tz \le x^Tx\]
-          the inequality is attained if \(V\) is of rank \(n\)
+          the inequality is attained.
     \item Since \(\sum_i y_i \ge z^Tz\) by small cones, our goal is to reduce over-estimation of \(y_i\)
     \item RLT, Secant, branching, cuts, ..., anything from Shor also works here, but much faster.
   \end{itemize}
 \end{frame}
-
-
-\begin{frame}{MSCA: MSC Alternative2}
-
-  Assume \(V\) is of rank \(n\),
-
-  \[\begin{aligned}
-       & \exists p, x = Vp                                                       \\
-       & x^TQx = p^TV^TV\Gamma V^T Vp = p^T \Gamma p = \mathrm{diag}(\Gamma)^T y \\
-       & 0 \le Vp \le e                                                          \\
-       & \begin{bmatrix}y_i & p_i \\ p_i & 1 \end{bmatrix} \succeq 0
-    \end{aligned}\]
-  Also, \(p^Tp = x^Tx = y^Te\)
-\end{frame}
-
 
 \end{document}

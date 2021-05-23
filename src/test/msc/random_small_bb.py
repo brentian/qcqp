@@ -31,13 +31,14 @@ np.random.seed(1)
 if __name__ == '__main__':
   pd.set_option("display.max_columns", None)
   try:
-    n, m, backend, *_ = sys.argv[1:]
+    n, m, relax, *_ = sys.argv[1:]
   except Exception as e:
     print("usage:\n"
           "python tests/random_bb.py n (number of variables) m (num of constraints)")
     raise e
   verbose = False
   bool_use_shor = False
+  relax = int(relax)
   evals = []
   # problem
   problem_id = f"{n}:{m}:{0}"
@@ -46,10 +47,11 @@ if __name__ == '__main__':
   
   # global args
   params = bb_msc.BCParams()
-  params.backend_name = backend
+  params.backend_name = 'msk'
+  params.relax = relax
   params.time_limit = 30
   kwargs = dict(
-    relax=True,
+    relax=relax,
     sense="max",
     verbose=verbose,
     params=params,
@@ -60,15 +62,15 @@ if __name__ == '__main__':
     "grb": grb.qp_gurobi,
     # "bb_shor": bb.bb_box,
     # "bb_msc": bb_msc.bb_box,
-    "bb_msc_eig": bb_msc.bb_box,
+    "bb_msc_eig": bb_diag.bb_box,
     "bb_msc_diag": bb_diag.bb_box,
     # "bb_socp": bb_socp.bb_box
   }
   # personal
   pkwargs = {k: kwargs for k in methods}
   pkwargs_dtl = {
-    "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2"},
-    "bb_msc_diag": {**kwargs, "decompose_method": "eig-type2"},
+    "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2", "branch_name": "vio"},
+    "bb_msc_diag": {**kwargs, "decompose_method": "eig-type2", "branch_name": "bound"},
     # "bb_msc_socp": {**kwargs, "func": bg_msk.msc_socp_relaxation}
   }
   pkwargs.update(pkwargs_dtl)
@@ -77,7 +79,10 @@ if __name__ == '__main__':
   results = {}
   # run methods
   for k, func in methods.items():
-    r = func(qp, **pkwargs[k])
+    print(k, pkwargs[k])
+    qp1 = bb_msc.QP(*qp.unpack())
+    qp1.decompose(**pkwargs[k])
+    r = func(qp1, **pkwargs[k])
     reval = r.eval(problem_id)
     evals.append({**reval.__dict__, "method": k})
     results[k] = r

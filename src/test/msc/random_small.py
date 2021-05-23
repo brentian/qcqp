@@ -50,7 +50,7 @@ if __name__ == '__main__':
   )
   methods = {
     "grb": grb.qp_gurobi,
-    "shor": bg_msk.shor_relaxation,
+    # "shor": bg_msk.shor_relaxation,
     "msc": bg_msk.msc_relaxation,
     "msc_eig": bg_msk.msc_relaxation,
     "msc_diag": bg_msk.msc_diag_relaxation,

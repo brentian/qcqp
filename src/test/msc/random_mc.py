@@ -22,29 +22,40 @@
 import pandas as pd
 import numpy as np
 import sys
-from pyqp import grb
-from pyqp import bb_msc, bb_msc2, bb, bb_msc3, bb_msc4
-from pyqp import bb_socp
-from .. import max_cut
+from pyqp import grb, bg_msk
+from pyqp import bb, bb_msc, \
+  bb_msc2, bb_diag, bb_socp
+from test import max_cut
 
 np.random.seed(1)
 
 if __name__ == '__main__':
   pd.set_option("display.max_columns", None)
   try:
-    n, backend, *_ = sys.argv[1:]
+    n, relax, *_ = sys.argv[1:]
   except Exception as e:
     print("usage:\n"
           "python tests/-.py n (number of variables) backend")
     raise e
+  
   verbose = False
   bool_use_shor = False
+  relax = int(relax)
   evals = []
+  
+  # problem
+  problem_id = f"max-cut:{n}:{0}"
+  
+  # start
+  qp = max_cut.create_random_mc(int(n))
+  
+  # global args
   params = bb_msc.BCParams()
-  params.backend_name = backend
-  params.time_limit = 300
+  params.backend_name = 'msk'
+  params.relax = relax
+  params.time_limit = 30
   kwargs = dict(
-    relax=True,
+    relax=relax,
     sense="max",
     verbose=verbose,
     params=params,
@@ -54,21 +65,28 @@ if __name__ == '__main__':
   methods = {
     "grb": grb.qp_gurobi,
     # "bb_shor": bb.bb_box,
-    "bb_msc": bb_msc3.bb_box,
-    "bb_msc2": bb_msc4.bb_box,
+    # "bb_msc": bb_msc.bb_box,
+    # "bb_msc_eig": bb_msc.bb_box,
+    "bb_msc_diag": bb_diag.bb_box,
     # "bb_socp": bb_socp.bb_box
   }
-  
-  # problem
-  problem_id = f"max-cut:{n}:{0}"
-  # start
-  qp = max_cut.create_random_mc(int(n))
+  # personal
+  pkwargs = {k: kwargs for k in methods}
+  pkwargs_dtl = {
+    # "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2"},
+    "bb_msc_diag": {**kwargs, "decompose_method": "eig-type2", "branch_name": "bound"},
+    # "bb_msc_socp": {**kwargs, "func": bg_msk.msc_socp_relaxation}
+  }
+  pkwargs.update(pkwargs_dtl)
   
   evals = []
   results = {}
   # run methods
   for k, func in methods.items():
-    r = func(qp, **kwargs)
+    print(k, pkwargs[k])
+    qp1 = bb_msc.QP(*qp.unpack())
+    qp1.decompose(**pkwargs[k])
+    r = func(qp1, **pkwargs[k])
     reval = r.eval(problem_id)
     evals.append({**reval.__dict__, "method": k})
     results[k] = r

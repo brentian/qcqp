@@ -5,7 +5,7 @@ from pyqp.classes import QP
 
 def create_random_mc(n: int):
   e = np.ones((n, 1))
-  w = np.random.randint(-5, 5, (n, n))
+  w = np.random.randint(0, 5, (n, n))
   q = 1 / 2 * (w + w.T) @ e
 
   A = np.zeros((0, n, n))
