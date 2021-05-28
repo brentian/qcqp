@@ -63,13 +63,12 @@ if __name__ == '__main__':
     # "bb_msc": bb_msc.bb_box,
     # "bb_msc_eig": bb_msc.bb_box,
     "bb_msc_diag": bb_diag.bb_box,
-    "bb_msc_eig": bb_diag.bb_box,
     # "bb_socp": bb_socp.bb_box
   }
   # personal
   pkwargs = {k: kwargs for k in methods}
   pkwargs_dtl = {
-    "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2", "branch_name": "vio"},
+    # "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2", "branch_name": "vio"},
     "bb_msc_diag": {**kwargs, "decompose_method": "eig-type2", "branch_name": "bound"},
     # "bb_msc_socp": {**kwargs, "func": bg_msk.msc_socp_relaxation}
   }
@@ -95,3 +94,5 @@ if __name__ == '__main__':
   
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)
+
+  print(df_eval.to_latex())

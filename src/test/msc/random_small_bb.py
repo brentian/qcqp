@@ -31,7 +31,7 @@ np.random.seed(1)
 if __name__ == '__main__':
   pd.set_option("display.max_columns", None)
   try:
-    n, m, relax, *_ = sys.argv[1:]
+    n, m, pc, relax, *_ = sys.argv[1:]
   except Exception as e:
     print("usage:\n"
           "python tests/random_bb.py n (number of variables) m (num of constraints)")
@@ -42,8 +42,9 @@ if __name__ == '__main__':
   evals = []
   # problem
   problem_id = f"{n}:{m}:{0}"
+  
   # start
-  qp = bb_msc.QP.create_random_instance(int(n), int(m))
+  qp = bb_msc.QP.create_random_instance(int(n), int(m), special=pc.split(","))
   
   # global args
   params = bb_msc.BCParams()
@@ -62,14 +63,14 @@ if __name__ == '__main__':
     "grb": grb.qp_gurobi,
     # "bb_shor": bb.bb_box,
     # "bb_msc": bb_msc.bb_box,
-    "bb_msc_eig": bb_diag.bb_box,
+    # "bb_msc_eig": bb_diag.bb_box,
     "bb_msc_diag": bb_diag.bb_box,
     # "bb_socp": bb_socp.bb_box
   }
   # personal
   pkwargs = {k: kwargs for k in methods}
   pkwargs_dtl = {
-    "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2", "branch_name": "vio"},
+    # "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2", "branch_name": "vio"},
     "bb_msc_diag": {**kwargs, "decompose_method": "eig-type2", "branch_name": "bound"},
     # "bb_msc_socp": {**kwargs, "func": bg_msk.msc_socp_relaxation}
   }
@@ -94,4 +95,7 @@ if __name__ == '__main__':
     r.check(qp)
   
   df_eval = pd.DataFrame.from_records(evals)
+  
   print(df_eval)
+  
+  print(df_eval.to_latex())

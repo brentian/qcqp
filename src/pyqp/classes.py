@@ -48,16 +48,26 @@ class QP(object):
            self.lb, self.ub, self.ylb, self.yub, self.diagx
   
   @staticmethod
-  def create_random_instance(n, m):
-    Q = np.random.randint(-5, 5, (n, n))
+  def create_random_instance(n, m, special=None):
+    Q = np.random.randint(-4, 4, (n, n))
+    # Q = - Q.T @ Q
     A = np.random.randint(-5, 5, (m, n, n))
+    # A = np.zeros(A.shape)
     q = np.random.randint(0, 5, (n, 1))
     a = np.random.randint(0, 5, (m, n, 1))
-    b = np.random.randint(0, 2 * n, (m))
+    b = np.ones(m) * 3 * n
     sign = np.ones(shape=m)
     lb = np.zeros(shape=(n, 1))
     ub = np.ones(shape=(n, 1))
-    return QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
+    if special is None:
+      return QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
+    else:
+      if 'cvx' in special:
+        Q = - Q.T @ Q
+        A = - A.transpose(0, 2, 1) @ A
+      if 'lc' in special:
+        A = A = np.zeros(A.shape)
+      return QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
   
   def decompose(self, validate=False, decompose_method='eig-type1', **kwargs):
     """
@@ -283,7 +293,7 @@ class MscBounds(Bounds):
            self.dlb.copy(), self.dub.copy()
   
   @classmethod
-  def construct(cls, qp:QP, imply_y=True):
+  def construct(cls, qp: QP, imply_y=True):
     # for x
     xlb = np.zeros((qp.n, qp.d))
     xub = np.ones((qp.n, qp.d))

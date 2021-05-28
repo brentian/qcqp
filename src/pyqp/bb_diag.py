@@ -319,18 +319,21 @@ def bb_box(
         r.solve(verbose=verbose)
         r.solve_time = time.time() - start_time
       
-      if k % logging_interval == 0:
-        if r.relax_obj < lb:
-          # prune this tree
+      if r.relax_obj < lb:
+        # prune this tree
+        if k % logging_interval == 0:
           print(f"prune #{item.node_id} @{r.relax_obj :.4f} by bound")
-          continue
+        continue
       
       x = r.xval
       z = r.zval
       y = r.yval
       zc = r.Zval
       yc = r.Yval
-      resc = np.abs(yc - zc ** 2)
+      try:
+        resc = np.abs(yc - zc ** 2)
+      except:
+        print(1)
       resc_feas = resc.max()
       resc_feasC = resc[:, 1:].max() if resc.shape[1] > 1 else 0
       

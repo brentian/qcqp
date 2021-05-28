@@ -361,7 +361,8 @@ def msc_diag_relaxation(
     qp: QP, bounds: MscBounds = None,
     sense="max", verbose=True, solve=True,
     with_shor: Result = None,  # if not None then use Shor relaxation as upper bound
-    rlt=False,  # True add all rlt/secant cut: yi - (li + ui) zi + li * ui <= 0
+    rlt=True,  # True add all rlt/secant cut: yi - (li + ui) zi + li * ui <= 0
+    lk=False,  # True then add lk constraint
     *args,
     **kwargs
 ):
@@ -442,6 +443,10 @@ def msc_diag_relaxation(
         # this means you can place on x directly.
         rlt_expr = expr.sub(expr.sum(yi), expr.dot(bounds.xlb + bounds.xub, x))
         model.constraint(rlt_expr, dom.lessThan(- (bounds.xlb * bounds.xub).sum()))
+      
+      if lk:
+        lk_expr = expr.sub(expr.sum(yi), expr.sum(y))
+        model.constraint(lk_expr, dom.equalsTo(0))
       
       quad_terms = expr.dot(el, yi)
       

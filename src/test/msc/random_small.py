@@ -30,7 +30,7 @@ np.random.seed(1)
 if __name__ == '__main__':
   pd.set_option("display.max_columns", None)
   try:
-    n, m, *_ = sys.argv[1:]
+    n, m, pc, *_ = sys.argv[1:]
   except Exception as e:
     print("usage:\n"
           "python tests/random_bb.py n (number of variables) m (num of constraints)")
@@ -50,26 +50,26 @@ if __name__ == '__main__':
   )
   methods = {
     "grb": grb.qp_gurobi,
-    # "shor": bg_msk.shor_relaxation,
+    "shor": bg_msk.shor_relaxation,
     "msc": bg_msk.msc_relaxation,
     "msc_eig": bg_msk.msc_relaxation,
     "msc_diag": bg_msk.msc_diag_relaxation,
     # "socp": bg_msk.socp_relaxation
   }
-
+  
   # personal
   pkwargs = {k: {**kwargs} for k in methods}
   pkwargs_dtl = {
     "msc_eig": {**kwargs, "decompose_method": "eig-type2"},
-    "msc_diag": {**kwargs, "decompose_method": "eig-type2"},
+    "msc_diag": {**kwargs, "decompose_method": "eig-type2", "lk": False},
     # "socp": {**kwargs, "decompose_method": "eig-type2"},
   }
   pkwargs.update(pkwargs_dtl)
   # problem
   problem_id = f"{n}:{m}:{0}"
   # start
-  qp = bb_msc.QP.create_random_instance(int(n), int(m))
-
+  qp = bb_msc.QP.create_random_instance(int(n), int(m), special=pc.split(","))
+  
   evals = []
   results = {}
   # run methods
@@ -81,12 +81,12 @@ if __name__ == '__main__':
     reval = r.eval(problem_id)
     evals.append({**reval.__dict__, "method": k})
     results[k] = r
-
+  
   for k, r in results.items():
     print(f"{k} benchmark @{r.relax_obj}")
     print(f"{k} benchmark x\n"
           f"{r.xval.round(3)}")
     r.check(qp)
-
+  
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)

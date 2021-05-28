@@ -1,0 +1,47 @@
+\include{headers/header.slides}
+\usepackage{subfig}
+\usepackage[style=verbose]{biblatex}
+\usepackage{bm}
+\title{Global QCQP Solver}
+\author{Chuwen}
+\date{\today}
+\addbibresource{headers/qcqp.bib}
+
+
+\begin{document}
+\fontsize{8pt}{11.2}\selectfont
+\frame{\titlepage}
+
+
+
+\begin{frame}
+  \frametitle{QCQP}
+  Recall QCQP:
+
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & x^TQx + q^T x                   \\
+      \mathrm{s.t.}  \quad   & x^{T} A_i x  + a_i^Tx   \le b_i \\
+                             & 0\le x\le e
+    \end{aligned}
+  \end{equation}
+
+  We apply ``Many-Small-Cone'' (MSC) relaxation.
+\end{frame}
+
+
+\begin{frame}{EMSC}
+  Recall the decomposition by eigenvalue decomposition,
+  \[Q = V_0\Lambda_0 V_0 ^T, A_i = V_i\Lambda_i V_i^T \]
+
+  \begin{align}
+    \nonumber \mathrm{Maximize}\quad & y_0 ^T\lambda_0 + q^Tx                         \\
+    \mathrm{s.t.} \quad              & V_i z_i = x                        & i=0,...,m \\
+                                     & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m \\
+    \label{quad}                     & y_i = z_i \circ z_i                & i=0,...,m
+  \end{align}
+
+  Relax \eqref{quad} to conic constraint, \(\forall j, \; y_{ij} \ge z^2_{ij}\)
+\end{frame}
+
+\end{document}
