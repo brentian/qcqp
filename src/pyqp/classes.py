@@ -63,10 +63,12 @@ class QP(object):
       return QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
     else:
       if 'cvx' in special:
+        print("convex")
         Q = - Q.T @ Q
         A = - A.transpose(0, 2, 1) @ A
       if 'lc' in special:
-        A = A = np.zeros(A.shape)
+        print("linear_constrained")
+        A = np.zeros(A.shape)
       return QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
   
   def decompose(self, validate=False, decompose_method='eig-type1', **kwargs):
