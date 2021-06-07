@@ -1,0 +1,64 @@
+\include{headers/header.slides}
+\usepackage{subfig}
+\usepackage[style=verbose]{biblatex}
+\usepackage{bm}
+\title{Global QCQP Solver}
+\author{Chuwen}
+\date{\today}
+\addbibresource{headers/qcqp.bib}
+
+
+\begin{document}
+\fontsize{8pt}{11.2}\selectfont
+\frame{\titlepage}
+
+
+
+\begin{frame}
+  \frametitle{SNL}
+  Recall SNL:
+
+  \begin{align*}
+    \left\|x_{i}-x_{j}\right\|^{2}=d_{i j}^{2}       & \text { for }(i, j) \in E_{1} \\
+    \left\|x_{i}-a_{j}\right\|^{2}=\bar{d}_{i j}^{2} & \text { for }(i, j) \in E_{2}
+  \end{align*}
+
+  We apply ``Many-Small-Cone'' (MSC) relaxation.
+\end{frame}
+
+
+\begin{frame}{SNL}
+  \begin{equation}
+    \left\|x_{i}-x_{j}\right\|^{2} =\left(e_{i}-e_{j}\right)^{T} X^{T} X\left(e_{i}-e_{j}\right)=\left(e_{i}-e_{j}\right)\left(e_{i}-e_{j}\right)^{T} \bullet\left(X^{T} X\right)
+  \end{equation}
+  is equivalent to,
+  \begin{equation}
+    \begin{aligned}
+       & X(e_i - e_j) = z_{ij}                     \\
+       & z_{ij} \circ z_{ij} = y_{ij}              \\
+       & \|x_{i}-x_{j}\|^2 = y_{ij}^T e \le d_{ij}
+    \end{aligned}
+  \end{equation}
+
+  also for
+
+  \begin{equation}
+    \begin{aligned}
+       & Xe_i - A e_j = \bar z_{ij}                          \\
+       & z_{ij} \circ z_{ij} = \bar y_{ij}                   \\
+       & \|x_{i}-a_{j}\|^2 = \bar y_{ij}^T e \le \bar d_{ij}
+    \end{aligned}
+  \end{equation}
+\end{frame}
+
+\begin{frame}
+  \begin{equation}
+    \begin{aligned}
+      \|x_i - x_k + x_k - x_j\|^2 = \|x_i - x_k\|^2 + \|x_k - x_j\|^2 + 2(x_i - x_k)^T (x_k - x_j)
+    \end{aligned}
+  \end{equation}
+\end{frame}
+
+
+
+\end{document}

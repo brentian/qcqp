@@ -1,0 +1,64 @@
+\include{headers/header.slides}
+\usepackage{subfig}
+\usepackage[style=verbose]{biblatex}
+\usepackage{bm}
+\title{Global QCQP Solver}
+\author{Chuwen}
+\date{\today}
+\addbibresource{headers/qcqp.bib}
+
+
+\begin{document}
+\fontsize{8pt}{11.2}\selectfont
+\frame{\titlepage}
+
+
+
+\begin{frame}{QAP}
+  QAP:
+
+  \begin{align*}
+    \mathrm{Minimize:}\quad & \mathsf{tr}(A^T \bm X B \bm X^T)  = x^T(B^T\otimes A^T) x \\
+    \mathrm{s.t.} \quad     & \bm X  \in \Pi_{n}, x = \mathsf{vec}(\bm X)               \\
+                            & \Pi_{n}=\{\bm X \in \mathbb{R}^{n \times n} \mid
+    \bm X \mathbf{e}= \bm X^T \mathbf{e}=\mathbf{e}, \bm X_{i j} \in\{0,1\}\}
+  \end{align*}
+
+  We apply ``Many-Small-Cone'' (MSC) relaxation.
+\end{frame}
+
+\begin{frame}{On vectorized \(x\)}
+  Decomposition:
+
+  \begin{equation}
+    B^T\otimes A^T = V\mathsf{diag}(\lambda)V^T
+  \end{equation}
+
+  \begin{align*}
+    \mathrm{Minimize:}\quad & \lambda^Ty                                       \\
+    \mathrm{s.t.} \quad     & Vz = x, y = z\circ z                             \\
+                            & \bm X  \in \Pi_{n}, x = \mathsf{vec}(\bm X)      \\
+                            & \Pi_{n}=\{\bm X \in \mathbb{R}^{n \times n} \mid
+    \bm X \mathbf{e}= \bm X^T \mathbf{e}=\mathbf{e}, \bm X_{i j} \in\{0,1\}\}
+  \end{align*}
+
+\end{frame}
+
+
+
+\begin{frame}{On Matrix \(\bm X\)}
+  Decomposition:
+
+  \begin{align*}
+    \mathrm{Minimize:}\quad & \lambda^Ty                                       \\
+    \mathrm{s.t.} \quad     & Vz = x, y = z\circ z                             \\
+                            & \bm X  \in \Pi_{n}, x = \mathsf{vec}(\bm X)      \\
+                            & \Pi_{n}=\{\bm X \in \mathbb{R}^{n \times n} \mid
+    \bm X \mathbf{e}= \bm X^T \mathbf{e}=\mathbf{e}, \bm X_{i j} \in\{0,1\}\}
+  \end{align*}
+
+\end{frame}
+
+
+
+\end{document}
