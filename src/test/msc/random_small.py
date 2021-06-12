@@ -22,7 +22,7 @@
 import numpy as np
 import pandas as pd
 import sys
-from pyqp import grb, bb, bg_msk
+from pyqp import grb, bb, bg_msk, bg_msk_ex
 from pyqp import bb_msc, bb_msc2
 
 np.random.seed(1)
@@ -51,17 +51,17 @@ if __name__ == '__main__':
   methods = {
     "grb": grb.qp_gurobi,
     "shor": bg_msk.shor_relaxation,
-    # "msc": bg_msk.msc_relaxation,
+    "msc": bg_msk.msc_relaxation,
     "emsc": bg_msk.msc_diag_relaxation,
-    "emsc_lk": bg_msk.msc_diag_relaxation
+    # "emscsdp": bg_msk_ex.msc_diag_sdp_relaxation
     # "socp": bg_msk.socp_relaxation
   }
   
   # personal
   pkwargs = {k: {**kwargs} for k in methods}
   pkwargs_dtl = {
-    "emsc": {**kwargs, "decompose_method": "eig-type2", "lk": False},
-    "emsc_lk": {**kwargs, "decompose_method": "eig-type2", "lk": True},
+    "emsc": {**kwargs, "decompose_method": "eig-type2", },
+    # "emscsdp": {**kwargs, "decompose_method": "eig-type2", },
     # "msc_diag": {**kwargs, "decompose_method": "eig-type2", "lk": False},
     # "socp": {**kwargs, "decompose_method": "eig-type2"},
   }

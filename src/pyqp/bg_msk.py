@@ -121,38 +121,18 @@ def shor_relaxation(
   
   if verbose:
     model.setLogHandler(sys.stdout)
-  # if relax:
-  #     x = model.variable([n, d], dom.inRange(0, 1))
-  #     Y = model.variable([n, n], dom.inPSDCone(n))
-  # else:
-  #     x = model.variable([n, d], dom.binary())
-  #     Y = model.variable([n, n], dom.inPSDCone(n))
-  #     model.setSolverParam("mioTolRelGap", 0.1)
-  #     # model.setSolverParam("mioMaxTime", params.time_limit)
-  #     model.setSolverParam("mioMaxNumSolutions", 20)
-  #     model.acceptedSolutionStatus(mf.AccSolutionStatus.Feasible)
   
   Z = model.variable("Z", dom.inPSDCone(n + 1))
   Y = Z.slice([0, 0], [n, n])
   x = Z.slice([0, n], [n, n + 1])
-  model.constraint(Y, dom.inPSDCone(n))
-  # bounds
-  # constrs = [x <= ub, x >= lb]
-  if diagx is None:
-    model.constraint(expr.sub(x, ub), dom.lessThan(0))
-    model.constraint(expr.sub(x, lb), dom.greaterThan(0))
-  if ylb is not None:
-    model.constraint(expr.sub(Y, ylb), dom.greaterThan(0))
-  if yub is not None:
-    model.constraint(expr.sub(Y, yub), dom.lessThan(0))
   
-  # constrs += [cvx.diag(Y) <= x[:, 0]]
+  # bounds
+  model.constraint(expr.sub(x, ub), dom.lessThan(0))
+  model.constraint(expr.sub(x, lb), dom.greaterThan(0))
   model.constraint(expr.sub(Y.diag(), x), dom.lessThan(0))
-  # constrs += [cvx.bmat([[np.eye(d), x.T], [x, Y]]) >> 0]
   model.constraint(Z.index(n, n), dom.equalsTo(1.))
   for i in range(m):
     if sign[i] == 0:
-      # constrs += [cvx.trace(A[i].T @ Y) + cvx.trace(a[i].T @ x) == b[i]]
       model.constraint(
         expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
         dom.equalsTo(b[i]))
@@ -260,8 +240,11 @@ def msc_relaxation(
   # RLT cuts
   if rlt:
     if qp.decom_method == 'eig-type1':
-      rlt_expr = expr.sub(y, expr.mulElm(zlb[0] + zub[0], z))
-      model.constraint(rlt_expr, dom.lessThan(- zlb[0] * zub[0]))
+      # rlt_expr = expr.sub(y, expr.mulElm(zlb[0] + zub[0], z))
+      # model.constraint(rlt_expr, dom.lessThan(- zlb[0] * zub[0]))
+      rlt_expr_ex = expr.sub(expr.sum(expr.mulElm(y, np.abs(1 / qp.Qeig))),
+                             expr.dot(bounds.xlb + bounds.xub, x))
+      model.constraint(rlt_expr_ex, dom.lessThan(- (bounds.xlb * bounds.xub).sum()))
     elif qp.decom_method == 'eig-type2':
       # this means you can place on x directly.
       rlt_expr = expr.sub(expr.sum(y), expr.dot(bounds.xlb + bounds.xub, x))
@@ -465,149 +448,6 @@ def msc_diag_relaxation(
     
     model.constraint(
       quad_expr, quad_dom)
-  
-  # objectives
-  true_obj_expr = expr.add(expr.dot(q, x), expr.dot(qel, y))
-  obj_expr = true_obj_expr
-  
-  # with shor results
-  if with_shor is not None:
-    # use shor as ub
-    shor_ub = with_shor.relax_obj.round(4)
-    model.constraint(
-      true_obj_expr, dom.lessThan(shor_ub)
-    )
-  
-  # obj_expr = true_obj_expr
-  model.objective(mf.ObjectiveSense.Minimize
-                  if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
-  
-  r = MSKMscResult()
-  r.obj_expr = true_obj_expr
-  r.xvar = x
-  r.yvar = y
-  r.zvar = z
-  r.Zvar = Z
-  r.Yvar = Y
-  r.qel = qel
-  r.q = q
-  r.problem = model
-  if not solve:
-    return r
-  
-  r.solve(verbose=verbose, qp=qp)
-  
-  return r
-
-
-def msc_diag_sdp_relaxation(
-    qp: QP, bounds: MscBounds = None,
-    sense="max", verbose=True, solve=True,
-    with_shor: Result = None,  # if not None then use Shor relaxation as upper bound
-    rlt=True,  # True add all rlt/secant cut: yi - (li + ui) zi + li * ui <= 0
-    lk=False,  # True then add lk constraint
-    *args,
-    **kwargs
-):
-  """
-  The many-small-cone approach (with sdp)
-  Returns
-  -------
-  """
-  _unused = kwargs
-  Q, q, A, a, b, sign, *_ = qp.unpack()
-  if qp.Qpos is None:
-    raise ValueError("decompose QP instance first")
-  if qp.decom_method == 'eig-type1':
-    raise ValueError(f"cannot use {qp.decom_method}")
-  m, n, dim = a.shape
-  xshape = (n, dim)
-  model = mf.Model('many_small_cone_msk')
-  
-  if verbose:
-    model.setLogHandler(sys.stdout)
-  
-  if bounds is None:
-    bounds = MscBounds.construct(qp)
-  
-  qpos, qipos = qp.Qpos
-  qneg, qineg = qp.Qneg
-  
-  qel = qp.Qmul
-  
-  x = model.variable("x", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
-  zcone = model.variable("zc", dom.inPSDCone(2, n))
-  y = zcone.slice([0, 0, 0], [n, 1, 1]).reshape([n, 1])
-  z = zcone.slice([0, 0, 1], [n, 1, 2]).reshape([n, 1])
-  Y = [y]
-  Z = [z]
-  for idx in range(n):
-    model.constraint(zcone.index([idx, 1, 1]), dom.equalsTo(1))
-  
-  # Q.T x = Z
-  model.constraint(
-    expr.sub(
-      expr.mul((qneg + qpos), z),
-      x), dom.equalsTo(0))
-  
-  # RLT cuts
-  if rlt:
-    # this means you can place on x directly.
-    rlt_expr = expr.sub(expr.sum(y), expr.dot(bounds.xlb + bounds.xub, x))
-    model.constraint(rlt_expr, dom.lessThan(- (bounds.xlb * bounds.xub).sum()))
-  
-  if lk:
-    lk_expr = expr.sub(expr.sum(y), expr.sum(x))
-    model.constraint(lk_expr, dom.lessThan(0))
-  
-  for i in range(m):
-    pass
-    # apos, ipos = qp.Apos[i]
-    # aneg, ineg = qp.Aneg[i]
-    # quad_expr = expr.sub(expr.dot(a[i], x), b[i])
-    #
-    # if ipos.shape[0] + ineg.shape[0] > 0:
-    #
-    #   # if it is indeed quadratic
-    #   zconei = model.variable(f"zci@{i}", dom.inPSDCone(2, n))
-    #   yi = zconei.slice([0, 0, 0], [n, 1, 1]).reshape([n, 1])
-    #   zi = zconei.slice([0, 0, 1], [n, 1, 2]).reshape([n, 1])
-    #   Y.append(yi)
-    #   Z.append(zi)
-    #
-    #   el = qp.Amul[i]
-    #
-    #   # Z[-1, -1] == 1
-    #   for idx in range(n):
-    #     model.constraint(zconei.index([idx, 1, 1]), dom.equalsTo(1))
-    #
-    #   # A.T @ x == z
-    #   model.constraint(
-    #     expr.sub(
-    #       expr.mul((apos + aneg), zi),
-    #       x), dom.equalsTo(0))
-    #
-    #   if rlt:
-    #     # this means you can place on x directly.
-    #     rlt_expr = expr.sub(expr.sum(yi), expr.dot(bounds.xlb + bounds.xub, x))
-    #     model.constraint(rlt_expr, dom.lessThan(- (bounds.xlb * bounds.xub).sum()))
-    #
-    #   if lk:
-    #     lk_expr = expr.sub(expr.sum(yi), expr.sum(y))
-    #     model.constraint(lk_expr, dom.equalsTo(0))
-    #
-    #   quad_terms = expr.dot(el, yi)
-    #
-    #   quad_expr = expr.add(quad_expr, quad_terms)
-    #
-    # else:
-    #   Y.append(None)
-    #   Z.append(None)
-    #
-    # quad_dom = dom.equalsTo(0) if sign[i] == 0 else (dom.greaterThan(0) if sign[i] == -1 else dom.lessThan(0))
-    #
-    # model.constraint(
-    #   quad_expr, quad_dom)
   
   # objectives
   true_obj_expr = expr.add(expr.dot(q, x), expr.dot(qel, y))

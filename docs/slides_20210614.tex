@@ -56,18 +56,38 @@
     \item Since \(V\) is orthonormal, we see \(y^Te = \|z\|^2 = \|x\|^2\), one can use this to derive RLT cuts
     \item Also, \(y_-^Te= \|z_-\|^2 \le x^Tx \le x^Te \), which is very weak if number of negative eigenvalue is small.
     \item One can show that \(v^{\mathrm{Shor}} \ge v^{\mathrm{MSC}}\), (cf. \cite{luo_new_2019}, \cite{luo_new_2021}),
-
   \end{itemize}
 \end{frame}
 
-\begin{frame}{todo}
+\begin{frame}{EMSC-SDP}
+  Recall the decomposition by eigenvalue decomposition,
+
+  \[Q = V_0\Lambda_0 V_0 ^T, A_i = V_i\Lambda_i V_i^T \]
+
+  We let indices of positive eigenvalues be \(I_+ \subseteq [1, .., m]\),
+
+  \begin{align}
+    \nonumber \mathrm{Maximize}\quad & y_0 ^T\lambda_0 + q^Tx                          \\
+    \mathrm{s.t.} \quad              & V_i z_i = x                       & i=0,...,m   \\
+                                     & y_i ^T\lambda_i + a_i^Tx  \le b_i & i=1,...,m   \\
+                                     & (y_i, z_i) \in SOC                & i\notin I_+ \\
+                                     & Y \succeq z_+ z_+^T                             \\
+                                     & \mathsf{diag}(Y) = y_+ \le x
+  \end{align}
+
+  \(y^Te = \|z\|^2 = x^Tx\), so we have \(Y - z z^T = Y - V^Txx^TV \)
+
+\end{frame}
+
+\begin{frame}{Todo}
   \begin{itemize}
-    \item \textcolor{red}{can} we show \(v^{\mathrm{EMSC}} \ge v^{\mathrm{MSC}}\)
-    \item sss
+    \item \textcolor{red}{Can} we show \(v^{\mathrm{EMSC}} \ge v^{\mathrm{MSC}}\)
+    \item
   \end{itemize}
 \end{frame}
-\begin{frame}
 
+\begin{frame}
   \printbibliography
 \end{frame}
+
 \end{document}

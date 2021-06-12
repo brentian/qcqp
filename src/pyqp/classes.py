@@ -31,6 +31,7 @@ class QP(object):
     self.Apos = None
     self.Aneg = None
     self.Amul = None
+    self.Aeig = None
     self.zlb = None
     self.zub = None
     self.decom_map = None
@@ -64,7 +65,7 @@ class QP(object):
     else:
       if 'cvx' in special:
         print("convex")
-        Q = - Q.T @ Q
+        Q = Q.T @ Q
         A = - A.transpose(0, 2, 1) @ A
       if 'lc' in special:
         print("linear_constrained")
@@ -81,6 +82,7 @@ class QP(object):
     self.Apos = {}
     self.Aneg = {}
     self.Amul = {}
+    self.Aeig = {}
     if decompose_method == 'eig-type1':
       func = self._decompose_matrix
     elif decompose_method == 'eig-type2':
@@ -88,9 +90,10 @@ class QP(object):
     else:
       raise ValueError("not such decomposition method")
     self.decom_method = decompose_method
-    (upos, ipos), (uneg, ineg), mul = func(self.Q)
+    (upos, ipos), (uneg, ineg), mul, gamma = func(self.Q)
     self.Qpos, self.Qneg = (upos, ipos), (uneg, ineg)
     self.Qmul = mul
+    self.Qeig = gamma
     decom_arr = []
     decom_map = np.zeros((self.m + 1, 2, self.n))
     decom_map[0, 0, ipos] = 1
@@ -98,10 +101,11 @@ class QP(object):
     decom_arr.append([ipos, ineg])
     
     for i in range(self.m):
-      (ap, ip), (an, inn), mul = func(self.A[i])
+      (ap, ip), (an, inn), mul, gamma = func(self.A[i])
       self.Apos[i] = (ap, ip)
       self.Aneg[i] = (an, inn)
       self.Amul[i] = mul
+      self.Aeig[i] = gamma
       decom_map[i + 1, 0, ip] = 1
       decom_map[i + 1, 1, inn] = 1
       decom_arr.append([ip, inn])
@@ -124,7 +128,7 @@ class QP(object):
     mul = np.ones(shape=(self.n, 1))  # todo: fix this for matrix case
     mul[ineg] = -1
     
-    return (upos, ipos), (uneg, ineg), mul
+    return (upos, ipos), (uneg, ineg), mul, gamma.reshape((self.n, 1))
   
   def _decompose_matrix_eig(self, A):
     gamma, u = nl.eig(A)
@@ -138,7 +142,7 @@ class QP(object):
     ineg, *_ = np.nonzero(ineg)
     mul = gamma.reshape((self.n, 1))
     
-    return (upos, ipos), (uneg, ineg), mul
+    return (upos, ipos), (uneg, ineg), mul, gamma.reshape((self.n, 1))
 
 
 class Eval(object):
