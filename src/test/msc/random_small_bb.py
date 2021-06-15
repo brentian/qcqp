@@ -61,7 +61,7 @@ if __name__ == '__main__':
   )
   methods = {
     "grb": grb.qp_gurobi,
-    # "bb_shor": bb.bb_box,
+    "bb_shor": bb.bb_box,
     # "bb_msc": bb_msc.bb_box,
     # "bb_msc_eig": bb_diag.bb_box,
     "bb_msc_diag": bb_diag.bb_box,

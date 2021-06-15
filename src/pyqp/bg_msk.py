@@ -229,14 +229,6 @@ def msc_relaxation(
       expr.mul((qneg + qpos).T, x),
       z), dom.equalsTo(0))
   
-  # only works for type2 !!!
-  # @note: overlapped by RLT
-  # if qp.decom_method == 'eig-type2':
-  #   model.constraint(
-  #     expr.sub(expr.sum(y), expr.sum(x)),
-  #     dom.lessThan(0)
-  #   )
-  
   # RLT cuts
   if rlt:
     if qp.decom_method == 'eig-type1':
