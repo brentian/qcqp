@@ -214,14 +214,14 @@ def msc_relaxation(
   for idx in range(n):
     model.constraint(zcone.index([idx, 1, 1]), dom.equalsTo(1))
   
-  # bounds
-  model.constraint(z, dom.inRange(zlb[0], zub[0]))
-  if bounds.ylb is not None:
-    pass
-  if bounds.yub is not None:
-    model.constraint(y, dom.lessThan(bounds.yub[0]))
-  else:
-    model.constraint(y, dom.lessThan(1e5))
+  # # bounds
+  # model.constraint(z, dom.inRange(zlb[0], zub[0]))
+  # if bounds.ylb is not None:
+  #   pass
+  # if bounds.yub is not None:
+  #   model.constraint(y, dom.lessThan(bounds.yub[0]))
+  # else:
+  #   model.constraint(y, dom.lessThan(1e5))
   
   # Q.T x = Z
   model.constraint(

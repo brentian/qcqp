@@ -191,7 +191,7 @@ def msc_part_relaxation(
     raise ValueError(f"cannot use {qp.decom_method}")
   m, n, dim = a.shape
   xshape = (n, dim)
-  model = mf.Model('msc_sdp_msk')
+  model = mf.Model('msc_sdp_msk_partition')
   
   if verbose:
     model.setLogHandler(sys.stdout)
@@ -204,41 +204,50 @@ def msc_part_relaxation(
   
   qel = qp.Qmul
   
+  
+  Z = model.variable("Z", dom.inPSDCone(n + 1))
+  Ym = Z.slice([0, 0], [n, n])
+  xp = Z.slice([0, n], [n, n + 1])
   x = model.variable("x", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
-  # y = model.variable("y", [*xshape], dom.greaterThan(0))
-  xp = model.variable("xp", [*xshape], dom.greaterThan(0))
-  xn = model.variable("yn", [*xshape], dom.greaterThan(0))
+  y = model.variable("y", [*xshape], dom.greaterThan(0))
   z = model.variable("z", [*xshape])
-  # Y = [y]
+  Y = [y]
   Z = [z]
   
   # Q.T x = Z
-  # model.constraint(
-  #   expr.sub(
-  #     expr.mul((qneg + qpos), z),
-  #     x), dom.equalsTo(0))
   model.constraint(
-    expr.sub(expr.add(xp, xn), x),
+    expr.sub(
+      expr.mul((qneg + qpos), z),
+      x), dom.equalsTo(0))
+  # x+ = V+z
+  model.constraint(
+    expr.sub(xp, expr.mul(qpos, z)),
     dom.equalsTo(0)
   )
-  
-  xp = expr.mul(qpos, z)
-  xn = expr.mul(qneg, z)
+  # conic
+  # y >= z^2
   for idx in range(n):
-    ypi = yp.index([idx, 0])
-    yni = yn.index([idx, 0])
-    model.constraint(expr.vstack(0.5, ypi, xp.index([idx, 0])),
+    model.constraint(expr.vstack(0.5, y.index([idx, 0]), z.index([idx, 0])),
                      dom.inRotatedQCone())
-    model.constraint(expr.vstack(0.5, yni, xn.index([idx, 0])),
-                     dom.inRotatedQCone())
-    # model.constraint(expr.vstack(0.5, y.index([idx, 0]), z.index([idx, 0])),
-    #                  dom.inRotatedQCone())
+  # Y+ = V+^TYV+
+  n_pos_eig = qipos.shape[0]
+  if n_pos_eig > 0:
+    # else the problem is convex
+    arr_pos_dim = np.zeros(n_pos_eig).astype(int).tolist()
+    ypos = y.pick(qipos.tolist(), arr_pos_dim)
+    Yp = expr.mul(
+      expr.mul(qpos.T, Ym),
+      qpos
+    )
+    model.constraint(expr.sub(Yp.pick([[j, j] for j in qipos]), ypos), dom.lessThan(0))
+    model.constraint(expr.mul(qneg.T, Ym), dom.equalsTo(0))
+    model.constraint(expr.mul(Ym, qneg), dom.equalsTo(0))
   
   # RLT cuts
   if rlt:
     # this means you can place on x directly.
-    rlt_expr = expr.sub(expr.add(xp, xn), x)
-    model.constraint(rlt_expr, dom.lessThan(0))
+    rlt_expr = expr.sub(expr.sum(y), expr.dot(bounds.xlb + bounds.xub, x))
+    model.constraint(rlt_expr, dom.lessThan(- (bounds.xlb * bounds.xub).sum()))
   
   for i in range(m):
     pass
