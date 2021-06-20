@@ -80,11 +80,16 @@ $$\begin{aligned}
     \mathrm{s.t.} \quad              & Vz = x                          \\
                                      & (y_i, z_i) \in SOC                & i \notin I_+ \\
                                      & Y \succeq z_+ z_+^T   \\ 
-                                     & \mathrm{diag}(Y) = y \\
+                                     & \mathrm{diag}(Y) = y_+ \\
                                      & y^T e \le x^Te
   \end{aligned}$$
 
-This is equivalent to DMSC 
+This is equivalent to DMSC...
+
+$$\begin{aligned}
+&V_+YV_+^T = x_+x_+^T\\
+&V_-z_- =x_-
+\end{aligned}$$
 
 
 <!-- 
@@ -110,14 +115,12 @@ $$\begin{aligned}
 
 ## Strength
 
-
 #### Proposition 1.
 $$v^\mathrm{Shor} \le v^\mathrm{MSC} = v^\mathrm{DMSC} = v^\mathrm{SMSC}$$
 
+One can see the key to improve the relaxation is to find a bound for $\mathrm{diag}(Y)$
 
-
-
-# Some unknown use
+# Potential try
 
 #### Partition 
 

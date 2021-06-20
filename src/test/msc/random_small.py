@@ -53,7 +53,7 @@ if __name__ == '__main__':
     "shor": bg_msk.shor_relaxation,
     "msc": bg_msk.msc_relaxation,
     "emsc": bg_msk.msc_diag_relaxation,
-    "emscsdp": bg_msk_ex.msc_part_relaxation
+    # "emscsdp": bg_msk_ex.msc_part_relaxation
     # "socp": bg_msk.socp_relaxation
   }
   
@@ -61,7 +61,7 @@ if __name__ == '__main__':
   pkwargs = {k: {**kwargs} for k in methods}
   pkwargs_dtl = {
     "emsc": {**kwargs, "decompose_method": "eig-type2", },
-    "emscsdp": {**kwargs, "decompose_method": "eig-type2", },
+    # "emscsdp": {**kwargs, "decompose_method": "eig-type2", },
     # "msc_diag": {**kwargs, "decompose_method": "eig-typae2", "lk": False},
     # "socp": {**kwargs, "decompose_method": "eig-type2"},
   }

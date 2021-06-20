@@ -203,3 +203,4 @@ dualnv/cmake-build-debug/
 CMakeFiles
 dualnv/cpp/Makefile
 dualnv/thirdparty
+/out/

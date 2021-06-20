@@ -77,9 +77,6 @@ def msc_diag_sdp_relaxation(
       dom.equalsTo(0)
     )
   
-  xp = expr.mul(qpos, z)
-  xn = expr.mul(qneg, z)
-  
   # RLT cuts
   if rlt:
     # this means you can place on x directly.
@@ -139,14 +136,6 @@ def msc_diag_sdp_relaxation(
   true_obj_expr = expr.add(expr.dot(q, x), expr.dot(qel, y))
   obj_expr = true_obj_expr
   
-  # with shor results
-  if with_shor is not None:
-    # use shor as ub
-    shor_ub = with_shor.relax_obj.round(4)
-    model.constraint(
-      true_obj_expr, dom.lessThan(shor_ub)
-    )
-  
   # obj_expr = true_obj_expr
   model.objective(mf.ObjectiveSense.Minimize
                   if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
@@ -205,9 +194,9 @@ def msc_part_relaxation(
   qel = qp.Qmul
   
   
-  Z = model.variable("Z", dom.inPSDCone(n + 1))
-  Ym = Z.slice([0, 0], [n, n])
-  xp = Z.slice([0, n], [n, n + 1])
+  Zp = model.variable("Zp", dom.inPSDCone(n + 1))
+  Yp = Zp.slice([0, 0], [n, n])
+  xp = Zp.slice([0, n], [n, n + 1])
   x = model.variable("x", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
   y = model.variable("y", [*xshape], dom.greaterThan(0))
   z = model.variable("z", [*xshape])
@@ -226,22 +215,26 @@ def msc_part_relaxation(
   )
   # conic
   # y >= z^2
-  for idx in range(n):
+  for idx in qineg:
     model.constraint(expr.vstack(0.5, y.index([idx, 0]), z.index([idx, 0])),
                      dom.inRotatedQCone())
-  # Y+ = V+^TYV+
+  arr_neg_dim = np.zeros(qineg.shape[0]).astype(int).tolist()
+  true_obj_expr = expr.dot(qel[qineg,:].flatten(), y.pick(qineg.tolist(), arr_neg_dim))
+  
+  # positive
   n_pos_eig = qipos.shape[0]
   if n_pos_eig > 0:
     # else the problem is convex
-    arr_pos_dim = np.zeros(n_pos_eig).astype(int).tolist()
-    ypos = y.pick(qipos.tolist(), arr_pos_dim)
-    Yp = expr.mul(
-      expr.mul(qpos.T, Ym),
-      qpos
+    model.constraint(expr.mul(qneg.T, Yp), dom.equalsTo(0))
+    model.constraint(expr.mul(Yp, qneg), dom.equalsTo(0))
+    qplus = qpos @ np.diag(qel.flatten()) @ qpos.T
+    true_obj_expr = expr.add(
+      true_obj_expr,
+      expr.sum(expr.mulElm(qplus, Yp))
     )
-    model.constraint(expr.sub(Yp.pick([[j, j] for j in qipos]), ypos), dom.lessThan(0))
-    model.constraint(expr.mul(qneg.T, Ym), dom.equalsTo(0))
-    model.constraint(expr.mul(Ym, qneg), dom.equalsTo(0))
+
+    model.constraint(expr.sub(Yp.diag(), x), dom.lessThan(0))
+    
   
   # RLT cuts
   if rlt:
@@ -299,7 +292,7 @@ def msc_part_relaxation(
     #   quad_expr, quad_dom)
   
   # objectives
-  true_obj_expr = expr.add(expr.dot(q, x), expr.dot(qel, y))
+  true_obj_expr = expr.add(true_obj_expr, expr.dot(q, x))
   obj_expr = true_obj_expr
   
   # with shor results
