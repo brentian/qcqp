@@ -261,7 +261,7 @@ def bb_box(
   # choose backend
   if backend_func is None:
     if backend_name == 'msk':
-      backend_func = bg_msk.msc_diag_relaxation
+      backend_func = bg_msk.msc_diag
     elif backend_name == 'cvx':
       backend_func = bg_cvx.msc_relaxation
     else:
@@ -280,7 +280,7 @@ def bb_box(
   
   if bool_use_shor:
     print("Solving the Shor relaxation")
-    r_shor = bg_msk.shor_relaxation(qp, solver='MOSEK', verbose=False)
+    r_shor = bg_msk.shor(qp, solver='MOSEK', verbose=False)
   else:
     r_shor = None
   

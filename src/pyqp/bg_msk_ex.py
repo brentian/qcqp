@@ -3,7 +3,7 @@ import numpy as np
 from .bg_msk import *
 
 
-def msc_diag_sdp_relaxation(
+def msc_diag_sdp(
     qp: QP, bounds: MscBounds = None,
     sense="max", verbose=True, solve=True,
     with_shor: Result = None,  # if not None then use Shor relaxation as upper bound
@@ -197,6 +197,7 @@ def msc_part_relaxation(
   Zp = model.variable("Zp", dom.inPSDCone(n + 1))
   Yp = Zp.slice([0, 0], [n, n])
   xp = Zp.slice([0, n], [n, n + 1])
+  xn = model.variable("xn", [*xshape])
   x = model.variable("x", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
   y = model.variable("y", [*xshape], dom.greaterThan(0))
   z = model.variable("z", [*xshape])

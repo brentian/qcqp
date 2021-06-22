@@ -201,7 +201,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), **kwargs):
   print(json.dumps(params.__dict__(), indent=2))
   backend_name = params.backend_name
   if backend_name == 'msk':
-    backend_func = bg_msk.shor_relaxation
+    backend_func = bg_msk.shor
   elif backend_name == 'cvx':
     backend_func = bg_cvx.shor_relaxation
   else:

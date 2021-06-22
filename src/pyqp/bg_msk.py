@@ -88,7 +88,7 @@ class MSKMscResult(MSKResult):
     self.solve_time = round(end_time - start_time, 3)
 
 
-def shor_relaxation(
+def shor(
     qp: QP,
     sense="max", verbose=True, solve=True, **kwargs
 ):
@@ -170,7 +170,7 @@ def shor_relaxation(
   return r
 
 
-def msc_relaxation(
+def msc(
     qp: QP, bounds: MscBounds = None,
     sense="max", verbose=True, solve=True,
     with_shor: Result = None,  # if not None then use Shor relaxation as upper bound
@@ -333,7 +333,7 @@ def msc_relaxation(
   return r
 
 
-def msc_diag_relaxation(
+def msc_diag(
     qp: QP, bounds: MscBounds = None,
     sense="max", verbose=True, solve=True,
     with_shor: Result = None,  # if not None then use Shor relaxation as upper bound
