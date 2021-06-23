@@ -67,7 +67,10 @@ def msc_diag_sdp(
     ymat = model.variable("yy", dom.inPSDCone(n_pos_eig + 1))
     yy = ymat.slice([0, 0], [n_pos_eig, n_pos_eig])
     zz = ymat.slice([0, n_pos_eig], [n_pos_eig, n_pos_eig + 1])
-    model.constraint(ymat.index(n_pos_eig, n_pos_eig), dom.equalsTo(1.))
+    # constraints
+    model.constraint(
+      ymat.index(n_pos_eig, n_pos_eig), dom.equalsTo(1.)
+    )
     model.constraint(
       expr.sub(zpos, zz),
       dom.equalsTo(0)
@@ -76,7 +79,7 @@ def msc_diag_sdp(
       expr.sub(yy.diag(), ypos),
       dom.equalsTo(0)
     )
-  
+    
   # RLT cuts
   if rlt:
     # this means you can place on x directly.
@@ -193,7 +196,6 @@ def msc_part_relaxation(
   
   qel = qp.Qmul
   
-  
   Zp = model.variable("Zp", dom.inPSDCone(n + 1))
   Yp = Zp.slice([0, 0], [n, n])
   xp = Zp.slice([0, n], [n, n + 1])
@@ -209,6 +211,7 @@ def msc_part_relaxation(
     expr.sub(
       expr.mul((qneg + qpos), z),
       x), dom.equalsTo(0))
+  
   # x+ = V+z
   model.constraint(
     expr.sub(xp, expr.mul(qpos, z)),
@@ -220,22 +223,20 @@ def msc_part_relaxation(
     model.constraint(expr.vstack(0.5, y.index([idx, 0]), z.index([idx, 0])),
                      dom.inRotatedQCone())
   arr_neg_dim = np.zeros(qineg.shape[0]).astype(int).tolist()
-  true_obj_expr = expr.dot(qel[qineg,:].flatten(), y.pick(qineg.tolist(), arr_neg_dim))
+  true_obj_expr = expr.dot(qel[qineg, :].flatten(), y.pick(qineg.tolist(), arr_neg_dim))
   
   # positive
   n_pos_eig = qipos.shape[0]
   if n_pos_eig > 0:
     # else the problem is convex
     model.constraint(expr.mul(qneg.T, Yp), dom.equalsTo(0))
-    model.constraint(expr.mul(Yp, qneg), dom.equalsTo(0))
     qplus = qpos @ np.diag(qel.flatten()) @ qpos.T
     true_obj_expr = expr.add(
       true_obj_expr,
       expr.sum(expr.mulElm(qplus, Yp))
     )
-
-    model.constraint(expr.sub(Yp.diag(), x), dom.lessThan(0))
     
+    model.constraint(expr.sub(Yp.diag(), x), dom.lessThan(0))
   
   # RLT cuts
   if rlt:

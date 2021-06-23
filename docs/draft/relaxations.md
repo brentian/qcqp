@@ -5,7 +5,8 @@
 - we wish to establish 
 - let $I_+$ be indices of positive eigenvalues, suppose $|I_+| = p$
 
-Spectral decomposition, 
+
+## Spectral decomposition
 
 $$Q = V\Lambda V^T$$
 
@@ -15,9 +16,9 @@ For simplicity, we let:
 
 
 
-# Relaxations
+# Relaxations for QCQP
 
-> Shor 
+## Shor 
 
 $$\begin{aligned}
    \mathrm{Maximize}\quad & Q\bullet Y + q^Tx                          \\
@@ -26,7 +27,7 @@ $$\begin{aligned}
             & 0\le x\le 1
   \end{aligned}$$
 
-> Basic MSC
+## Basic MSC
 
 $$U = V\sqrt{|\Lambda|)}$$
 
@@ -38,9 +39,9 @@ $$\begin{aligned}
                                 
   \end{aligned}$$
 
-One can derive box constraints for $z, y$ by the definition and bounds for $x$.
+One can derive box constraints for $z, y$ by the definition and bounds for $x$. By $x \in [0, 1]$, it's easy to create produce bound $l, u$.
 
-> Strengthened MSC
+### Strengthened MSC
 
 Let optimal value be $v^\mathrm{MSC}$
 
@@ -58,7 +59,7 @@ $$\begin{aligned}
 $$y^T\frac{1}{|\lambda|} = z^T|\Lambda|^{-1}z = x^T x \le x^Te$$
 - Also one can see that box constraints for $z$ is unnecessary.
 
-> Diagonalized (DMSC) 
+### Diagonalized (DMSC) 
 
 Let optimal value be $v^\mathrm{DMSC}$
 
@@ -74,24 +75,10 @@ One can see the equivalence of MSC and DMSC. Suppose $(x_0, z_0, y_0)$ is a feas
 
 - For DMSC, Strengthened MSC, the bounds for $z, y$ is not needed.
 
-<!-- > MSC + Simple SDP
 
-Let optimal value be $v^\mathrm{SMSC}$, let $Y$ be a semi-definite matrix of dimension $p$,
+## MSC + Shor
 
-$$\begin{aligned}
-   (\mathrm{SMSC}) \quad\mathrm{Maximize}\quad & y ^T\lambda + q^Tx                          \\
-    \mathrm{s.t.} \quad              & Vz = x                          \\
-                                     & (y_i, z_i) \in SOC                & i \notin I_+ \\
-                                     & Y \succeq z_+ z_+^T   \\ 
-                                     & \mathrm{diag}(Y) = y_+ \\
-                                     & y^T e \le x^Te
-  \end{aligned}$$
-
-This is equivalent to DMSC... -->
-
-
-> MSC + Shor
-
+Some remark for diagonalize and affine transformation,
 
 Partition also the orthonormal basis into into $V_+ \in R^{n\times p}, V_-\in R^{n\times (n-p)}$
 
@@ -105,6 +92,7 @@ $$x_+^TV_- = 0, x_-^TV_+ = 0$$
 
 
 Consider a SD matrix $Y\in R^{p\times p}$ to estimate $z_+ z_+^T$, we have, 
+
 $$\begin{aligned}
 &V_+YV_+^T = x_+x_+^T\\
 & \mathrm{diag}(V_+ Y V_+^T) = y_+ \\
@@ -122,15 +110,47 @@ $$
 This allows the following SOCP + SDP relaxation:
 
 $$\begin{aligned}
-   (\mathrm{SMSC}) \quad\mathrm{Maximize}\quad & Y \bullet \Lambda_ + -   + q^Tx                          \\
+   (\mathrm{SMSC}) \quad\mathrm{Maximize}\quad & Y \bullet \Lambda_ + + \lambda_-^T y_-   + q^Tx                          \\
     \mathrm{s.t.} \quad              & x_+ + x_- = x                         \\
                                      & V_+^T x_- = \bm 0 \\
                                      & (y_-, V_-^Tx_-)_i \in SOC                & i = 1, ..., n \\
                                      & \begin{bmatrix} Y & V_+^Tx_+\\ x_+^TV_+ & 1 \end{bmatrix} \succeq \bm 0\\
-                                     & V_-^T Y = \bm 0 \\
-                                    % & \mathrm{diag}(V_+ Y V_+^T) + y_- \le x \\ 
   \end{aligned}$$
  
+
+> Improvement ? 
+
+The difficulty here is to bound diagonal entries for $Y$ or alternatively $V_+ Y V_+^T \approx x_+ x_+^T$. In the latter case,
+
+$$
+\begin{aligned}  
+&\underbrace{\mathrm{diag}(V_+ Y V_+^T )}_{y_+} + x_-\circ x_- + \underbrace{2(x_- \circ x_+)}_{w} = x\circ x \le x \\
+& w^Te = 0 \\
+& w_i^2 = (y_+ \circ y_-)_i, & i = 1, ..., n
+\end{aligned}
+$$
+
+## Chordal graph based relaxation?
+
+- Fukuda 2001, Nakata 2003, Zheng 2020
+- Use Chordal extension, sparse matrix completion for SDP
+- 
+
+Sparse pattern: (non-zero) entries. let $G(V, E)$ be the graph representing data matrix
+
+$F = \bigcup_r C_r$, SD constraint,
+
+$$Y_{(i, i) \in C_r} \succeq 0, \quad \forall r$$
+
+original SDP be:
+
+$$\begin{aligned}
+\mathrm{Maximize}\quad & \sum_{(i,j) \in F} Q_{ij} Y_{ij} + q^Tx \\
+\mathrm{s.t.} \quad    & Y_{(i, i) \in C_r} \succeq 0            \\
+& \begin{bmatrix}Y & x \\ x^T & 1\end{bmatrix}   \succeq 0  \\ 
+\end{aligned}$$
+
+
 ## Strength
 
 #### Proposition 1.
@@ -141,26 +161,5 @@ One can see the key to improve the relaxation is to find a bound for $\mathrm{di
 We can see now doing diagonalization alone cannot improve the bound.
 
 
-# Potential try
 
-<!-- 
-#### Partition $x$ into $x_+ + x_- =x$
-
-Partition orthonormal basis into into $V_+, V_-$, let $V_+ z = x_+, V_- z = x_-$
-
-since $V_+^TV_- = 0$, we have,
-
-$$x_+^Tx_- = 0,\; x_+ + x_- = x$$
-
-also, suppose $Y \succeq x_+ x_+^T$, then $V_-^Tx_+ = 0,  V_-^T Y=0$
-
-$$\begin{aligned}
-   (\mathrm{SMSC2}) \quad\mathrm{Maximize}\quad & y ^T\lambda + q^Tx                          \\
-    \mathrm{s.t.} \quad              & x_+ + x_- = Vz \\
-                                     & (y_i, z_i) \in SOC                & i = 1, ..., n \\
-                                     & Y \succeq x_+ x_+^T   \\ 
-                                     & V_-^T Y = 0 \\
-                                     & y^T e \le x^Te \\
-                                     & \mathrm{diag}(V_+^TYV_+) = y_+
-  \end{aligned}$$ -->
 
