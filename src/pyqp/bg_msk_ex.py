@@ -1,5 +1,6 @@
 import numpy as np
-
+import networkx as nx
+import networkx.algorithms as na
 from .bg_msk import *
 
 
@@ -79,7 +80,7 @@ def msc_diag_sdp(
       expr.sub(yy.diag(), ypos),
       dom.equalsTo(0)
     )
-    
+  
   # RLT cuts
   if rlt:
     # this means you can place on x directly.
@@ -323,5 +324,290 @@ def msc_part_relaxation(
     return r
   
   r.solve(verbose=verbose, qp=qp)
+  
+  return r
+
+
+def greedy_agg_cc(cc, eps=40):
+  agg_cc = []
+  ac = set()
+  selected = set()
+  while cc:
+    cl = set(cc.pop())
+    lenc = len(cc)
+    newx = cl.difference(selected)
+    ac.update(cl)
+    if len(ac) >= eps or lenc == 0:
+      agg_cc.append(list(ac))
+      selected.update(ac)
+      ac = set()
+  return agg_cc
+
+
+def create_er_from_clique(cr, n):
+  nr = len(cr)
+  Er = np.zeros((nr, n))
+  for row, col in enumerate(cr):
+    Er[row, col] = 1
+  return Er
+
+
+def ssdp(
+    qp: QP,
+    sense="max", verbose=True, solve=True, **kwargs
+):
+  """
+  use a Y along with x in the SDP
+      for basic 0 <= x <= e, diag(Y) <= x
+  -------
+
+  """
+  _unused = kwargs
+  Q, q, A, a, b, sign, lb, ub, ylb, yub, cc = qp.unpack()
+  m, n, d = a.shape
+  xshape = (n, d)
+  model = mf.Model('shor_clique_msk')
+  
+  if verbose:
+    model.setLogHandler(sys.stdout)
+  
+  ########################
+  # cliques and chordal
+  ########################
+  if cc is None:
+    g = nx.Graph()
+    g.add_edges_from(list(zip(*Q.nonzero())))
+    # cc is a list of cliques
+    # e.g.:
+    # [[0, 4, 1], [0, 4, 3], [0, 4, 5], [2, 1], [2, 3]]
+    cc = list(na.find_cliques(g))
+  ccl = [len(cl) for cl in cc]
+  print(f"number of cliques {len(cc)}")
+  print(f"clique size: {min(ccl), max(ccl)}")
+  ########################
+  # greedily aggregate some cliques
+  ########################
+  # cc = greedy_agg_cc(cc)
+  # ccl = [len(cl) for cl in cc]
+  # print("after aggregation")
+  # print(f"number of cliques {len(cc)}")
+  # print(f"clique size: {min(ccl), max(ccl)}")
+  # for i in cc:
+  #   print(i)
+  ########################
+  # compute running intersections
+  ########################
+  mc = []
+  ac = set()
+  for cl in cc:
+    newm = set(cl).difference(ac)
+    if len(newm) > 0:
+      mc.append(newm)
+      ac.update(newm)
+    if len(ac) == n:
+      break
+  
+  x = model.variable("x", [*xshape])
+  Y = model.variable("Y", [n, n])
+  
+  # bounds
+  model.constraint(expr.sub(x, ub), dom.lessThan(0))
+  model.constraint(expr.sub(x, lb), dom.greaterThan(0))
+  model.constraint(expr.sub(Y.diag(), x), dom.lessThan(0))
+  
+  # cliques
+  sum_y = 0
+  for k, cr in enumerate(cc):
+    Er = create_er_from_clique(cr, n)
+    nr = len(cr)
+    Zr = model.variable(f"Zr_{k}", dom.inPSDCone(nr + 1))
+    Yr = Zr.slice([0, 0], [nr, nr])
+    xr = Zr.slice([0, nr], [nr, nr + 1])
+    model.constraint(Zr.index(nr, nr), dom.equalsTo(1.))
+    model.constraint(
+      expr.sub(
+        expr.mul(expr.mul(Er, Y), Er.T),
+        Yr),
+      dom.equalsTo(0)
+    )
+    xr_from_x = x.pick([[idx, 0] for idx in cr])
+    model.constraint(
+      expr.sub(xr_from_x, xr),
+      dom.equalsTo(0)
+    )
+    # model.constraint(
+    #   expr.sub(Yr.diag(), xr_from_x),
+    #   dom.lessThan(0)
+    # )
+    # if k + 1 <= len(mc):
+    #   zero_cols = list(set(cr).difference(mc[k]))
+    #   Er[:, zero_cols] = 0
+    #   sum_y = expr.add(sum_y, expr.mul(expr.mul(Er.T, Yr), Er))
+  #
+  # # constraints
+  # for i in range(m):
+  #   if sign[i] == 0:
+  #     model.constraint(
+  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+  #       dom.equalsTo(b[i]))
+  #   elif sign[i] == -1:
+  #     model.constraint(
+  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+  #       dom.greaterThan(b[i]))
+  #   else:
+  #     model.constraint(
+  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+  #       dom.lessThan(b[i]))
+  
+  # objectives
+  # obj_expr = expr.add(expr.sum(expr.mulElm(Q, sum_y)), expr.dot(x, q))
+  obj_expr = expr.add(expr.sum(expr.mulElm(Q, Y)), expr.dot(x, q))
+  model.objective(mf.ObjectiveSense.Minimize
+                  if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
+  
+  r = MSKResult()
+  r.xvar = x
+  r.yvar = Y
+  r.problem = model
+  if not solve:
+    return r
+  
+  model.solve()
+  xval = x.level().reshape(xshape)
+  r.yval = Y.level().reshape((n, n))
+  r.xval = xval
+  r.relax_obj = model.primalObjValue()
+  r.true_obj = qp_obj_func(Q, q, xval)
+  r.solved = True
+  r.solve_time = model.getSolverDoubleInfo("optimizerTime")
+  
+  return r
+
+
+
+def ssdpblk(
+    qp: QP,
+    sense="max", verbose=True, solve=True, **kwargs
+):
+  """
+  use a Y along with x in the SDP
+      for basic 0 <= x <= e, diag(Y) <= x
+  -------
+
+  """
+  _unused = kwargs
+  Q, q, A, a, b, sign, lb, ub, ylb, yub, cc = qp.unpack()
+  m, n, d = a.shape
+  xshape = (n, d)
+  model = mf.Model('shor_clique_msk')
+  
+  if verbose:
+    model.setLogHandler(sys.stdout)
+  
+  ########################
+  # cliques and chordal
+  ########################
+  if cc is None:
+    g = nx.Graph()
+    g.add_edges_from(list(zip(*Q.nonzero())))
+    # cc is a list of cliques
+    # e.g.:
+    # [[0, 4, 1], [0, 4, 3], [0, 4, 5], [2, 1], [2, 3]]
+    cc = list(na.find_cliques(g))
+  ccl = [len(cl) for cl in cc]
+  print(f"number of cliques {len(cc)}")
+  print(f"clique size: {min(ccl), max(ccl)}")
+  
+  ########################
+  # greedily aggregate some cliques
+  ########################
+  cc = greedy_agg_cc(cc)
+  ccl = [len(cl) for cl in cc]
+  print("after aggregation")
+  print(f"number of cliques {len(cc)}")
+  print(f"clique size: {min(ccl), max(ccl)}")
+  for i in cc:
+    print(i)
+    
+  ########################
+  # compute running intersections
+  ########################
+  mc = []
+  ac = set()
+  for cl in cc:
+    newm = set(cl).difference(ac)
+    if len(newm) > 0:
+      mc.append(newm)
+      ac.update(newm)
+    if len(ac) == n:
+      break
+  
+  x = model.variable("x", [*xshape])
+  # Y = model.variable("Y", [n, n])
+  
+  # bounds
+  model.constraint(expr.sub(x, ub), dom.lessThan(0))
+  model.constraint(expr.sub(x, lb), dom.greaterThan(0))
+  # model.constraint(expr.sub(Y.diag(), x), dom.lessThan(0))
+  
+  # cliques
+  sum_y = 0
+  for k, cr in enumerate(cc):
+    Er = create_er_from_clique(cr, n)
+    nr = len(cr)
+    Zr = model.variable(f"Zr_{k}", dom.inPSDCone(nr + 1))
+    Yr = Zr.slice([0, 0], [nr, nr])
+    xr = Zr.slice([0, nr], [nr, nr + 1])
+    model.constraint(Zr.index(nr, nr), dom.equalsTo(1.))
+    xr_from_x = x.pick([[idx, 0] for idx in cr])
+    model.constraint(
+      expr.sub(xr_from_x, xr),
+      dom.equalsTo(0)
+    )
+    model.constraint(
+      expr.sub(Yr.diag(), xr_from_x),
+      dom.lessThan(0)
+    )
+    if k + 1 <= len(mc):
+      zero_cols = list(set(cr).difference(mc[k]))
+      Er[:, zero_cols] = 0
+      sum_y = expr.add(sum_y, expr.mul(expr.mul(Er.T, Yr), Er))
+  #
+  # # constraints
+  # for i in range(m):
+  #   if sign[i] == 0:
+  #     model.constraint(
+  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+  #       dom.equalsTo(b[i]))
+  #   elif sign[i] == -1:
+  #     model.constraint(
+  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+  #       dom.greaterThan(b[i]))
+  #   else:
+  #     model.constraint(
+  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+  #       dom.lessThan(b[i]))
+  
+  # objectives
+  obj_expr = expr.add(expr.sum(expr.mulElm(Q, sum_y)), expr.dot(x, q))
+  # obj_expr = expr.add(expr.sum(expr.mulElm(Q, Y)), expr.dot(x, q))
+  model.objective(mf.ObjectiveSense.Minimize
+                  if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
+  
+  r = MSKResult()
+  r.xvar = x
+  # r.yvar = Y
+  r.problem = model
+  if not solve:
+    return r
+  
+  model.solve()
+  xval = x.level().reshape(xshape)
+  # r.yval = Y.level().reshape((n, n))
+  r.xval = xval
+  r.relax_obj = model.primalObjValue()
+  r.true_obj = qp_obj_func(Q, q, xval)
+  r.solved = True
+  r.solve_time = model.getSolverDoubleInfo("optimizerTime")
   
   return r

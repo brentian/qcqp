@@ -52,8 +52,10 @@ class RLTCuttingPlane(CuttingPlane):
     exprm = expr.mul
     n = yvar.getShape()[0]
     i, j, u_i, l_i, u_j, l_j = self.data
-    yij = zvar.index(i, j)
-    xi, xj = zvar.index(n, i), zvar.index(n, j)
+    # yij = zvar.index(i, j)
+    # xi, xj = zvar.index(n, i), zvar.index(n, j)
+    yij = yvar.index(i, j)
+    xi, xj = xvar.index(i, 0), xvar.index(j, 0)
     # (xi - li)(xj - uj) <= 0
     expr1, dom1 = exprs(exprs(yij, exprm(u_j, xi)),
                         exprm(l_i, xj)), bg_msk.dom.lessThan(- u_j * l_i)
@@ -199,13 +201,15 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
 
 def bb_box(qp: QP, verbose=False, params=BCParams(), **kwargs):
   print(json.dumps(params.__dict__(), indent=2))
+  backend_func = kwargs.get('func')
   backend_name = params.backend_name
-  if backend_name == 'msk':
-    backend_func = bg_msk.shor
-  elif backend_name == 'cvx':
-    backend_func = bg_cvx.shor_relaxation
-  else:
-    raise ValueError("not implemented")
+  if backend_func is None:
+    if backend_name == 'msk':
+      backend_func = bg_msk.shor
+    elif backend_name == 'cvx':
+      backend_func = bg_cvx.shor_relaxation
+    else:
+      raise ValueError("not implemented")
   # choose branching
   
   # problems

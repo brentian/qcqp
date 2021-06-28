@@ -24,6 +24,7 @@ import pandas as pd
 import sys
 from pyqp import grb, bb, bg_msk, bg_msk_ex
 from pyqp import bb_msc, bb_msc2
+from pyqp.classes import QPI
 
 np.random.seed(1)
 
@@ -51,17 +52,18 @@ if __name__ == '__main__':
   methods = {
     "grb": grb.qp_gurobi,
     "shor": bg_msk.shor,
-    "msc": bg_msk.msc,
+    # "msc": bg_msk.msc,
     "emsc": bg_msk.msc_diag,
-    "emscsdp": bg_msk_ex.msc_diag_sdp
-    # "socp": bg_msk.socp_relaxation
+    # "emscsdp": bg_msk_ex.msc_diag_sdp,
+    "ssdp": bg_msk_ex.ssdp,
+    # "ssdpblk": bg_msk_ex.ssdpblk
   }
   
   # personal
   pkwargs = {k: {**kwargs} for k in methods}
   pkwargs_dtl = {
     "emsc": {**kwargs, "decompose_method": "eig-type2", },
-    "emscsdp": {**kwargs, "decompose_method": "eig-type2", },
+    # "emscsdp": {**kwargs, "decompose_method": "eig-type2", },
     # "msc_diag": {**kwargs, "decompose_method": "eig-typae2", "lk": False},
     # "socp": {**kwargs, "decompose_method": "eig-type2"},
   }
@@ -69,7 +71,8 @@ if __name__ == '__main__':
   # problem
   problem_id = f"{n}:{m}:{0}"
   # start
-  qp = bb_msc.QP.create_random_instance(int(n), int(m), special=pc.split(","))
+  qp = QPI.block(int(n), int(m), r=10, eps=0.5)
+  # qp = QPI.normal(int(n), int(m), rho=0.2)
   
   evals = []
   results = {}
@@ -91,3 +94,4 @@ if __name__ == '__main__':
   
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)
+  print(df_eval[['prob_num', 'solve_time', 'relax_obj', 'method']].to_latex())

@@ -245,8 +245,6 @@ def bb_box(
   if backend_func is None:
     if backend_name == 'msk':
       backend_func = bg_msk.msc
-    elif backend_name == 'cvx':
-      backend_func = bg_cvx.msc_relaxation
     else:
       raise ValueError("not implemented")
   # choose branching

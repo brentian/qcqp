@@ -22,9 +22,10 @@
 import numpy as np
 import pandas as pd
 import sys
-from pyqp import grb, bg_msk
+from pyqp import grb, bg_msk, bg_msk_ex
 from pyqp import bb, bb_msc, \
   bb_msc2, bb_diag, bb_socp
+from pyqp.classes import QPI
 
 np.random.seed(1)
 
@@ -43,8 +44,7 @@ if __name__ == '__main__':
   # problem
   problem_id = f"{n}:{m}:{0}"
   
-  # start
-  qp = bb_msc.QP.create_random_instance(int(n), int(m), special=pc.split(","))
+  
   
   # global args
   params = bb_msc.BCParams()
@@ -61,20 +61,23 @@ if __name__ == '__main__':
   )
   methods = {
     "grb": grb.qp_gurobi,
-    "bb_shor": bb.bb_box,
-    # "bb_msc": bb_msc.bb_box,
-    # "bb_msc_eig": bb_diag.bb_box,
-    "bb_msc_diag": bb_diag.bb_box,
-    # "bb_socp": bb_socp.bb_box
+    # "shor": bb.bb_box,
+    "ssdp": bb.bb_box,
+    "emsc": bb_msc.bb_box,
+    # "emscsdp": bg_msk_ex.msc_diag_sdp,
+    
   }
   # personal
   pkwargs = {k: kwargs for k in methods}
   pkwargs_dtl = {
-    # "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2", "branch_name": "vio"},
-    "bb_msc_diag": {**kwargs, "decompose_method": "eig-type2", "branch_name": "bound"},
+    "emsc": {**kwargs, "decompose_method": "eig-type2", "branch_name": "vio"},
+    # "ssdp": {**kwargs, "func": bg_msk_ex.ssdp},
+    # "bb_msc_diag": {**kwargs, "decompose_method": "eig-type2", "branch_name": "bound"},
     # "bb_msc_socp": {**kwargs, "func": bg_msk.msc_socp_relaxation}
   }
   pkwargs.update(pkwargs_dtl)
+  # start
+  qp = QPI.normal(int(n), int(m), rho=0.8)
   
   evals = []
   results = {}
