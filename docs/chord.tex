@@ -33,12 +33,11 @@
 
 
 \subsubsection*{Packing}
-Set packing: finite set \(S\) and a list of subsets of \(S\). Then, the set packing problem asks if some \(k\) subsets in the list are pairwise disjoint, and its optimization problem determining the maximum \(k\)
+Set packing: finite set \(S\) and a list of subsets of \(S\). Then, the set packing problem asks if some \(k\) subsets in the list are pairwise disjoint, and its optimization determining the maximum \(k\) 。
 \begin{itemize}
       \item \textbf{IS} (independent) stable set: set \(S \subseteq V\) is a stable of an
             undirected graph \(G = (V, E)\) if no two vertices in \(S\) are
-            adjacent, i.e., the induced edge set is empty.
-      \item Sometimes referred to as ``vertex packing''
+            adjacent, i.e., the induced edge set is empty, sometimes referred to as ``vertex packing''
       \item The size of the
             largest stable set is called the stable set number of the graph,
             denoted \(\alpha(G)\). The problem \textbf{(MIS) Maximum independent set} denotes the problem of finding the largest such set.
@@ -57,9 +56,9 @@ Set packing: finite set \(S\) and a list of subsets of \(S\). Then, the set pack
 \end{itemize}
 
 \subsubsection*{Covering}
-Set covering, formally, given a universe \(\) and a collection of subsets \(\mathscr S = \{S\}\), the set cover problem is to find such cover, i.e., \(\mathscr U \subseteq \bigcup_{S\in\mathscr S} S \)
+Set covering, formally, given a universe \(\) and a collection of subsets \(\mathscr S = \{S\}\), the set cover problem is to find such cover, i.e., \(\mathscr U \subseteq \bigcup_{S\in\mathscr S} S \)。 Generally, we are interested in the minimum covers.
 \begin{itemize}
-      \item Vertex cover: a subset \(V' \subseteq V\) such that \(V'\) covers at least one endpoint of edges. It is not strictly a cover since it is not set of sets.
+      \item Vertex cover: a subset \(V' \subseteq V\) such that \(V'\) covers at least one endpoint of edges. It is not strictly a cover since it is not set of sets, minimal size be vertex cover number \(\tau(G)\)
 \end{itemize}
 
 \subsubsection*{Clique and Completeness}
@@ -67,8 +66,7 @@ Set covering, formally, given a universe \(\) and a collection of subsets \(\mat
       \tightlist
       \item[\(\checkmark\)] fun fact: in the social sciences, clique is a group of individuals who interact with one another and share similar interests
       \item Complete (induced subgraph): a (sub)-graph is complete if all vertices are pairwise adjacent.
-      \item (Maximal) Clique: a clique is a set of vertices \(C \subseteq V\) that induces a (maximal) complete subgraph. Normally we use two terms interchangeably except that maximal is declared.
-      \item \textbf{Maximal}: i.e., it cannot be extended by including one more adjacent vertex
+      \item (Maximal) Clique: a clique is a set of vertices \(C \subseteq V\) that induces a (maximal) complete subgraph. Normally we use two terms interchangeably except that maximal is declared. \textbf{Maximal}: i.e., it cannot be extended by including one more adjacent vertex
       \item Simplicial: A vertex \(v\) is simplicial if its neighborhood \(adj(v)\) is complete.
       \item Clique cover (CC): a clique cover \(\mathscr C\) of \(G\) is a set of
             cliques that cover the vertex set \(V\). The clique cover number
@@ -90,26 +88,21 @@ Set covering, formally, given a universe \(\) and a collection of subsets \(\mat
 
 
 \subsubsection*{Remark: complementarity}
-We mark the relationship and paraphrases here
+We mark the relationship and paraphrases here,
 \begin{itemize}
-      \item A set \(S\) in \(G\) is independent \textbf{iff.} \(V\backslash S\) is a vertex cover
+      \item A set \(S\) in \(G\) is independent \textbf{iff.} \(V\backslash S\) is a vertex cover (VC), i.e.,
+            \[\tau(G) = |V| - \alpha(G)\]
       \item A set in \(G\) is independent \textbf{iff.} it is a clique in the \(G^\star\)
+            \textbf{Remark}: finding \(\alpha(G)\) is equivalent to find the \(\chi(G)\).
       \item For a clique cover \(\mathscr C\) and independent set \(S\), we always have, \(|\mathscr C| \ge |S|\) and,
             \[\bar \chi (G) \ge \alpha(G)\]
             \textbf{PF}: \(\forall k, C_k \) covers at most one vertex in \(S\). The clique cover number and independent number is obvious by taking min and max on left and right, respectively.
 \end{itemize}
 
-\subsubsection*{Remark: Complexity}
+\subsubsection*{Remark: Complexity in the general case}
 
-Generally, finding a MCC is NP-hard, and its decision version is NP-complete. Also, MIS is a strongly NP-hard problem.
-
-If \(G\) is chordal, we have the following theorem.
-
-\begin{theorem}
-      (\cite{gavril_algorithms_1972}, \cite{vandenberghe_chordal_2015})
-      \(\bar \chi (G) = \alpha(G)\) if \(G\) is chordal,
-      polynomial time algorithms exist for both numbers, see \cite{gavril_algorithms_1972}
-\end{theorem}
+Generally, finding a MIS is a strongly NP-hard problem, and its decision version is NP-complete. Also, MCC is NP-hard.
+Most of the results can be found in \cite{schrijver_combinatorial_2003}.
 
 
 \subsection{Chordal}
@@ -127,6 +120,15 @@ ordering: an ordering \(\sigma \{1, 2, ... , n\} \Rightarrow V\) can
 also be interpreted as a sequence of vertices
 \(\sigma = (\sigma(1), ... , \sigma(n))\). We refer to
 \(\sigma^{−1} (v)\) as the index of vertex \(v\) of such ordering.
+
+If \(G\) is chordal, we have the following theorem.
+
+\begin{theorem}
+      (\cite{gavril_algorithms_1972}, \cite{schrijver_combinatorial_2003}, \cite{vandenberghe_chordal_2015})
+      \(\bar \chi (G) = \alpha(G)\) if \(G\) is chordal,
+      polynomial time algorithms exist for both numbers, see \cite{gavril_algorithms_1972}
+\end{theorem}
+
 
 \begin{itemize}
       \tightlist
