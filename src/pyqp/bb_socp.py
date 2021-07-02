@@ -11,6 +11,7 @@ from queue import PriorityQueue
 import numpy as np
 import time
 
+import pyqp.bg_msk_msc
 from . import bg_msk, bg_cvx
 from .bb import BCParams, BBItem, Cuts, RLTCuttingPlane
 from .classes import MscBounds, Branch
@@ -133,7 +134,7 @@ class MscCuts(Cuts):
         for expr in ct.serialize_to_cvx(z, y):
           _problem._constraints.append(expr)
 
-  def add_cuts_to_msk(self, r: bg_msk.MSKMscResult):
+  def add_cuts_to_msk(self, r: pyqp.bg_msk_msc.MSKMscResult):
 
     _problem: bg_msk.mf.Model = r.problem
     z, y, d = r.Zvar, r.Yvar, r.Dvar
@@ -184,7 +185,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
   print(json.dumps(params.__dict__(), indent=2))
   backend_name = params.backend_name
   if backend_name == 'msk':
-    backend_func = bg_msk.socp_relaxation
+    backend_func = pyqp.bg_msk_msc.socp_relaxation
   else:
     raise ValueError("not implemented")
   # choose branching

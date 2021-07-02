@@ -13,6 +13,7 @@ from queue import PriorityQueue
 import numpy as np
 import time
 
+import pyqp.bg_msk_msc
 from . import bg_msk, bg_cvx, bb_msc
 from .bb import BCParams, BBItem, Cuts, RLTCuttingPlane
 from .classes import MscBounds, Branch
@@ -192,7 +193,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
   print(json.dumps(params.__dict__(), indent=2))
   backend_name = params.backend_name
   if backend_name == 'msk':
-    backend_func = bg_msk.msc
+    backend_func = pyqp.bg_msk_msc.msc
   elif backend_name == 'cvx':
     backend_func = bg_cvx.msc_relaxation
   else:

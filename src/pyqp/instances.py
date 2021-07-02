@@ -241,7 +241,7 @@ class QPInstanceUtils(object):
       qr = Er @ Q @ Er.T
       qc += Er.T @ qr @ Er
     
-    qp = QPInstanceUtils._wrapper(Q, q, A, a, b, sign, lb, ub)
+    qp = QPInstanceUtils._wrapper(qc, q, A, a, b, sign, lb, ub)
     qp.add_cliques(cc)
     return qp
   

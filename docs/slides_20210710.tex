@@ -1,0 +1,90 @@
+\include{headers/header.slides}
+\usepackage{subfig}
+\usepackage[style=authoryear]{biblatex}
+\usepackage{bm}
+\title{Global QCQP Solver}
+\author{Chuwen}
+\date{\today}
+\addbibresource{headers/qcqp.bib}
+
+
+\begin{document}
+\fontsize{9pt}{11}\selectfont
+\frame{\titlepage}
+
+
+
+\begin{frame}{QCQP}
+
+  Suppose we readily have a sparse pattern \(G(V, E)\) (and extension \(E\subseteq F\)) for \(Q\)
+
+  We denote aggregated pattern if \(G(V, E)\) stands for all data matrices.
+
+  \(F = \bigcup_r C_r\), where \(C_r\) the maximal cliques can be computed efficiently for chordal graph \(F\).
+
+  SD constraint \(Y \succeq 0\) is equivalent to,
+
+  \[Y_{(i, i) \in C_r} \succeq 0, \quad \forall r\]
+
+  Can be expressed as follows,
+
+  \begin{equation}
+    \begin{aligned}
+       & E_r \in \mathbf R^{|C_r|\times n}     \\
+       & (E_r)_{i,j}=\begin{cases}
+        1,  \text { if } C_r(i)=j \\
+        0,  \text { otherwise }
+      \end{cases} \\
+       & Y_r\equiv E_r Y E_r^T \succeq 0       \\
+    \end{aligned}
+  \end{equation}
+\end{frame}
+
+\begin{frame}{Sparse-SDP: SSDP}
+  In QCQP, we have the SD constraint:
+  \[Y - xx^T \succeq 0\]
+  then any subprinciple matrix is also semidefinite,
+  \begin{equation}
+    \begin{aligned}
+       & E_r (Y - x x^T) E_r^T \succeq 0
+    \end{aligned}
+  \end{equation}
+
+  So we have the QCQP with \(r\) smaller SDP constraints.
+
+  \[\begin{aligned}
+      \mathrm{Maximize}\quad & Q \bullet Y + q^Tx                               \\
+      \mathrm{s.t.} \quad    & \begin{bmatrix}E_r Y E_r^T & E_rx \\ (E_rx)^T & 1\end{bmatrix}   \succeq 0, \forall r \\
+    \end{aligned}\]
+
+  This formulation incorporates a lot of linear constraints for \(C_r \cap C_{r'}\)
+\end{frame}
+\begin{frame}
+  Consider the dual of primal SDP relaxation.
+  \begin{equation}
+    \begin{aligned}
+      L = & \max_{x, X} \; Q\bullet X + q^Tx + \sum_i \left( \lambda_i A_i \bullet X  + \lambda_i a_i^Tx - \lambda_i b_i \right ) + \mu^Tx - \mu^Te \\
+          & - \begin{bmatrix}X & x \\ x^T & 1\end{bmatrix} \bullet \begin{bmatrix}Y & y \\ y^T & 1\end{bmatrix}                                                                           \\
+      =   & \max_{x, X} \; - \lambda^Tb - \mu^Te - 1+X\bullet (Q + \sum_i\lambda_iA_i - Y) + x^T(q + \sum_i \lambda_i a_i + \mu - 2 y)
+    \end{aligned}
+  \end{equation}
+
+  And thus the dual,
+
+  \begin{equation}
+    \begin{aligned}
+      \min_{\lambda, \mu, y, Y}\quad & \lambda^Tb + \mu^Te + 1                    \\
+      \mathrm{s.t.} \quad            & Y = Q + \sum_i \lambda_i A_i               \\
+                                     & q + \sum_i \lambda_i a_i + \mu - 2 y \le 0 \\
+                                     & Y \succeq yy^T                             \\
+                                     & \lambda, \mu \ge 0
+    \end{aligned}
+  \end{equation}
+\end{frame}
+
+\begin{frame}
+  \scriptsize
+  \printbibliography
+\end{frame}
+
+\end{document}

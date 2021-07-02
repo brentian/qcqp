@@ -3,6 +3,7 @@ Heuristic and other primal methods to extract a feasible solution
 """
 import numpy as np
 from .bg_msk import *
+from .bg_msk_msc import MSKMscResult
 
 
 def penalty_method(r: MSKMscResult, qp: QP) -> MSKMscResult:

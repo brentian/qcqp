@@ -4,6 +4,284 @@ import networkx.algorithms as na
 from .bg_msk import *
 
 
+####################################
+# Chordal/Clique based SDP
+####################################
+from .bg_msk_msc import MSKMscResult
+from .classes import MscBounds
+
+
+def greedy_agg_cc(cc, eps=40):
+  agg_cc = []
+  ac = set()
+  selected = set()
+  while cc:
+    cl = set(cc.pop())
+    lenc = len(cc)
+    newx = cl.difference(selected)
+    ac.update(cl)
+    if len(ac) >= eps or lenc == 0:
+      agg_cc.append(list(ac))
+      selected.update(ac)
+      ac = set()
+  return agg_cc
+
+
+def create_er_from_clique(cr, n):
+  nr = len(cr)
+  Er = np.zeros((nr, n))
+  for row, col in enumerate(cr):
+    Er[row, col] = 1
+  return Er
+
+####################################
+# Primal
+####################################
+# @note
+# this method is based on chordal graph extension
+# original graph G(V, E) standing for data matrix
+# 1. find chordal extension G(V, F) for G(V, E)
+# 2. for chordal graph polynomial time alg exists for maximal cliques:
+#   F ⊆ {Cr}
+# 3. Y ⪰ 0 is eq to Yr ⪰ 0 for each r and Cr
+def ssdp(
+    qp: QP,
+    sense="max", verbose=True, solve=True, **kwargs
+):
+  """
+  """
+  _unused = kwargs
+  Q, q, A, a, b, sign, lb, ub, ylb, yub, cc = qp.unpack()
+  m, n, d = a.shape
+  xshape = (n, d)
+  model = mf.Model('shor_clique_msk')
+  
+  if verbose:
+    model.setLogHandler(sys.stdout)
+  
+  ########################
+  # cliques and chordal
+  ########################
+  if cc is None:
+    g = nx.Graph()
+    g.add_edges_from([(i, j) for i, j in zip(*Q.nonzero()) if i!=j])
+    g_chordal, alpha = na.complete_to_chordal_graph(g)
+    # cc is a list of maximal cliques
+    # e.g.:
+    # [[0, 4, 1], [0, 4, 3], [0, 4, 5], [2, 1], [2, 3]]
+    cc = na.chordal_graph_cliques(g_chordal)
+    # cc = greedy_agg_cc(cc, eps=70)
+  ccl = [len(cl) for cl in cc]
+  print(f"number of cliques {len(cc)}")
+  print(f"clique size: {min(ccl), max(ccl)}")
+  print(cc)
+  
+  x = model.variable("x", [*xshape])
+  Y = model.variable("Y", [n, n])
+  
+  # bounds
+  model.constraint(expr.sub(x, ub), dom.lessThan(0))
+  model.constraint(expr.sub(x, lb), dom.greaterThan(0))
+  model.constraint(expr.sub(Y.diag(), x), dom.lessThan(0))
+  
+  # cliques
+  for k, cr in enumerate(cc):
+    Er = create_er_from_clique(cr, n)
+    nr = len(cr)
+    Zr = model.variable(f"Zr_{k}", dom.inPSDCone(nr + 1))
+    Yr = Zr.slice([0, 0], [nr, nr])
+    xr = Zr.slice([0, nr], [nr, nr + 1])
+    model.constraint(Zr.index(nr, nr), dom.equalsTo(1.))
+    model.constraint(
+      expr.sub(
+        expr.mul(expr.mul(Er, Y), Er.T),
+        Yr),
+      dom.equalsTo(0)
+    )
+    xr_from_x = x.pick([[idx, 0] for idx in cr])
+    model.constraint(
+      expr.sub(xr_from_x, xr),
+      dom.equalsTo(0)
+    )
+    model.constraint(
+      expr.sub(Yr.diag(), xr),
+      dom.lessThan(0)
+    )
+  #
+  # # constraints
+  # for i in range(m):
+  #   if sign[i] == 0:
+  #     model.constraint(
+  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+  #       dom.equalsTo(b[i]))
+  #   elif sign[i] == -1:
+  #     model.constraint(
+  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+  #       dom.greaterThan(b[i]))
+  #   else:
+  #     model.constraint(
+  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+  #       dom.lessThan(b[i]))
+  
+  # objectives
+  # obj_expr = expr.add(expr.sum(expr.mulElm(Q, sum_y)), expr.dot(x, q))
+  obj_expr = expr.add(expr.sum(expr.mulElm(Q, Y)), expr.dot(x, q))
+  model.objective(
+    mf.ObjectiveSense.Minimize if sense == 'min'
+    else mf.ObjectiveSense.Maximize, obj_expr
+  )
+  
+  r = MSKResult()
+  r.xvar = x
+  r.yvar = Y
+  r.problem = model
+  if not solve:
+    return r
+  
+  model.solve()
+  xval = x.level().reshape(xshape)
+  r.yval = Y.level().reshape((n, n))
+  r.xval = xval
+  r.relax_obj = model.primalObjValue()
+  r.true_obj = qp_obj_func(Q, q, xval)
+  r.solved = True
+  r.solve_time = model.getSolverDoubleInfo("optimizerTime")
+  
+  return r
+
+
+
+# def ssdpblk(
+#     qp: QP,
+#     sense="max", verbose=True, solve=True, **kwargs
+# ):
+#   """
+#   use a Y along with x in the SDP
+#       for basic 0 <= x <= e, diag(Y) <= x
+#   -------
+#
+#   """
+#   _unused = kwargs
+#   Q, q, A, a, b, sign, lb, ub, ylb, yub, cc = qp.unpack()
+#   m, n, d = a.shape
+#   xshape = (n, d)
+#   model = mf.Model('shor_clique_msk')
+#
+#   if verbose:
+#     model.setLogHandler(sys.stdout)
+#
+#   ########################
+#   # cliques and chordal
+#   ########################
+#   if cc is None:
+#     g = nx.Graph()
+#     g.add_edges_from([(i, j) for i, j in zip(*Q.nonzero()) if i!=j])
+#     g_chordal, alpha = na.complete_to_chordal_graph(g)
+#     # cc is a list of maximal cliques
+#     # e.g.:
+#     # [[0, 4, 1], [0, 4, 3], [0, 4, 5], [2, 1], [2, 3]]
+#     cc = na.chordal_graph_cliques(g_chordal)
+#   ccl = [len(cl) for cl in cc]
+#   print(f"number of cliques {len(cc)}")
+#   print(f"clique size: {min(ccl), max(ccl)}")
+#   print(cc)
+#
+#   ########################
+#   # compute running intersections
+#   ########################
+#   mc = []
+#   ac = set()
+#   for cl in cc:
+#     newm = set(cl).difference(ac)
+#     if len(newm) > 0:
+#       mc.append(newm)
+#       ac.update(newm)
+#     if len(ac) == n:
+#       break
+#
+#   x = model.variable("x", [*xshape])
+#   # Y = model.variable("Y", [n, n])
+#
+#   # bounds
+#   model.constraint(expr.sub(x, ub), dom.lessThan(0))
+#   model.constraint(expr.sub(x, lb), dom.greaterThan(0))
+#   #
+#
+#   # cliques
+#   sum_y = 0
+#   ee = 0
+#   for k, cr in enumerate(cc):
+#     Er = create_er_from_clique(cr, n)
+#     nr = len(cr)
+#     ee += Er.T @ Er
+#     # Zr = model.variable(f"Zr_{k}", dom.inPSDCone(nr + 1))
+#     Yr = model.variable(f"Yr_{k}", dom.inPSDCone(nr))
+#     # xr = Zr.slice([0, nr], [nr, nr + 1])
+#     # model.constraint(Zr.index(nr, nr), dom.equalsTo(1.))
+#     # xr_from_x = x.pick([[idx, 0] for idx in cr])
+#     # model.constraint(
+#     #   expr.sub(xr_from_x, xr),
+#     #   dom.equalsTo(0)
+#     # )
+#     # model.constraint(
+#     #   expr.sub(Yr.diag(), xr_from_x),
+#     #   dom.lessThan(0)
+#     # )
+#     # if k + 1 <= len(mc):
+#     #   zero_cols = list(set(cr).difference(mc[k]))
+#     #   # Er[:, zero_cols] = 0
+#     sum_y = expr.add(sum_y, expr.mul(expr.mul(Er.T, Yr), Er))
+#   model.constraint(
+#     expr.sub(
+#       expr.diag,
+#       x), dom.lessThan(0))
+#   #
+#   # # constraints
+#   # for i in range(m):
+#   #   if sign[i] == 0:
+#   #     model.constraint(
+#   #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+#   #       dom.equalsTo(b[i]))
+#   #   elif sign[i] == -1:
+#   #     model.constraint(
+#   #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+#   #       dom.greaterThan(b[i]))
+#   #   else:
+#   #     model.constraint(
+#   #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+#   #       dom.lessThan(b[i]))
+#
+#   # objectives
+#   obj_expr = expr.add(expr.sum(expr.mulElm(Q, sum_y)), expr.dot(x, q))
+#   # obj_expr = expr.add(expr.sum(expr.mulElm(Q, Y)), expr.dot(x, q))
+#   model.objective(mf.ObjectiveSense.Minimize
+#                   if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
+#
+#   r = MSKResult()
+#   r.xvar = x
+#   # r.yvar = Y
+#   r.problem = model
+#   if not solve:
+#     return r
+#
+#   model.solve()
+#   xval = x.level().reshape(xshape)
+#   # r.yval = Y.level().reshape((n, n))
+#   r.xval = xval
+#   r.relax_obj = model.primalObjValue()
+#   r.true_obj = qp_obj_func(Q, q, xval)
+#   r.solved = True
+#   r.solve_time = model.getSolverDoubleInfo("optimizerTime")
+#
+#   return r
+
+
+####################################
+# Archaic naive models
+#   simply rewrite positive eigenvectors
+#   into a SDP instead of conic
+# todo: to be improved
+####################################
 def msc_diag_sdp(
     qp: QP, bounds: MscBounds = None,
     sense="max", verbose=True, solve=True,
@@ -236,7 +514,6 @@ def msc_part_relaxation(
       true_obj_expr,
       expr.sum(expr.mulElm(qplus, Yp))
     )
-    
     model.constraint(expr.sub(Yp.diag(), x), dom.lessThan(0))
   
   # RLT cuts
@@ -327,259 +604,3 @@ def msc_part_relaxation(
   
   return r
 
-
-def greedy_agg_cc(cc, eps=40):
-  agg_cc = []
-  ac = set()
-  selected = set()
-  while cc:
-    cl = set(cc.pop())
-    lenc = len(cc)
-    newx = cl.difference(selected)
-    ac.update(cl)
-    if len(ac) >= eps or lenc == 0:
-      agg_cc.append(list(ac))
-      selected.update(ac)
-      ac = set()
-  return agg_cc
-
-
-def create_er_from_clique(cr, n):
-  nr = len(cr)
-  Er = np.zeros((nr, n))
-  for row, col in enumerate(cr):
-    Er[row, col] = 1
-  return Er
-
-
-def ssdp(
-    qp: QP,
-    sense="max", verbose=True, solve=True, **kwargs
-):
-  """
-  use a Y along with x in the SDP
-      for basic 0 <= x <= e, diag(Y) <= x
-  -------
-
-  """
-  _unused = kwargs
-  Q, q, A, a, b, sign, lb, ub, ylb, yub, cc = qp.unpack()
-  m, n, d = a.shape
-  xshape = (n, d)
-  model = mf.Model('shor_clique_msk')
-  
-  if verbose:
-    model.setLogHandler(sys.stdout)
-  
-  ########################
-  # cliques and chordal
-  ########################
-  if cc is None:
-    g = nx.Graph()
-    g.add_edges_from([(i, j) for i, j in zip(*Q.nonzero()) if i!=j])
-    g_chordal, alpha = na.complete_to_chordal_graph(g)
-    # cc is a list of maximal cliques
-    # e.g.:
-    # [[0, 4, 1], [0, 4, 3], [0, 4, 5], [2, 1], [2, 3]]
-    cc = na.chordal_graph_cliques(g_chordal)
-  ccl = [len(cl) for cl in cc]
-  print(f"number of cliques {len(cc)}")
-  print(f"clique size: {min(ccl), max(ccl)}")
-  
-  x = model.variable("x", [*xshape])
-  Y = model.variable("Y", [n, n])
-  
-  # bounds
-  model.constraint(expr.sub(x, ub), dom.lessThan(0))
-  model.constraint(expr.sub(x, lb), dom.greaterThan(0))
-  model.constraint(expr.sub(Y.diag(), x), dom.lessThan(0))
-  
-  # cliques
-  sum_y = 0
-  for k, cr in enumerate(cc):
-    Er = create_er_from_clique(cr, n)
-    nr = len(cr)
-    Zr = model.variable(f"Zr_{k}", dom.inPSDCone(nr + 1))
-    Yr = Zr.slice([0, 0], [nr, nr])
-    xr = Zr.slice([0, nr], [nr, nr + 1])
-    model.constraint(Zr.index(nr, nr), dom.equalsTo(1.))
-    model.constraint(
-      expr.sub(
-        expr.mul(expr.mul(Er, Y), Er.T),
-        Yr),
-      dom.equalsTo(0)
-    )
-    xr_from_x = x.pick([[idx, 0] for idx in cr])
-    model.constraint(
-      expr.sub(xr_from_x, xr),
-      dom.equalsTo(0)
-    )
-    # model.constraint(
-    #   expr.sub(Yr.diag(), xr_from_x),
-    #   dom.lessThan(0)
-    # )
-    # if k + 1 <= len(mc):
-    #   zero_cols = list(set(cr).difference(mc[k]))
-    #   Er[:, zero_cols] = 0
-    #   sum_y = expr.add(sum_y, expr.mul(expr.mul(Er.T, Yr), Er))
-  #
-  # # constraints
-  # for i in range(m):
-  #   if sign[i] == 0:
-  #     model.constraint(
-  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
-  #       dom.equalsTo(b[i]))
-  #   elif sign[i] == -1:
-  #     model.constraint(
-  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
-  #       dom.greaterThan(b[i]))
-  #   else:
-  #     model.constraint(
-  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
-  #       dom.lessThan(b[i]))
-  
-  # objectives
-  # obj_expr = expr.add(expr.sum(expr.mulElm(Q, sum_y)), expr.dot(x, q))
-  obj_expr = expr.add(expr.sum(expr.mulElm(Q, Y)), expr.dot(x, q))
-  model.objective(mf.ObjectiveSense.Minimize
-                  if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
-  
-  r = MSKResult()
-  r.xvar = x
-  r.yvar = Y
-  r.problem = model
-  if not solve:
-    return r
-  
-  model.solve()
-  xval = x.level().reshape(xshape)
-  r.yval = Y.level().reshape((n, n))
-  r.xval = xval
-  r.relax_obj = model.primalObjValue()
-  r.true_obj = qp_obj_func(Q, q, xval)
-  r.solved = True
-  r.solve_time = model.getSolverDoubleInfo("optimizerTime")
-  
-  return r
-
-
-
-def ssdpblk(
-    qp: QP,
-    sense="max", verbose=True, solve=True, **kwargs
-):
-  """
-  use a Y along with x in the SDP
-      for basic 0 <= x <= e, diag(Y) <= x
-  -------
-
-  """
-  _unused = kwargs
-  Q, q, A, a, b, sign, lb, ub, ylb, yub, cc = qp.unpack()
-  m, n, d = a.shape
-  xshape = (n, d)
-  model = mf.Model('shor_clique_msk')
-  
-  if verbose:
-    model.setLogHandler(sys.stdout)
-  
-  ########################
-  # cliques and chordal
-  ########################
-  ########################
-  # cliques and chordal
-  ########################
-  if cc is None:
-    g = nx.Graph()
-    g.add_edges_from([(i, j) for i, j in zip(*Q.nonzero()) if i!=j])
-    g_chordal, alpha = na.complete_to_chordal_graph(g)
-    # cc is a list of maximal cliques
-    # e.g.:
-    # [[0, 4, 1], [0, 4, 3], [0, 4, 5], [2, 1], [2, 3]]
-    cc = na.chordal_graph_cliques(g_chordal)
-  ccl = [len(cl) for cl in cc]
-  print(f"number of cliques {len(cc)}")
-  print(f"clique size: {min(ccl), max(ccl)}")
-    
-  ########################
-  # compute running intersections
-  ########################
-  mc = []
-  ac = set()
-  for cl in cc:
-    newm = set(cl).difference(ac)
-    if len(newm) > 0:
-      mc.append(newm)
-      ac.update(newm)
-    if len(ac) == n:
-      break
-  
-  x = model.variable("x", [*xshape])
-  # Y = model.variable("Y", [n, n])
-  
-  # bounds
-  model.constraint(expr.sub(x, ub), dom.lessThan(0))
-  model.constraint(expr.sub(x, lb), dom.greaterThan(0))
-  # model.constraint(expr.sub(Y.diag(), x), dom.lessThan(0))
-  
-  # cliques
-  sum_y = 0
-  for k, cr in enumerate(cc):
-    Er = create_er_from_clique(cr, n)
-    nr = len(cr)
-    Zr = model.variable(f"Zr_{k}", dom.inPSDCone(nr + 1))
-    Yr = Zr.slice([0, 0], [nr, nr])
-    xr = Zr.slice([0, nr], [nr, nr + 1])
-    model.constraint(Zr.index(nr, nr), dom.equalsTo(1.))
-    xr_from_x = x.pick([[idx, 0] for idx in cr])
-    model.constraint(
-      expr.sub(xr_from_x, xr),
-      dom.equalsTo(0)
-    )
-    model.constraint(
-      expr.sub(Yr.diag(), xr_from_x),
-      dom.lessThan(0)
-    )
-    if k + 1 <= len(mc):
-      zero_cols = list(set(cr).difference(mc[k]))
-      # Er[:, zero_cols] = 0
-      sum_y = expr.add(sum_y, expr.mul(expr.mul(Er.T, Yr), Er))
-  #
-  # # constraints
-  # for i in range(m):
-  #   if sign[i] == 0:
-  #     model.constraint(
-  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
-  #       dom.equalsTo(b[i]))
-  #   elif sign[i] == -1:
-  #     model.constraint(
-  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
-  #       dom.greaterThan(b[i]))
-  #   else:
-  #     model.constraint(
-  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
-  #       dom.lessThan(b[i]))
-  
-  # objectives
-  obj_expr = expr.add(expr.sum(expr.mulElm(Q, sum_y)), expr.dot(x, q))
-  # obj_expr = expr.add(expr.sum(expr.mulElm(Q, Y)), expr.dot(x, q))
-  model.objective(mf.ObjectiveSense.Minimize
-                  if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
-  
-  r = MSKResult()
-  r.xvar = x
-  # r.yvar = Y
-  r.problem = model
-  if not solve:
-    return r
-  
-  model.solve()
-  xval = x.level().reshape(xshape)
-  # r.yval = Y.level().reshape((n, n))
-  r.xval = xval
-  r.relax_obj = model.primalObjValue()
-  r.true_obj = qp_obj_func(Q, q, xval)
-  r.solved = True
-  r.solve_time = model.getSolverDoubleInfo("optimizerTime")
-  
-  return r

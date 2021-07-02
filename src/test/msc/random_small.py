@@ -22,7 +22,9 @@
 import numpy as np
 import pandas as pd
 import sys
-from pyqp import grb, bb, bg_msk, bg_msk_ex
+
+import pyqp.bg_msk_msc
+from pyqp import grb, bb, bg_msk, bg_msk_msc, bg_msk_chordal
 from pyqp import bb_msc, bb_msc2
 from pyqp.classes import QPI
 
@@ -53,10 +55,10 @@ if __name__ == '__main__':
     "grb": grb.qp_gurobi,
     "shor": bg_msk.shor,
     # "msc": bg_msk.msc,
-    "emsc": bg_msk.msc_diag,
+    "emsc": pyqp.bg_msk_msc.msc_diag,
     # "emscsdp": bg_msk_ex.msc_diag_sdp,
-    "ssdp": bg_msk_ex.ssdp,
-    "ssdpblk": bg_msk_ex.ssdpblk
+    "ssdp": bg_msk_chordal.ssdp,
+    # "ssdpblk": bg_msk_ex.ssdpblk
   }
   
   # personal
@@ -71,8 +73,8 @@ if __name__ == '__main__':
   # problem
   problem_id = f"{n}:{m}:{0}"
   # start
-  # qp = QPI.block(int(n), int(m), r=10, eps=0.5)
-  qp = QPI.normal(int(n), int(m), rho=0.2)
+  qp = QPI.block(int(n), int(m), r=2, eps=0.5)
+  # qp = QPI.normal(int(n), int(m), rho=0.2)
   
   evals = []
   results = {}
