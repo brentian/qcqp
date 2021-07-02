@@ -56,7 +56,7 @@ if __name__ == '__main__':
     "emsc": bg_msk.msc_diag,
     # "emscsdp": bg_msk_ex.msc_diag_sdp,
     "ssdp": bg_msk_ex.ssdp,
-    # "ssdpblk": bg_msk_ex.ssdpblk
+    "ssdpblk": bg_msk_ex.ssdpblk
   }
   
   # personal
@@ -71,8 +71,8 @@ if __name__ == '__main__':
   # problem
   problem_id = f"{n}:{m}:{0}"
   # start
-  qp = QPI.block(int(n), int(m), r=10, eps=0.5)
-  # qp = QPI.normal(int(n), int(m), rho=0.2)
+  # qp = QPI.block(int(n), int(m), r=10, eps=0.5)
+  qp = QPI.normal(int(n), int(m), rho=0.2)
   
   evals = []
   results = {}

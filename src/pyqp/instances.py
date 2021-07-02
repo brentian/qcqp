@@ -1,6 +1,10 @@
 import numpy as np
 import numpy.linalg as nl
 
+import networkx as nx
+import networkx.algorithms as nxa
+import matplotlib.pyplot as plt
+
 
 class QP(object):
   import copy
@@ -114,6 +118,11 @@ class QP(object):
     self.decom_arr = decom_arr
   
   def _decompose_matrix(self, A):
+    """
+    A cholesky like decomposition.
+    :param A:
+    :return:
+    """
     gamma, u = nl.eig(A)
     ipos = (gamma > 0).astype(int)
     ineg = (gamma < 0).astype(int)
@@ -151,6 +160,9 @@ class QPInstanceUtils(object):
   """
   create special QP instances
   """
+  @staticmethod
+  def _wrapper(Q, q, A, a, b, sign, lb, ub):
+    return QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
   
   @staticmethod
   def cvx(n, m):
@@ -172,7 +184,8 @@ class QPInstanceUtils(object):
     ub = np.ones(shape=(n, 1))
     Q = Q.T @ Q
     A = - A.transpose(0, 2, 1) @ A
-    return QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
+    return QPInstanceUtils._wrapper(Q, q, A, a, b, sign, lb, ub)
+    
   
   @staticmethod
   def normal(n, m, rho=0.5):
@@ -195,7 +208,7 @@ class QPInstanceUtils(object):
     ub = np.ones(shape=(n, 1))
     Q = (np.random.random(Q.shape) <= rho) * Q
     A = (np.random.random(A.shape) <= rho) @ A
-    return QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
+    return QPInstanceUtils._wrapper(Q, q, A, a, b, sign, lb, ub)
   
   @staticmethod
   def block(n, m, r, eps=0):
@@ -228,4 +241,15 @@ class QPInstanceUtils(object):
       qr = Er @ Q @ Er.T
       qc += Er.T @ qr @ Er
     
-    return QP(qc, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T, cc=cc)
+    qp = QPInstanceUtils._wrapper(Q, q, A, a, b, sign, lb, ub)
+    qp.add_cliques(cc)
+    return qp
+  
+  @staticmethod
+  def chordal(n, m):
+    intervals = np.random.randint(-100, 100, (n, 2))
+    intervals.sort(axis=1)
+    G = nx.interval_graph(intervals.tolist())
+    nx.draw(G)
+    plt.savefig("/tmp/1.png")
+    # todo ...

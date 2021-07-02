@@ -78,11 +78,12 @@ Set covering, formally, given a universe \(\) and a collection of subsets \(\mat
                          & \bar \chi (G) = \min_{\mathscr C} |\mathscr C|
                   \end{aligned}
             \end{equation}
-      \item Clique edge cover (CEC) Intersection graph respect a cover \(\{S_i\}\), is a graph by representative vertex \(v_i, \forall i\) as vertex set \(V\), and edge set,
+            % \item As as comparison, clique edge cover (CEC) is a set of cliques to cover all edges in \(G\)
+            % \item Intersection graph respect a cover \(\{S_i\}\), is a graph by representative vertex \(v_i, \forall i\) as vertex set \(V\), and edge set,
 
-            \[E(G)=\left\{(v_{i}, v_{j}) \mid i \neq j, S_{i} \cap S_{j} \neq \emptyset \right\}\]
+            %       \[E(G)=\left\{(v_{i}, v_{j}) \mid i \neq j, S_{i} \cap S_{j} \neq \emptyset \right\}\]
 
-            intersection number is the smallest number of elements of the cover: \(|\bigcup_i S_i|\)
+            %       intersection number is the smallest number of elements of the cover: \(|\bigcup_i S_i|\)
 \end{itemize}
 
 
@@ -101,19 +102,19 @@ We mark the relationship and paraphrases here,
 
 \subsubsection*{Remark: Complexity in the general case}
 
-Generally, finding a MIS is a strongly NP-hard problem, and its decision version is NP-complete. Also, MCC is NP-hard.
-Most of the results can be found in \cite{schrijver_combinatorial_2003}.
+Generally, finding a maximum independent set (and thus maximum clique) is a strongly NP-hard problem, and its decision version is NP-complete. Also, minimum clique cover also is NP-hard. Most of the results can be found in \cite{schrijver_combinatorial_2003}.
 
 
-\subsection{Chordal}
+\subsection{Ordering and the Chordal Graph}
 
-chord and chordal graph: an undirected graph \(G\) is called chordal
-(or \textbf{triangulated}, or a rigid circuit) if every cycle of
-length greater than or equal to 4 has at least one chord.
+\subsubsection*{Chord and Chordal Graph}
+
+An undirected graph \(G\) is called chordal (or \textbf{triangulated}, or a rigid circuit) if every cycle of
+length greater than or equal to 4 has at least one chord, an edge connecting two non-adjacent vertices.
 
 \begin{itemize}
       \tightlist
-      \item non-chordal graphs can always be chordal extended, i.e., extended to  a chordal graph, by adding additional edges to the original graph
+      \item non-chordal graphs can always be chordal extended, i.e., extended to a chordal graph, by adding additional edges to the original graph.
 \end{itemize}
 
 ordering: an ordering \(\sigma \{1, 2, ... , n\} \Rightarrow V\) can
@@ -125,7 +126,7 @@ If \(G\) is chordal, we have the following theorem.
 
 \begin{theorem}
       (\cite{gavril_algorithms_1972}, \cite{schrijver_combinatorial_2003}, \cite{vandenberghe_chordal_2015})
-      \(\bar \chi (G) = \alpha(G)\) if \(G\) is chordal,
+      The stable set number is equal to minimum  \(\bar \chi (G) = \alpha(G)\) if \(G\) is chordal,
       polynomial time algorithms exist for both numbers, see \cite{gavril_algorithms_1972}
 \end{theorem}
 

@@ -376,36 +376,15 @@ def ssdp(
   ########################
   if cc is None:
     g = nx.Graph()
-    g.add_edges_from(list(zip(*Q.nonzero())))
-    # cc is a list of cliques
+    g.add_edges_from([(i, j) for i, j in zip(*Q.nonzero()) if i!=j])
+    g_chordal, alpha = na.complete_to_chordal_graph(g)
+    # cc is a list of maximal cliques
     # e.g.:
     # [[0, 4, 1], [0, 4, 3], [0, 4, 5], [2, 1], [2, 3]]
-    cc = list(na.find_cliques(g))
+    cc = na.chordal_graph_cliques(g_chordal)
   ccl = [len(cl) for cl in cc]
   print(f"number of cliques {len(cc)}")
   print(f"clique size: {min(ccl), max(ccl)}")
-  ########################
-  # greedily aggregate some cliques
-  ########################
-  # cc = greedy_agg_cc(cc)
-  # ccl = [len(cl) for cl in cc]
-  # print("after aggregation")
-  # print(f"number of cliques {len(cc)}")
-  # print(f"clique size: {min(ccl), max(ccl)}")
-  # for i in cc:
-  #   print(i)
-  ########################
-  # compute running intersections
-  ########################
-  mc = []
-  ac = set()
-  for cl in cc:
-    newm = set(cl).difference(ac)
-    if len(newm) > 0:
-      mc.append(newm)
-      ac.update(newm)
-    if len(ac) == n:
-      break
   
   x = model.variable("x", [*xshape])
   Y = model.variable("Y", [n, n])
@@ -507,27 +486,20 @@ def ssdpblk(
   ########################
   # cliques and chordal
   ########################
+  ########################
+  # cliques and chordal
+  ########################
   if cc is None:
     g = nx.Graph()
-    g.add_edges_from(list(zip(*Q.nonzero())))
-    # cc is a list of cliques
+    g.add_edges_from([(i, j) for i, j in zip(*Q.nonzero()) if i!=j])
+    g_chordal, alpha = na.complete_to_chordal_graph(g)
+    # cc is a list of maximal cliques
     # e.g.:
     # [[0, 4, 1], [0, 4, 3], [0, 4, 5], [2, 1], [2, 3]]
-    cc = list(na.find_cliques(g))
+    cc = na.chordal_graph_cliques(g_chordal)
   ccl = [len(cl) for cl in cc]
   print(f"number of cliques {len(cc)}")
   print(f"clique size: {min(ccl), max(ccl)}")
-  
-  ########################
-  # greedily aggregate some cliques
-  ########################
-  cc = greedy_agg_cc(cc)
-  ccl = [len(cl) for cl in cc]
-  print("after aggregation")
-  print(f"number of cliques {len(cc)}")
-  print(f"clique size: {min(ccl), max(ccl)}")
-  for i in cc:
-    print(i)
     
   ########################
   # compute running intersections
@@ -570,7 +542,7 @@ def ssdpblk(
     )
     if k + 1 <= len(mc):
       zero_cols = list(set(cr).difference(mc[k]))
-      Er[:, zero_cols] = 0
+      # Er[:, zero_cols] = 0
       sum_y = expr.add(sum_y, expr.mul(expr.mul(Er.T, Yr), Er))
   #
   # # constraints
