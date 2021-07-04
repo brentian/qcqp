@@ -21,27 +21,25 @@ class Eval(object):
 
 
 class Result:
-  def __init__(self, problem=None, yval=0, xval=0, tval=0, relax_obj=0, true_obj=0, bound=0,
-               solve_time=0):
+  def __init__(
+      self,
+      problem=None,
+  ):
     self.problem = problem
-    self.yval = yval
-    self.xval = xval
-    self.tval = tval
-    self.relax_obj = relax_obj
-    self.true_obj = true_obj
-    self.bound = bound
-    self.solve_time = solve_time
+    self.relax_obj = 0
+    self.true_obj = 0
+    self.bound = 0
+    self.start_time = 0
+    self.solve_time = 0
+    self.total_time = 0
+    self.build_time = 0
     self.nodes = 0
   
   def eval(self, problem_id=""):
     return Eval(problem_id, self.solve_time, self.bound, self.true_obj, relax_obj=self.relax_obj, nodes=self.nodes)
   
   def check(self, qp: QP):
-    x, y = self.xval, self.yval
-    # res = (y - x @ x.T)
-    # print(f"y - xx':{res.min(), res.max()}")
-    for m in range(qp.A.shape[0]):
-      print(f"A*Y + a * x - b:{(x.T @ qp.A[m] * x).trace() + (qp.a[m].T @ x).trace() - qp.b[m]}: {qp.sign[m]}")
+    pass
 
 
 keys = ['feas_eps', 'opt_eps', 'time_limit']
@@ -86,8 +84,14 @@ class Bounds(object):
     # sparse implementation
     self.xlb = xlb.copy()
     self.xub = xub.copy()
-    self.ylb = ylb.copy()
-    self.yub = yub.copy()
+    if ylb is not None:
+      self.ylb = ylb.copy()
+    else:
+      self.ylb = xlb @ xlb.T
+    if yub is not None:
+      self.yub = yub.copy()
+    else:
+      self.yub = xub @ xub.T
   
   def unpack(self):
     return self.xlb, self.xub, self.ylb, self.yub

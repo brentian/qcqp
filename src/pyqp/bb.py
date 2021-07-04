@@ -127,7 +127,7 @@ class Cuts(object):
   def add_cuts_to_msk(self, r: bg_msk.MSKResult):
     
     _problem: bg_msk.mf.Model = r.problem
-    x, y, z = r.xvar, r.yvar, r.zvar
+    x, y, z = r.xvar, r.yvar, None
     
     for cut_type, cut_list in self.cuts.items():
       for ct in cut_list:
@@ -154,15 +154,12 @@ class BBItem(object):
 
 def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=False, backend_name='msk',
                          backend_func=None, sdp_solver="MOSEK"):
-  Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = parent.qp.unpack()
+  Q, q, A, a, b, sign, *_ = parent.qp.unpack()
   # left <=
   left_bounds = Bounds(*parent.bound.unpack())
   left_succ = left_bounds.update_bounds_from_branch(branch, left=True)
-  left_qp = QP(
-    Q, q, A, a, b, sign,
-    *left_bounds.unpack()
-  )
-  left_r = backend_func(left_qp, solver=sdp_solver, verbose=verbose, solve=False)
+ 
+  left_r = backend_func(parent.qp, left_bounds, solver=sdp_solver, verbose=verbose, solve=False)
   if not left_succ:
     # problem is infeasible:
     left_r.solved = True
@@ -173,17 +170,14 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
     left_cuts = parent.cuts.generate_cuts(branch, left_bounds)
     left_cuts.add_cuts(left_r, backend_name)
   
-  left_item = BBItem(left_qp, parent.depth + 1, total_nodes, parent.node_id, parent.result.relax_obj, left_r,
+  left_item = BBItem(parent.qp, parent.depth + 1, total_nodes, parent.node_id, parent.result.relax_obj, left_r,
                      left_bounds, left_cuts)
   
   # right >=
   right_bounds = Bounds(*parent.bound.unpack())
   right_succ = right_bounds.update_bounds_from_branch(branch, left=False)
-  right_qp = QP(
-    Q, q, A, a, b, sign,
-    *right_bounds.unpack()
-  )
-  right_r = backend_func(right_qp, solver=sdp_solver, verbose=verbose, solve=False)
+  
+  right_r = backend_func(parent.qp, right_bounds, solver=sdp_solver, verbose=verbose, solve=False)
   if not right_succ:
     # problem is infeasible
     right_r.solved = True
@@ -194,12 +188,12 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
     right_cuts = parent.cuts.generate_cuts(branch, right_bounds)
     right_cuts.add_cuts(right_r, backend_name)
   
-  right_item = BBItem(right_qp, parent.depth + 1, total_nodes + 1, parent.node_id, parent.result.relax_obj, right_r,
+  right_item = BBItem(parent.qp, parent.depth + 1, total_nodes + 1, parent.node_id, parent.result.relax_obj, right_r,
                       right_bounds, right_cuts)
   return left_item, right_item
 
 
-def bb_box(qp: QP, verbose=False, params=BCParams(), **kwargs):
+def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   print(json.dumps(params.__dict__(), indent=2))
   backend_func = kwargs.get('func')
   backend_name = params.backend_name
@@ -210,19 +204,16 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), **kwargs):
       backend_func = bg_cvx.shor_relaxation
     else:
       raise ValueError("not implemented")
-  # choose branching
+  # root
+  root_bound = bounds
   
   # problems
   k = 0
   start_time = time.time()
   print("solving root node")
-  root_r = backend_func(qp, solver=params.sdp_solver, verbose=True, solve=True)
+  root_r = backend_func(qp, root_bound, solver=params.sdp_solver, verbose=True, solve=True)
   best_r = root_r
-  # root
-  root_bound = Bounds(
-    qp.lb, qp.ub,
-    qp.ylb, qp.yub
-  )
+  
   # global cuts
   glc = Cuts()
   

@@ -65,13 +65,33 @@ for \(X \in \mathbb{R}^{n\times d}\), we have: \(X^{T} A_{i} X = A_i \bullet (XX
   \end{aligned}
 \end{equation}
 
+Consider the dual of primal SDP relaxation.
+\begin{equation}
+  \begin{aligned}
+    L = & \max_{x, X} \; Q\bullet X + q^Tx + \sum_i \left( \lambda_i A_i \bullet X  + \lambda_i a_i^Tx - \lambda_i b_i \right ) + \mu^Tx - \mu^Te \\
+        & - \begin{bmatrix}X & x \\ x^T & 1\end{bmatrix} \bullet \begin{bmatrix}Y & y \\ y^T & 1\end{bmatrix}                                                                           \\
+    =   & \max_{x, X} \; - \lambda^Tb - \mu^Te - 1+X\bullet (Q + \sum_i\lambda_iA_i - Y) + x^T(q + \sum_i \lambda_i a_i + \mu - 2 y)
+  \end{aligned}
+\end{equation}
+
+And thus the dual,
+
+\begin{equation}
+  \begin{aligned}
+    \min_{\lambda, \mu, y, Y}\quad & \lambda^Tb + \mu^Te + 1                    \\
+    \mathrm{s.t.} \quad            & Y = Q + \sum_i \lambda_i A_i               \\
+                                   & q + \sum_i \lambda_i a_i + \mu - 2 y \le 0 \\
+                                   & Y \succeq yy^T                             \\
+                                   & \lambda, \mu \ge 0
+  \end{aligned}
+\end{equation}
 \subsubsection{Inhomogeneous}
 SDP relaxation,
 \begin{equation}
   \begin{aligned}
-    \mathrm{Maximize}\quad & Q\bullet Y   + 2q^T x                                            \\
+    \mathrm{Maximize}\quad & Q\bullet Y   + 2q^T x                                             \\
     \mathrm{s.t.}  \quad   & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
-                           & A_i \bullet Y +2 a_i^Tx \; (\le, =, \ge) \; b_i, \forall i       \\
+                           & A_i \bullet Y +2 a_i^Tx \; (\le, =, \ge) \; b_i, \forall i        \\
   \end{aligned}
 \end{equation}
 
@@ -81,7 +101,7 @@ The above formulation could be unbounded. We homogenize by letting \(y = (x; t)\
 \begin{equation}
   \begin{aligned}
     \mathrm{Maximize}\quad & y^T
-    \begin{bmatrix} Q   & q \\ q^T & 0 \end{bmatrix}y                                                                    \\
+    \begin{bmatrix} Q   & q \\ q^T & 0 \end{bmatrix}y                                                                   \\
     \mathrm{s.t.} \quad    & y^T  \begin{bmatrix} A_i   & a_i \\ a_i^T & 0 \end{bmatrix}y  \; (\le, =, \ge) \; b_i, \forall i \\
   \end{aligned}
 \end{equation}

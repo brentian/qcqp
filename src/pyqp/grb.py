@@ -1,10 +1,13 @@
 import itertools
 import numpy as np
+import time
 
-from .classes import Result, Params, QP
+from .classes import Result, Params, QP, Bounds
 
 
-def qp_gurobi(qp: QP, sense="max", relax=True, verbose=True, params: Params = Params(), **kwargs):
+def qp_gurobi(qp: QP,
+              bounds: Bounds,
+              sense="max", relax=True, verbose=True, params: Params = Params(), **kwargs):
   """
   QCQP using Gurobi 9.1 as benchmark
   todo: works only for 1-d case now
@@ -32,7 +35,9 @@ def qp_gurobi(qp: QP, sense="max", relax=True, verbose=True, params: Params = Pa
   ######################
   time_limit = params.time_limit
   import gurobipy as grb
-  Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
+  st_time = time.time()
+  Q, q, A, a, b, sign = qp.unpack()
+  lb, ub, ylb, yub = bounds.unpack()
   m, n, d = a.shape
   model = grb.Model()
   model.setParam(grb.GRB.Param.OutputFlag, True)

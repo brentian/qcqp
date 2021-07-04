@@ -26,18 +26,21 @@ import sys
 import pyqp.bg_msk_msc
 from pyqp import grb, bb, bg_msk, bg_msk_msc, bg_msk_chordal
 from pyqp import bb_msc, bb_msc2
-from pyqp.classes import QPI
+from pyqp.classes import QPI, Bounds
+import argparse
 
 np.random.seed(1)
 
+parser = argparse.ArgumentParser("QCQP runner")
+parser.add_argument("--n", type=int, help="dim of x", default=5)
+parser.add_argument("--m", type=int, help="if randomly generated num of constraints", default=5)
+parser.add_argument("--pc", type=str, help="if randomly generated problem type", default=5)
+
 if __name__ == '__main__':
   pd.set_option("display.max_columns", None)
-  try:
-    n, m, pc, *_ = sys.argv[1:]
-  except Exception as e:
-    print("usage:\n"
-          "python tests/random_bb.py n (number of variables) m (num of constraints)")
-    raise e
+  parser.print_usage()
+  args = parser.parse_args()
+  n, m, pc = args.n, args.m, args.pc
   verbose = True
   bool_use_shor = False
   evals = []
@@ -66,15 +69,17 @@ if __name__ == '__main__':
   pkwargs_dtl = {
     "emsc": {**kwargs, "decompose_method": "eig-type2", },
     # "emscsdp": {**kwargs, "decompose_method": "eig-type2", },
-    # "msc_diag": {**kwargs, "decompose_method": "eig-typae2", "lk": False},
+    # "msc_diag": {**kwargs, "decompose_method": "eig-typae2"},
     # "socp": {**kwargs, "decompose_method": "eig-type2"},
   }
   pkwargs.update(pkwargs_dtl)
   # problem
   problem_id = f"{n}:{m}:{0}"
   # start
-  qp = QPI.block(int(n), int(m), r=2, eps=0.5)
-  # qp = QPI.normal(int(n), int(m), rho=0.2)
+  # qp = QPI.block(n, m, r=5, eps=0.5)
+  qp = QPI.normal(int(n), int(m), rho=0.2)
+  bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
+  
   
   evals = []
   results = {}
@@ -83,15 +88,15 @@ if __name__ == '__main__':
     print(k, pkwargs[k])
     qp1 = bb_msc.QP(*qp.unpack())
     qp1.decompose(**pkwargs[k])
-    r = func(qp1, **pkwargs[k])
+    r = func(qp1, bd, **pkwargs[k])
     reval = r.eval(problem_id)
     evals.append({**reval.__dict__, "method": k})
     results[k] = r
   
   for k, r in results.items():
     print(f"{k} benchmark @{r.relax_obj}")
-    print(f"{k} benchmark x\n"
-          f"{r.xval.round(3)}")
+    # print(f"{k} benchmark x\n"
+    #       f"{r.xval.round(3)}")
     r.check(qp)
   
   df_eval = pd.DataFrame.from_records(evals)

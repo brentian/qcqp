@@ -1,4 +1,5 @@
 import sys
+import time
 
 try:
   import mosek.fusion as mf
@@ -11,15 +12,20 @@ except Exception as e:
   
   logging.exception(e)
 
-from .classes import Result, qp_obj_func, QP
+from .classes import Result, qp_obj_func, QP, Bounds
 
 
 class MSKResult(Result):
-  def __init__(self, problem: mf.Model = None, yval=0, xval=0, tval=0, relax_obj=0, true_obj=0, bound=0, solve_time=0,
-               xvar: mf.Variable = None,
-               yvar: mf.Variable = None,
-               zvar: mf.Variable = None):
-    super().__init__(problem, yval, xval, tval, relax_obj, true_obj, bound, solve_time)
+  def __init__(
+      self,
+      qp: QP = None,
+      problem: mf.Model = None,
+      xvar: mf.Variable = None,
+      yvar: mf.Variable = None,
+      zvar: mf.Variable = None
+  ):
+    super().__init__(problem)
+    self.qp = qp
     self.xvar = xvar
     self.yvar = yvar
     self.zvar = zvar
@@ -27,15 +33,21 @@ class MSKResult(Result):
   
   def solve(self):
     self.problem.solve()
-    self.yval = self.yvar.level().reshape(self.yvar.getShape())
     self.xval = self.xvar.level().reshape(self.xvar.getShape())
+    self.yval = self.yvar.level().reshape(self.yvar.getShape())
     self.relax_obj = self.problem.primalObjValue()
     self.solved = True
+    self.solve_time = self.problem.getSolverDoubleInfo("optimizerTime")
+    self.total_time = time.time() - self.start_time
 
 
 def shor(
     qp: QP,
-    sense="max", verbose=True, solve=True, **kwargs
+    bounds: Bounds,
+    sense="max",
+    verbose=True,
+    solve=True,
+    **kwargs
 ):
   """
   use a Y along with x in the SDP
@@ -59,7 +71,9 @@ def shor(
 
   """
   _unused = kwargs
-  Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
+  st_time = time.time()
+  Q, q, A, a, b, sign = qp.unpack()
+  lb, ub, ylb, yub = bounds.unpack()
   m, n, d = a.shape
   xshape = (n, d)
   model = mf.Model('shor_msk')
@@ -95,29 +109,21 @@ def shor(
   model.objective(mf.ObjectiveSense.Minimize
                   if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
   
-  r = MSKResult()
-  r.xvar = x
-  r.yvar = Y
-  r.zvar = Z
-  r.problem = model
+  r = MSKResult(qp, model, x, Y, Z)
+  r.start_time = st_time
+  r.build_time = time.time() - st_time
   if not solve:
     return r
-  
-  model.solve()
-  xval = x.level().reshape(xshape)
-  r.yval = Y.level().reshape((n, n))
-  r.xval = xval
-  r.relax_obj = model.primalObjValue()
-  r.true_obj = qp_obj_func(Q, q, xval)
-  r.solved = True
-  r.solve_time = model.getSolverDoubleInfo("optimizerTime")
+  r.solve()
+  if verbose:
+    print(r.build_time, r.total_time, r.solve_time)
   
   return r
 
 
-
 def dshor(
     qp: QP,
+    bounds: Bounds,
     sense="max", verbose=True, solve=True, **kwargs
 ):
   """
@@ -127,7 +133,8 @@ def dshor(
 
   """
   _unused = kwargs
-  Q, q, A, a, b, sign, lb, ub, ylb, yub, diagx = qp.unpack()
+  Q, q, A, a, b, sign = qp.unpack()
+  lb, ub, ylb, yub = bounds.unpack()
   m, n, d = a.shape
   xshape = (n, d)
   model = mf.Model('shor_msk')
@@ -181,5 +188,3 @@ def dshor(
   r.solve_time = model.getSolverDoubleInfo("optimizerTime")
   
   return r
-
-

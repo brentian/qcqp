@@ -60,26 +60,7 @@
   This formulation incorporates a lot of linear constraints for \(C_r \cap C_{r'}\)
 \end{frame}
 \begin{frame}
-  Consider the dual of primal SDP relaxation.
-  \begin{equation}
-    \begin{aligned}
-      L = & \max_{x, X} \; Q\bullet X + q^Tx + \sum_i \left( \lambda_i A_i \bullet X  + \lambda_i a_i^Tx - \lambda_i b_i \right ) + \mu^Tx - \mu^Te \\
-          & - \begin{bmatrix}X & x \\ x^T & 1\end{bmatrix} \bullet \begin{bmatrix}Y & y \\ y^T & 1\end{bmatrix}                                                                           \\
-      =   & \max_{x, X} \; - \lambda^Tb - \mu^Te - 1+X\bullet (Q + \sum_i\lambda_iA_i - Y) + x^T(q + \sum_i \lambda_i a_i + \mu - 2 y)
-    \end{aligned}
-  \end{equation}
 
-  And thus the dual,
-
-  \begin{equation}
-    \begin{aligned}
-      \min_{\lambda, \mu, y, Y}\quad & \lambda^Tb + \mu^Te + 1                    \\
-      \mathrm{s.t.} \quad            & Y = Q + \sum_i \lambda_i A_i               \\
-                                     & q + \sum_i \lambda_i a_i + \mu - 2 y \le 0 \\
-                                     & Y \succeq yy^T                             \\
-                                     & \lambda, \mu \ge 0
-    \end{aligned}
-  \end{equation}
 \end{frame}
 
 \begin{frame}

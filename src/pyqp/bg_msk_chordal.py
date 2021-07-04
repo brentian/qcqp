@@ -1,3 +1,4 @@
+import itertools
 import numpy as np
 import networkx as nx
 import networkx.algorithms as na
@@ -46,12 +47,15 @@ def create_er_from_clique(cr, n):
 # 3. Y ⪰ 0 is eq to Yr ⪰ 0 for each r and Cr
 def ssdp(
     qp: QP,
+    bounds: Bounds,
     sense="max", verbose=True, solve=True, **kwargs
 ):
   """
   """
   _unused = kwargs
-  Q, q, A, a, b, sign, lb, ub, ylb, yub, cc = qp.unpack()
+  st_time = time.time()
+  Q, q, A, a, b, sign = qp.unpack()
+  lb, ub, ylb, yub = bounds.unpack()
   m, n, d = a.shape
   xshape = (n, d)
   model = mf.Model('shor_clique_msk')
@@ -59,45 +63,30 @@ def ssdp(
   if verbose:
     model.setLogHandler(sys.stdout)
   
-  ########################
-  # cliques and chordal
-  ########################
-  if cc is None:
-    g = nx.Graph()
-    g.add_edges_from([(i, j) for i, j in zip(*Q.nonzero()) if i!=j])
-    g_chordal, alpha = na.complete_to_chordal_graph(g)
-    # cc is a list of maximal cliques
-    # e.g.:
-    # [[0, 4, 1], [0, 4, 3], [0, 4, 5], [2, 1], [2, 3]]
-    cc = na.chordal_graph_cliques(g_chordal)
-    # cc = greedy_agg_cc(cc, eps=70)
+  ic, cc, er = qp.ic, qp.cc, qp.Er
   ccl = [len(cl) for cl in cc]
   print(f"number of cliques {len(cc)}")
   print(f"clique size: {min(ccl), max(ccl)}")
   print(cc)
   
-  x = model.variable("x", [*xshape])
-  Y = model.variable("Y", [n, n])
-  
-  # bounds
-  model.constraint(expr.sub(x, ub), dom.lessThan(0))
-  model.constraint(expr.sub(x, lb), dom.greaterThan(0))
-  model.constraint(expr.sub(Y.diag(), x), dom.lessThan(0))
+  x = model.variable("x", [*xshape], dom.inRange(lb, ub))
+  # Y = model.variable("Y", [n, n])
   
   # cliques
+  sum_y = 0
   for k, cr in enumerate(cc):
-    Er = create_er_from_clique(cr, n)
+    Er = er[k]
     nr = len(cr)
     Zr = model.variable(f"Zr_{k}", dom.inPSDCone(nr + 1))
     Yr = Zr.slice([0, 0], [nr, nr])
     xr = Zr.slice([0, nr], [nr, nr + 1])
     model.constraint(Zr.index(nr, nr), dom.equalsTo(1.))
-    model.constraint(
-      expr.sub(
-        expr.mul(expr.mul(Er, Y), Er.T),
-        Yr),
-      dom.equalsTo(0)
-    )
+    # model.constraint(
+    #   expr.sub(
+    #     expr.mul(expr.mul(Er, Y), Er.T),
+    #     Yr),
+    #   dom.equalsTo(0)
+    # )
     xr_from_x = x.pick([[idx, 0] for idx in cr])
     model.constraint(
       expr.sub(xr_from_x, xr),
@@ -107,6 +96,33 @@ def ssdp(
       expr.sub(Yr.diag(), xr),
       dom.lessThan(0)
     )
+    Qr = Er @ Q @ Er.T
+    sum_y = expr.add(sum_y, expr.dot(Qr, Yr))
+  # intersections
+  for k, cr in enumerate(ic):
+    Er = create_er_from_clique(cr, n)
+    nr = len(cr)
+    Zr = model.variable(f"inZr_{k})", dom.inPSDCone(nr + 1))
+    Yr = Zr.slice([0, 0], [nr, nr])
+    xr = Zr.slice([0, nr], [nr, nr + 1])
+    model.constraint(Zr.index(nr, nr), dom.equalsTo(1.))
+    # model.constraint(
+    #   expr.sub(
+    #     expr.mul(expr.mul(Er, Y), Er.T),
+    #     Yr),
+    #   dom.equalsTo(0)
+    # )
+    xr_from_x = x.pick([[idx, 0] for idx in cr])
+    model.constraint(
+      expr.sub(xr_from_x, xr),
+      dom.equalsTo(0)
+    )
+    model.constraint(
+      expr.sub(Yr.diag(), xr),
+      dom.lessThan(0)
+    )
+    Qr = Er @ Q @ Er.T
+    sum_y = expr.sub(sum_y, expr.dot(Qr, Yr))
   #
   # # constraints
   # for i in range(m):
@@ -124,8 +140,8 @@ def ssdp(
   #       dom.lessThan(b[i]))
   
   # objectives
-  # obj_expr = expr.add(expr.sum(expr.mulElm(Q, sum_y)), expr.dot(x, q))
-  obj_expr = expr.add(expr.sum(expr.mulElm(Q, Y)), expr.dot(x, q))
+  obj_expr = expr.add(sum_y, expr.dot(x, q))
+  # obj_expr = expr.add(expr.sum(expr.mulElm(Q, Y)), expr.dot(x, q))
   model.objective(
     mf.ObjectiveSense.Minimize if sense == 'min'
     else mf.ObjectiveSense.Maximize, obj_expr
@@ -133,20 +149,11 @@ def ssdp(
   
   r = MSKResult()
   r.xvar = x
-  r.yvar = Y
+  #
   r.problem = model
   if not solve:
     return r
-  
-  model.solve()
-  xval = x.level().reshape(xshape)
-  r.yval = Y.level().reshape((n, n))
-  r.xval = xval
-  r.relax_obj = model.primalObjValue()
-  r.true_obj = qp_obj_func(Q, q, xval)
-  r.solved = True
-  r.solve_time = model.getSolverDoubleInfo("optimizerTime")
-  
+  r.solve()
   return r
 
 

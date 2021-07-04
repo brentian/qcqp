@@ -8,9 +8,8 @@ from .instances import QP
 
 
 class MSKMscResult(MSKResult):
-  def __init__(self, problem=None, yval=0, xval=0, tval=0, relax_obj=0, true_obj=0, bound=0, solve_time=0, xvar=None,
-               yvar=None):
-    super().__init__(problem, yval, xval, tval, relax_obj, true_obj, bound, solve_time, xvar, yvar)
+  def __init__(self):
+    super().__init__()
     self.zvar = None
     self.zval = None
     self.Zvar = None
@@ -75,6 +74,7 @@ def msc(
   """
   _unused = kwargs
   Q, q, A, a, b, sign, *_ = qp.unpack()
+  
   if qp.Qpos is None:
     raise ValueError("decompose QP instance first")
   m, n, dim = a.shape
@@ -103,16 +103,7 @@ def msc(
   Z = [z]
   for idx in range(n):
     model.constraint(zcone.index([idx, 1, 1]), dom.equalsTo(1))
-  
-  # # bounds
-  # model.constraint(z, dom.inRange(zlb[0], zub[0]))
-  # if bounds.ylb is not None:
-  #   pass
-  # if bounds.yub is not None:
-  #   model.constraint(y, dom.lessThan(bounds.yub[0]))
-  # else:
-  #   model.constraint(y, dom.lessThan(1e5))
-  
+
   # Q.T x = Z
   model.constraint(
     expr.sub(
