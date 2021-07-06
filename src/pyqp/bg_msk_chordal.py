@@ -4,12 +4,61 @@ import networkx as nx
 import networkx.algorithms as na
 from .bg_msk import *
 
-
 ####################################
 # Chordal/Clique based SDP
 ####################################
 from .bg_msk_msc import MSKMscResult
 from .classes import MscBounds
+
+
+class MSKChordalResult(MSKResult):
+  extract_arr_of_vars = \
+    lambda self, x_arr: [xx.level().reshape(xx.getShape()).round(4) for xx in x_arr]
+  
+  def __init__(self, qp: QP, problem: mf.Model):
+    super().__init__(qp, problem)
+    self.Yrvar = None
+    self.Yivar = None
+    self.yval = None
+    self.Yival = None
+    self.Yrval = None
+    self.solved = False
+    self.obj_expr = None
+    self.qel = None
+    self.q = None
+  
+  def solve(self, verbose=False):
+    if verbose:
+      self.problem.setLogHandler(sys.stdout)
+    try:
+      self.problem.solve()
+      status = self.problem.getProblemStatus()
+    except Exception as e:
+      status = 'failed'
+    end_time = time.time()
+    if status == mf.ProblemStatus.PrimalAndDualFeasible:
+      self.xval = self.xvar.level().reshape(self.xvar.getShape())
+      self.relax_obj = self.problem.primalObjValue()
+      self.solved = True
+      self.solve_time = self.problem.getSolverDoubleInfo("optimizerTime")
+      self.total_time = time.time() - self.start_time
+      if self.Yrvar is not None:
+        self.Yrval = self.extract_arr_of_vars(self.Yrvar)
+      if self.Yivar is not None:
+        self.Yival = self.extract_arr_of_vars(self.Yivar)
+      sum_y = 0
+      for k, cr in enumerate(self.qp.cc):
+        er = self.qp.Er[k]
+        sum_y += er.T @ self.Yrval[k] @ er
+      for k, cr in enumerate(self.qp.ic):
+        er = self.qp.Eir[k]
+        sum_y -= er.T @ self.Yival[k] @ er
+      self.yval = sum_y
+      self.true_obj = qp_obj_func(self.qp.Q, self.qp.q, self.xval)
+      
+    else:  # infeasible
+      self.relax_obj = -1e6
+    self.solved = True
 
 
 def greedy_agg_cc(cc, eps=40):
@@ -34,6 +83,7 @@ def create_er_from_clique(cr, n):
   for row, col in enumerate(cr):
     Er[row, col] = 1
   return Er
+
 
 ####################################
 # Primal
@@ -60,31 +110,30 @@ def ssdp(
   xshape = (n, d)
   model = mf.Model('shor_clique_msk')
   
-  if verbose:
-    model.setLogHandler(sys.stdout)
-  
-  ic, cc, er = qp.ic, qp.cc, qp.Er
+  ic, cc, er, eir = qp.ic, qp.cc, qp.Er, qp.Eir
   ccl = [len(cl) for cl in cc]
-  print(f"number of cliques {len(cc)}")
-  print(f"clique size: {min(ccl), max(ccl)}")
-  print(cc)
+  if verbose:
+    print(f"number of cliques {len(cc)}")
+    print(f"clique size: {min(ccl), max(ccl)}")
+    print(cc)
   
   x = model.variable("x", [*xshape], dom.inRange(lb, ub))
-  # Y = model.variable("Y", [n, n])
-  
+  Y = model.variable("Y", [n, n])
+  Yr = []
+  Yi = []
   # cliques
   sum_y = 0
   for k, cr in enumerate(cc):
     Er = er[k]
     nr = len(cr)
-    Zr = model.variable(f"Zr_{k}", dom.inPSDCone(nr + 1))
-    Yr = Zr.slice([0, 0], [nr, nr])
-    xr = Zr.slice([0, nr], [nr, nr + 1])
-    model.constraint(Zr.index(nr, nr), dom.equalsTo(1.))
+    zr = model.variable(f"Zr_{k}", dom.inPSDCone(nr + 1))
+    yr = zr.slice([0, 0], [nr, nr])
+    xr = zr.slice([0, nr], [nr, nr + 1])
+    model.constraint(zr.index(nr, nr), dom.equalsTo(1.))
     # model.constraint(
     #   expr.sub(
     #     expr.mul(expr.mul(Er, Y), Er.T),
-    #     Yr),
+    #     yr),
     #   dom.equalsTo(0)
     # )
     xr_from_x = x.pick([[idx, 0] for idx in cr])
@@ -93,23 +142,26 @@ def ssdp(
       dom.equalsTo(0)
     )
     model.constraint(
-      expr.sub(Yr.diag(), xr),
+      expr.sub(yr.diag(), xr),
       dom.lessThan(0)
     )
     Qr = Er @ Q @ Er.T
-    sum_y = expr.add(sum_y, expr.dot(Qr, Yr))
+    sum_y = expr.add(sum_y, expr.dot(Qr, yr))
+    Yr.append(yr)
+  
+  
   # intersections
   for k, cr in enumerate(ic):
-    Er = create_er_from_clique(cr, n)
+    Er = eir[k]
     nr = len(cr)
-    Zr = model.variable(f"inZr_{k})", dom.inPSDCone(nr + 1))
-    Yr = Zr.slice([0, 0], [nr, nr])
-    xr = Zr.slice([0, nr], [nr, nr + 1])
-    model.constraint(Zr.index(nr, nr), dom.equalsTo(1.))
+    zr = model.variable(f"Zir_{k}", dom.inPSDCone(nr + 1))
+    yr = zr.slice([0, 0], [nr, nr])
+    xr = zr.slice([0, nr], [nr, nr + 1])
+    model.constraint(zr.index(nr, nr), dom.equalsTo(1.))
     # model.constraint(
     #   expr.sub(
     #     expr.mul(expr.mul(Er, Y), Er.T),
-    #     Yr),
+    #     yr),
     #   dom.equalsTo(0)
     # )
     xr_from_x = x.pick([[idx, 0] for idx in cr])
@@ -118,11 +170,12 @@ def ssdp(
       dom.equalsTo(0)
     )
     model.constraint(
-      expr.sub(Yr.diag(), xr),
+      expr.sub(yr.diag(), xr),
       dom.lessThan(0)
     )
     Qr = Er @ Q @ Er.T
-    sum_y = expr.sub(sum_y, expr.dot(Qr, Yr))
+    sum_y = expr.sub(sum_y, expr.dot(Qr, yr))
+    Yi.append(yr)
   #
   # # constraints
   # for i in range(m):
@@ -147,15 +200,18 @@ def ssdp(
     else mf.ObjectiveSense.Maximize, obj_expr
   )
   
-  r = MSKResult()
+  r = MSKChordalResult(qp, model)
+  r.start_time = st_time
+  r.build_time = time.time() - st_time
   r.xvar = x
+  r.Yrvar = Yr
+  r.Yivar = Yi
   #
   r.problem = model
   if not solve:
     return r
-  r.solve()
+  r.solve(verbose=verbose)
   return r
-
 
 
 # def ssdpblk(
@@ -610,4 +666,3 @@ def msc_part_relaxation(
   r.solve(verbose=verbose, qp=qp)
   
   return r
-

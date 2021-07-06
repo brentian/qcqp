@@ -4,6 +4,7 @@ import numpy.linalg as nl
 import networkx as nx
 import networkx.algorithms as nxa
 import matplotlib.pyplot as plt
+from collections import defaultdict
 
 
 class QP(object):
@@ -142,12 +143,25 @@ class QP(object):
     cc1 = {i for cl in cc[:len(cc) // 2] for i in cl}
     cc2 = {i for cl in cc[len(cc) // 2:] for i in cl}
     cc = [cc1, cc2]
-    ic = [cc1.intersection(cc2)]
+    a = cc1.intersection(cc2)
+    ic = []
+    if len(a) > 0:
+      ic  = [a]
     # now we compute pairwise intersections
     self.cc = cc
     self.ic = ic
     self.Er = [QP.create_er_from_clique(cr, self.n) for k, cr in enumerate(cc)]
-  
+    self.Eir = [QP.create_er_from_clique(cr, self.n) for k, cr in enumerate(ic)]
+    self.F = sum(er.T @ er for er in self.Er)
+    self.node_to_Er = defaultdict(list)
+    self.node_to_Eir = defaultdict(list)
+    for idx_cr, cr in enumerate(cc):
+      for l in cr:
+        self.node_to_Er[l].append(idx_cr)
+    for idx_cr, cr in enumerate(ic):
+      for l in cr:
+        self.node_to_Eir[l].append(idx_cr)
+
   @staticmethod
   def create_er_from_clique(cr, n):
     nr = len(cr)
@@ -238,12 +252,3 @@ class QPInstanceUtils(object):
     
     qp = QPInstanceUtils._wrapper(qc, q, A, a, b, sign)
     return qp
-  
-  @staticmethod
-  def chordal(n, m):
-    intervals = np.random.randint(-100, 100, (n, 2))
-    intervals.sort(axis=1)
-    G = nx.interval_graph(intervals.tolist())
-    nx.draw(G)
-    plt.savefig("/tmp/1.png")
-    # todo ...

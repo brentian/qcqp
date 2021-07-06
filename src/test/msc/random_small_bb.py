@@ -24,7 +24,7 @@ import argparse
 import numpy as np
 import pandas as pd
 import sys
-from pyqp import grb, bg_msk, bg_msk_chordal
+from pyqp import bg_grb, bg_msk, bg_msk_chordal, bb_chord
 from pyqp import bb, bb_msc, \
   bb_msc2, bb_diag, bb_socp
 from pyqp.classes import QPI, QP, Bounds
@@ -33,14 +33,14 @@ np.random.seed(1)
 parser = argparse.ArgumentParser("QCQP runner")
 parser.add_argument("--n", type=int, help="dim of x", default=5)
 parser.add_argument("--m", type=int, help="if randomly generated num of constraints", default=5)
-parser.add_argument("--pc", type=str, help="if randomly generated problem type", default=5)
-parser.add_argument("--relax", type=str, help="relax integral constraints, solve as fractional", default=5)
+parser.add_argument("--pc", type=str, help="if randomly generated problem type", default="5")
+parser.add_argument("--relax", type=int, help="relax integral constraints, solve as fractional", default=1)
 
 if __name__ == '__main__':
   pd.set_option("display.max_columns", None)
   parser.print_usage()
   args = parser.parse_args()
-  n, m, pc,relax = args.n, args.m, args.pc, args.relax
+  n, m, pc, relax = args.n, args.m, args.pc, args.relax
   verbose = False
   bool_use_shor = False
   evals = []
@@ -61,9 +61,9 @@ if __name__ == '__main__':
     rlt=True
   )
   methods = {
-    "grb": grb.qp_gurobi,
+    "grb": bg_grb.qp_gurobi,
     "shor": bb.bb_box,
-    # "ssdp": bb.bb_box,
+    "ssdp": bb_chord.bb_box,
     # "emsc": bb_msc.bb_box,
     # "emscsdp": bg_msk_ex.msc_diag_sdp,
     
