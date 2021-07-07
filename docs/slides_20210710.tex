@@ -51,16 +51,28 @@
   \end{equation}
 
   So we have the QCQP with \(r\) smaller SDP constraints.
-
-  \[\begin{aligned}
+  \begin{equation}
+    \begin{aligned}
       \mathrm{Maximize}\quad & Q \bullet Y + q^Tx                               \\
       \mathrm{s.t.} \quad    & \begin{bmatrix}E_r Y E_r^T & E_rx \\ (E_rx)^T & 1\end{bmatrix}   \succeq 0, \forall r \\
-    \end{aligned}\]
+    \end{aligned}
+  \end{equation}
 
   This formulation incorporates a lot of linear constraints for \(C_r \cap C_{r'}\)
 \end{frame}
 \begin{frame}
+  Consider the case for 2-blocks (2 cliques), let \(D_1 = C_1 \bigcap C_2\)
 
+  \begin{equation}
+    Y =  \sum_{r=1}^2 E_r^TY_r Er - E(D_1)^TY_{D_1}E(D_1)
+  \end{equation}
+
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & Q \bullet Y + q^Tx                               \\
+      \mathrm{s.t.} \quad    & \begin{bmatrix}E_r Y E_r^T & E_rx \\ (E_rx)^T & 1\end{bmatrix}   \succeq 0, \forall r \\
+    \end{aligned}
+  \end{equation}
 \end{frame}
 
 \begin{frame}

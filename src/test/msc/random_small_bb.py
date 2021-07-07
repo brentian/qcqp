@@ -78,8 +78,8 @@ if __name__ == '__main__':
   }
   pkwargs.update(pkwargs_dtl)
   # start
-  qp = QPI.block(n, m, r=5, eps=0.5)
-  # qp = QPI.normal(int(n), int(m), rho=0.2)
+  qp = QPI.normal(int(n), int(m), rho=0.2)
+  qp = QPI.block(n, m, r=2, eps=0.5)
   bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
   
   evals = []
@@ -87,7 +87,7 @@ if __name__ == '__main__':
   # run methods
   for k, func in methods.items():
     print(k, pkwargs[k])
-    qp1 = QP(*qp.unpack())
+    qp1 = bb_msc.QP(*qp.unpack())
     qp1.decompose(**pkwargs[k])
     r = func(qp1, bd, **pkwargs[k])
     reval = r.eval(problem_id)

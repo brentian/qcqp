@@ -15,11 +15,33 @@ from .bb import BBItem, BCParams
 from .classes import qp_obj_func, QP, Params, Result, Bounds, Branch, CuttingPlane
 
 
+class ChordBranch(object):
+  def __init__(self, qp: QP):
+    self.qp = qp
+    self.xpivot = None
+    self.xpivot_val = None
+    self.xminor = None
+    self.xminor_val = None
+    self.ypivot = None
+    self.ypivot_val = None
+  
+  def simple_vio_branch(self, x, y, res):
+    res_sum = res.sum(0)
+    x_index = res_sum.argmax()
+    self.xpivot = x_index
+    self.xpivot_val = x[self.xpivot, 0].round(6)
+    x_minor = res[x_index].argmax()
+    self.xminor = x_minor
+    self.xminor_val = x[x_minor, 0].round(6)
+    self.ypivot = x_index, x_minor
+    self.ypivot_val = y[x_index, x_minor].round(6)
+
+
 class ChordRLTCuttingPlane(CuttingPlane):
   def __init__(self, data):
     super().__init__(data)
   
-  def serialize_to_msk(self, xvar, yrvar, yivar, qp):
+  def serialize_to_msk_block(self, xvar, yrvar, yivar, qp):
     expr = bg_msk.expr
     exprs = expr.sub
     exprm = expr.mul
@@ -49,27 +71,108 @@ class ChordRLTCuttingPlane(CuttingPlane):
       )
       dom1 = dom.lessThan(-_ub_cr @ _lb_cr.T)
       yield expr1, dom1
-    pass
-    # yij = zvar.index(i, j)
-    # xi, xj = zvar.index(n, i), zvar.index(n, j)
-    # yij = yvar.index(i, j)
-    # xi, xj = xvar.index(i, 0), xvar.index(j, 0)
-    # # (xi - li)(xj - uj) <= 0
-    # expr1, dom1 = exprs(exprs(yij, exprm(u_j, xi)),
-    #                     exprm(l_i, xj)), bg_msk.dom.lessThan(- u_j * l_i)
-    # # (xi - ui)(xj - lj) <= 0
-    # expr2, dom2 = exprs(exprs(yij, exprm(l_j, xi)),
-    #                     exprm(u_i, xj)), bg_msk.dom.lessThan(- u_i * l_j)
-    # # (xi - li)(xj - lj) >= 0
-    # expr3, dom3 = exprs(exprs(yij, exprm(l_j, xi)),
-    #                     exprm(l_i, xj)), bg_msk.dom.greaterThan(- l_j * l_i)
-    # # (xi - ui)(xj - uj) >= 0
-    # expr4, dom4 = exprs(exprs(yij, exprm(u_j, xi)),
-    #                     exprm(u_i, xj)), bg_msk.dom.greaterThan(-u_i * u_j)
-    # yield expr1, dom1
-    # yield expr2, dom2
-    # yield expr3, dom3
-    # yield expr4, dom4
+      expr1 = exprs(
+        exprs(_yr, exprm(_xr, _lb_cr.T)),
+        exprm(_lb_cr, expr.transpose(_xr))
+      )
+      dom1 = dom.greaterThan(-_lb_cr @ _lb_cr.T)
+      yield expr1, dom1
+    for idx in arr_ic_index:
+      er = qp.Eir[idx]
+      cr = list(qp.ic[idx])
+      _lb_i, _ub_i = lb[i], ub[i]
+      _lb_cr, _ub_cr = lb[cr], ub[cr]
+      _row = cr.index(i)
+      _yr = yivar[idx]
+      _xr = exprm(er, xvar)
+      ###############
+      # only on rows will not work
+      ###############
+      # _yvar = yrvar[idx].slice([0, _row], [cr.__len__(), _row + 1])
+      # _xvar = xvar.index([_row, 0])
+      # expr1, dom1 = exprs(_yvar, exprm(_xvar, _lb_cr + _ub_cr)), bg_msk.dom.lessThan(- _lb_cr * _ub_cr)
+      # yield expr1, dom1
+      expr1 = exprs(
+        exprs(_yr, exprm(_xr, _lb_cr.T)),
+        exprm(_ub_cr, expr.transpose(_xr))
+      )
+      dom1 = dom.lessThan(-_ub_cr @ _lb_cr.T)
+      yield expr1, dom1
+      expr1 = exprs(
+        exprs(_yr, exprm(_xr, _lb_cr.T)),
+        exprm(_lb_cr, expr.transpose(_xr))
+      )
+      dom1 = dom.greaterThan(-_lb_cr @ _lb_cr.T)
+      yield expr1, dom1
+  
+  def serialize_to_msk(self, xvar, yrvar, yivar, qp, res):
+    
+    expr = bg_msk.expr
+    exprs = expr.sub
+    exprm = expr.mul
+    dom = bg_msk.dom
+    i, _, lb, ub = self.data
+    
+    arr_cc_index = qp.node_to_Er[i]
+    arr_ic_index = qp.node_to_Eir[i]
+    for idx in arr_cc_index:
+      er = qp.Er[idx]
+      res_r = er @ res @ er.T
+      cr_set = qp.cc[idx]
+      cr = list(cr_set)
+      _row = cr.index(i)
+      _col = res_r[_row].argmax()
+      j = cr[_col]
+      
+      _lb_i, _ub_i = lb[i], ub[i]
+      _lb_j, _ub_j = lb[j], ub[j]
+      yij = yrvar[idx].index(_row, _col)
+      xi, xj = xvar.index(i, 0), xvar.index(j, 0)
+      # (xi - li)(xj - uj) <= 0
+      expr1, dom1 = exprs(exprs(yij, exprm(_ub_j, xi)),
+                          exprm(_lb_i, xj)), dom.lessThan(- _ub_j * _lb_i)
+      # (xi - ui)(xj - lj) <= 0
+      expr2, dom2 = exprs(exprs(yij, exprm(_lb_j, xi)),
+                          exprm(_ub_i, xj)), bg_msk.dom.lessThan(- _ub_i * _lb_j)
+      # (xi - li)(xj - lj) >= 0
+      expr3, dom3 = exprs(exprs(yij, exprm(_lb_j, xi)),
+                          exprm(_lb_i, xj)), bg_msk.dom.greaterThan(- _lb_j * _lb_i)
+      # (xi - ui)(xj - uj) >= 0
+      expr4, dom4 = exprs(exprs(yij, exprm(_ub_j, xi)),
+                          exprm(_ub_i, xj)), bg_msk.dom.greaterThan(-_ub_i * _ub_j)
+      yield expr1, dom1
+      yield expr2, dom2
+      yield expr3, dom3
+      yield expr4, dom4
+    for idx in arr_ic_index:
+      er = qp.Eir[idx]
+      res_r = er @ res @ er.T
+      cr_set = qp.ic[idx]
+      cr = list(cr_set)
+      _row = cr.index(i)
+      _col = res_r[_row].argmax()
+      j = cr[_col]
+      
+      _lb_i, _ub_i = lb[i], ub[i]
+      _lb_j, _ub_j = lb[j], ub[j]
+      yij = yrvar[idx].index(_row, _col)
+      xi, xj = xvar.index(i, 0), xvar.index(j, 0)
+      # (xi - li)(xj - uj) <= 0
+      expr1, dom1 = exprs(exprs(yij, exprm(_ub_j, xi)),
+                          exprm(_lb_i, xj)), dom.lessThan(- _ub_j * _lb_i)
+      # (xi - ui)(xj - lj) <= 0
+      expr2, dom2 = exprs(exprs(yij, exprm(_lb_j, xi)),
+                          exprm(_ub_i, xj)), bg_msk.dom.lessThan(- _ub_i * _lb_j)
+      # (xi - li)(xj - lj) >= 0
+      expr3, dom3 = exprs(exprs(yij, exprm(_lb_j, xi)),
+                          exprm(_lb_i, xj)), bg_msk.dom.greaterThan(- _lb_j * _lb_i)
+      # (xi - ui)(xj - uj) >= 0
+      expr4, dom4 = exprs(exprs(yij, exprm(_ub_j, xi)),
+                          exprm(_ub_i, xj)), bg_msk.dom.greaterThan(-_ub_i * _ub_j)
+      yield expr1, dom1
+      yield expr2, dom2
+      yield expr3, dom3
+      yield expr4, dom4
 
 
 def add_rlt_cuts(branch, bounds):
@@ -101,20 +204,20 @@ class Cuts(object):
       new_cuts.cuts[k] = self.cuts.get(k, []) + [val]
     return new_cuts
   
-  def add_cuts(self, r: Result, backend_name):
+  def add_cuts(self, backend_name, r: Result, r_parent: bg_msk_chordal.MSKChordalResult = None):
     if backend_name == 'msk':
       assert isinstance(r, bg_msk_chordal.MSKChordalResult)
-      self.add_cuts_to_msk(r)
+      self.add_cuts_to_msk(r, r_parent)
     else:
       raise ValueError(f"not implemented backend {backend_name}")
   
-  def add_cuts_to_msk(self, r: bg_msk_chordal.MSKChordalResult):
+  def add_cuts_to_msk(self, r: bg_msk_chordal.MSKChordalResult, r_parent: bg_msk_chordal.MSKChordalResult = None):
     
     _problem: bg_msk.mf.Model = r.problem
     x, y, z = r.xvar, r.Yrvar, r.Yivar
     for cut_type, cut_list in self.cuts.items():
       for ct in cut_list:
-        for expr, dom in ct.serialize_to_msk(x, y, z, r.qp):
+        for expr, dom in ct.serialize_to_msk(x, y, z, r.qp, r_parent.res):
           _problem.constraint(expr, dom)
 
 
@@ -134,7 +237,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
   else:
     # add cuts to cut off
     left_cuts = parent.cuts.generate_cuts(branch, left_bounds)
-    left_cuts.add_cuts(left_r, backend_name)
+    left_cuts.add_cuts(backend_name, left_r, parent.result)
   
   left_item = BBItem(parent.qp, parent.depth + 1, total_nodes, parent.node_id, parent.result.relax_obj, left_r,
                      left_bounds, left_cuts)
@@ -152,7 +255,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
   else:
     # add cuts to cut off
     right_cuts = parent.cuts.generate_cuts(branch, right_bounds)
-    right_cuts.add_cuts(right_r, backend_name)
+    right_cuts.add_cuts(backend_name, right_r, parent.result)
   
   right_item = BBItem(parent.qp, parent.depth + 1, total_nodes + 1, parent.node_id, parent.result.relax_obj, right_r,
                       right_bounds, right_cuts)
@@ -176,6 +279,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   k = 0
   start_time = time.time()
   print("solving root node")
+  # root_r = bg_msk.shor(qp, root_bound, solver=params.sdp_solver, verbose=True, solve=True)
   root_r = backend_func(qp, root_bound, solver=params.sdp_solver, verbose=True, solve=True)
   best_r = root_r
   
@@ -224,6 +328,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     x = r.xval
     y = r.yval
     res = np.abs(y - x @ x.T)
+    r.res = res
     
     print(
       f"time: {r.solve_time: .2f} #{item.node_id}, "
@@ -240,7 +345,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       continue
     
     ## branching    
-    br = Branch()
+    br = ChordBranch(qp, )
     br.simple_vio_branch(x, y, res)
     left_item, right_item = generate_child_items(
       total_nodes, item, br, sdp_solver=params.sdp_solver, verbose=verbose, backend_name=backend_name,

@@ -161,6 +161,8 @@ class QP(object):
     for idx_cr, cr in enumerate(ic):
       for l in cr:
         self.node_to_Eir[l].append(idx_cr)
+    self.g = g
+    self.g_chordal = g_chordal
 
   @staticmethod
   def create_er_from_clique(cr, n):
@@ -230,7 +232,7 @@ class QPInstanceUtils(object):
     :param r:
     :return:
     """
-    q = np.random.randint(0, 5, (n, 1))
+    q = np.random.randint(-5, 5, (n, 1))
     a = np.random.randint(0, 5, (m, n, 1))
     b = np.ones(m) * 3 * n
     sign = np.ones(shape=m)

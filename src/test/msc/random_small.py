@@ -58,7 +58,7 @@ if __name__ == '__main__':
     "grb": bg_grb.qp_gurobi,
     "shor": bg_msk.shor,
     # "msc": bg_msk.msc,
-    "emsc": pyqp.bg_msk_msc.msc_diag,
+    "emsc": bg_msk_msc.msc_diag,
     # "emscsdp": bg_msk_ex.msc_diag_sdp,
     "ssdp": bg_msk_chordal.ssdp,
     # "ssdpblk": bg_msk_ex.ssdpblk
@@ -76,8 +76,8 @@ if __name__ == '__main__':
   # problem
   problem_id = f"{n}:{m}:{0}"
   # start
-  qp = QPI.block(n, m, r=2, eps=0.5)
-  # qp = QPI.normal(int(n), int(m), rho=0.2)
+  # qp = QPI.block(n, m, r=2, eps=0.5)
+  qp = QPI.normal(int(n), int(m), rho=0.2)
   bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
   
   
