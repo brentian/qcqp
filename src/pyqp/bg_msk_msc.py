@@ -3,7 +3,7 @@ import sys
 import time
 
 from .bg_msk import MSKResult, dom, expr, mf
-from .classes import qp_obj_func, MscBounds, Result
+from .classes import qp_obj_func, MscBounds, Result, Bounds
 from .instances import QP
 
 
@@ -647,5 +647,114 @@ def socp_relaxation(
     return r
   
   r.solve(verbose=verbose, qp=qp)
+  
+  return r
+
+
+#####################
+
+def eshor(
+    qp: QP,
+    bounds: Bounds,
+    sense="max",
+    verbose=True,
+    solve=True,
+    r_parent: MSKResult=None,
+    **kwargs
+):
+  """
+  use a Y along with x in the SDP
+      for basic 0 <= x <= e, diag(Y) <= x
+  Parameters
+  ----------
+  Q
+  q
+  A
+  a
+  b
+  sign
+  lb
+  ub
+  solver
+  sense
+  kwargs
+
+  Returns
+  -------
+
+  """
+  _unused = kwargs
+  st_time = time.time()
+  Q, q, A, a, b, sign = qp.unpack()
+  lb, ub, ylb, yub = bounds.unpack()
+  m, n, d = a.shape
+  xshape = (n, d)
+  model = mf.Model('shor_msk')
+  
+  if verbose:
+    model.setLogHandler(sys.stdout)
+  
+  qpos, qipos = qp.Qpos
+  qneg, qineg = qp.Qneg
+  
+  V = qneg + qpos
+  qel = qp.Qmul
+
+
+  Z = model.variable("Z", dom.inPSDCone(n + 1))
+  Y = Z.slice([0, 0], [n, n])
+  z = Z.slice([0, n], [n, n + 1])
+  model.constraint(Z.index(n, n), dom.equalsTo(1.))
+  M = model.variable("M", [n, n])
+  
+  # bounds
+  x = model.variable("x", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
+  # z = v^T x
+  model.constraint(
+    expr.sub(
+      expr.mul(V.T, x),
+      z), dom.equalsTo(0))
+  model.constraint(
+    expr.sub(
+      expr.mul(expr.mul(V, Y), V.T),
+      M),
+    dom.equalsTo(0))
+
+  model.constraint(expr.sub(M.diag(), x), dom.lessThan(0))
+  
+  if r_parent is not None:
+    # Y.setLevel(r_parent.yval.flatten())
+    # x.setLevel(np.zeros(n).tolist())
+    # x.index(0, 0).setLevel([r_parent.xval[0,0]])
+    # need control for the HSD model
+    pass
+  
+  for i in range(m):
+    if sign[i] == 0:
+      model.constraint(
+        expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+        dom.equalsTo(b[i]))
+    elif sign[i] == -1:
+      model.constraint(
+        expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+        dom.greaterThan(b[i]))
+    else:
+      model.constraint(
+        expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+        dom.lessThan(b[i]))
+  
+  # objectives
+  obj_expr = expr.add(expr.sum(expr.mulElm(np.diag(qel.flatten()), Y)), expr.dot(x, q))
+  model.objective(mf.ObjectiveSense.Minimize
+                  if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
+  model.setSolverParam("intpntSolveForm", "dual")
+  r = MSKResult(qp, model, x, Y, Z)
+  r.start_time = st_time
+  r.build_time = time.time() - st_time
+  if not solve:
+    return r
+  r.solve()
+  if verbose:
+    print(r.build_time, r.total_time, r.solve_time)
   
   return r

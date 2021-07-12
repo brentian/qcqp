@@ -51,7 +51,7 @@
   \end{equation}
 
   So we have the QCQP with \(r\) smaller SDP constraints.
-  \begin{equation}
+  \begin{equation}\label{eq:sdp.blocks}
     \begin{aligned}
       \mathrm{Maximize}\quad & Q \bullet Y + q^Tx                               \\
       \mathrm{s.t.} \quad    & \begin{bmatrix}E_r Y E_r^T & E_rx \\ (E_rx)^T & 1\end{bmatrix}   \succeq 0, \forall r \\
@@ -71,6 +71,16 @@
     \begin{aligned}
       \mathrm{Maximize}\quad & Q \bullet Y + q^Tx                               \\
       \mathrm{s.t.} \quad    & \begin{bmatrix}E_r Y E_r^T & E_rx \\ (E_rx)^T & 1\end{bmatrix}   \succeq 0, \forall r \\
+    \end{aligned}
+  \end{equation}
+
+  We see the above is equivalent to \eqref{eq:sdp.blocks}, if there is no intersections for blocks, i.e., \(D_1 = \emptyset\),
+  it can be further simplified by letting \(Q_r = E_r Q E_r^T\)
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & \sum_{r=1}^L Q_r \bullet Y_r                     \\
+      \mathrm{s.t.} \quad    & \begin{bmatrix}Y_r & E_rx \\ (E_rx)^T & 1\end{bmatrix}   \succeq 0, \forall r \\
+                             & \mathrm{diag}(Y_r) \le E_r x
     \end{aligned}
   \end{equation}
 \end{frame}

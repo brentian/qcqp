@@ -1,3 +1,4 @@
+import numpy as np
 import sys
 import time
 
@@ -47,6 +48,7 @@ def shor(
     sense="max",
     verbose=True,
     solve=True,
+    r_parent: MSKResult=None,
     **kwargs
 ):
   """
@@ -90,6 +92,14 @@ def shor(
   model.constraint(expr.sub(x, lb), dom.greaterThan(0))
   model.constraint(expr.sub(Y.diag(), x), dom.lessThan(0))
   model.constraint(Z.index(n, n), dom.equalsTo(1.))
+  
+  if r_parent is not None:
+    # Y.setLevel(r_parent.yval.flatten())
+    # x.setLevel(np.zeros(n).tolist())
+    # x.index(0, 0).setLevel([r_parent.xval[0,0]])
+    # need control for the HSD model
+    pass
+  
   for i in range(m):
     if sign[i] == 0:
       model.constraint(
@@ -108,7 +118,7 @@ def shor(
   obj_expr = expr.add(expr.sum(expr.mulElm(Q, Y)), expr.dot(x, q))
   model.objective(mf.ObjectiveSense.Minimize
                   if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
-  
+  model.setSolverParam("intpntSolveForm", "dual")
   r = MSKResult(qp, model, x, Y, Z)
   r.start_time = st_time
   r.build_time = time.time() - st_time

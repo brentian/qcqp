@@ -57,6 +57,7 @@ if __name__ == '__main__':
   methods = {
     "grb": bg_grb.qp_gurobi,
     "shor": bg_msk.shor,
+    "eshor": bg_msk_msc.eshor,
     # "msc": bg_msk.msc,
     "emsc": bg_msk_msc.msc_diag,
     # "emscsdp": bg_msk_ex.msc_diag_sdp,
@@ -68,6 +69,7 @@ if __name__ == '__main__':
   pkwargs = {k: {**kwargs} for k in methods}
   pkwargs_dtl = {
     "emsc": {**kwargs, "decompose_method": "eig-type2", },
+    "eshor": {**kwargs, "decompose_method": "eig-type2", },
     # "emscsdp": {**kwargs, "decompose_method": "eig-type2", },
     # "msc_diag": {**kwargs, "decompose_method": "eig-typae2"},
     # "socp": {**kwargs, "decompose_method": "eig-type2"},

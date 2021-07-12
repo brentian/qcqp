@@ -159,7 +159,8 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
   left_bounds = Bounds(*parent.bound.unpack())
   left_succ = left_bounds.update_bounds_from_branch(branch, left=True)
  
-  left_r = backend_func(parent.qp, left_bounds, solver=sdp_solver, verbose=verbose, solve=False)
+  # left_r = backend_func(parent.qp, left_bounds, solver=sdp_solver, verbose=verbose, solve=False)
+  left_r = backend_func(parent.qp, left_bounds, solver=sdp_solver, verbose=verbose, solve=False, r_parent=parent.result)
   if not left_succ:
     # problem is infeasible:
     left_r.solved = True
@@ -177,7 +178,8 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
   right_bounds = Bounds(*parent.bound.unpack())
   right_succ = right_bounds.update_bounds_from_branch(branch, left=False)
   
-  right_r = backend_func(parent.qp, right_bounds, solver=sdp_solver, verbose=verbose, solve=False)
+  # right_r = backend_func(parent.qp, right_bounds, solver=sdp_solver, verbose=verbose, solve=False)
+  right_r = backend_func(parent.qp, right_bounds, solver=sdp_solver, verbose=verbose, solve=False, r_parent=parent.result)
   if not right_succ:
     # problem is infeasible
     right_r.solved = True

@@ -407,6 +407,7 @@ def msc_diag_sdp(
     zpos = z.pick(qipos.tolist(), arr_pos_dim)
     ypos = y.pick(qipos.tolist(), arr_pos_dim)
     ymat = model.variable("yy", dom.inPSDCone(n_pos_eig + 1))
+    mm = model.variable("mm", [n_pos_eig, n_pos_eig])
     yy = ymat.slice([0, 0], [n_pos_eig, n_pos_eig])
     zz = ymat.slice([0, n_pos_eig], [n_pos_eig, n_pos_eig + 1])
     # constraints
@@ -418,9 +419,12 @@ def msc_diag_sdp(
       dom.equalsTo(0)
     )
     model.constraint(
-      expr.sub(yy.diag(), ypos),
-      dom.equalsTo(0)
-    )
+      expr.sub(
+        expr.mul(expr.mul(qpos, yy), qpos.T),
+        mm),
+      dom.equalsTo(0))
+
+    model.constraint(expr.sub(mm.diag(), x), dom.lessThan(0))
   
   # RLT cuts
   if rlt:
