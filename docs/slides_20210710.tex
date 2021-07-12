@@ -83,8 +83,20 @@
                              & \mathrm{diag}(Y_r) \le E_r x
     \end{aligned}
   \end{equation}
-\end{frame}
 
+  The same for any similarity transformations
+\end{frame}
+% \begin{frame}{Warm-start}
+%   \begin{equation}
+%     \begin{aligned}
+%       \min_{\lambda, \mu, y, Y}\quad & \lambda^Tb + \mu^Te + 1                    \\
+%       \mathrm{s.t.} \quad            & Y = Q + \sum_i \lambda_i A_i               \\
+%                                      & q + \sum_i \lambda_i a_i + \mu - 2 y \le 0 \\
+%                                      & Y \succeq yy^T                             \\
+%                                      & \lambda, \mu \ge 0
+%     \end{aligned}
+%   \end{equation}
+% \end{frame}
 \begin{frame}
   \scriptsize
   \printbibliography

@@ -15,7 +15,6 @@ where $V$ is the orthonormal basis and $\Lambda$ is the diagonal matrix construc
 For simplicity, we let:
 
 
-
 # Relaxations for QCQP
 
 ## Shor 
@@ -130,15 +129,14 @@ $$
 \end{aligned}
 $$
 
-## Chordal graph based relaxation?
+## Chordal graph based relaxation
 
 - Fukuda 2001, Nakata 2003, Zheng 2020
 - Use Chordal extension, sparse matrix completion for SDP
-- 
 
 Sparse pattern: (non-zero) entries. let $G(V, E)$ be the graph representing data matrix
 
-$F = \bigcup_r C_r$, SD constraint,
+$F = \bigcup_r C_r \supseteq E$, SD constraint,
 
 $$Y_{(i, i) \in C_r} \succeq 0, \quad \forall r$$
 
@@ -146,8 +144,7 @@ original SDP be:
 
 $$\begin{aligned}
 \mathrm{Maximize}\quad & \sum_{(i,j) \in F} Q_{ij} Y_{ij} + q^Tx \\
-\mathrm{s.t.} \quad    & Y_{(i, i) \in C_r} \succeq 0            \\
-& \begin{bmatrix}Y & x \\ x^T & 1\end{bmatrix}   \succeq 0  \\ 
+\mathrm{s.t.} \quad    & Y_{(i, i) \in C_r} \succeq (E_r x)(E_r x)^T\\ 
 \end{aligned}$$
 
 

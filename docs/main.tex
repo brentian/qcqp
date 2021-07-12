@@ -1,16 +1,21 @@
-\input{headers/header.note}
+\input{headers/header.mp}
+% \documentclass[draft]{svjour3}
 \title{Global QCQP Solver}
 \author{Chuwen Zhang}
 \date{\today}
 
-
+\usepackage{amsfonts} 
+\usepackage{amsmath}
+% \usepackage{mathptmx}
 \usepackage{subfiles}
 \usepackage{graphicx} 
-\usepackage{subfiles} 
 \usepackage{subfig}
+\usepackage{bm}
 \usepackage[table]{xcolor}
 \usepackage[font=small,labelfont=bf]{caption}
+
 \begin{document}
+
 \maketitle
 {
     \setcounter{tocdepth}{3}
@@ -24,7 +29,7 @@
 % \subfile{sections/chord.tex}
 
 \bibliography{headers/qcqp}
-\bibliographystyle{headers/siamplain}
+\bibliographystyle{headers/spmpsci}
 \addcontentsline{toc}{section}{References}
 
 % finish off

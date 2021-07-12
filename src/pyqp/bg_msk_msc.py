@@ -720,6 +720,7 @@ def eshor(
       M),
     dom.equalsTo(0))
 
+  # model.constraint(expr.sum(expr.sub(Y.diag(), x)), dom.lessThan(0))
   model.constraint(expr.sub(M.diag(), x), dom.lessThan(0))
   
   if r_parent is not None:
@@ -747,7 +748,7 @@ def eshor(
   obj_expr = expr.add(expr.sum(expr.mulElm(np.diag(qel.flatten()), Y)), expr.dot(x, q))
   model.objective(mf.ObjectiveSense.Minimize
                   if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
-  model.setSolverParam("intpntSolveForm", "dual")
+  
   r = MSKResult(qp, model, x, Y, Z)
   r.start_time = st_time
   r.build_time = time.time() - st_time
