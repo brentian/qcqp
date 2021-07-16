@@ -9,7 +9,7 @@
   \tableofcontents
 }
 
-\section{Relaxations for QCQP}
+\section{Relaxations for General QCQP}
 
 As a convention, we assume data matrices are symmetric, i.e., \(Q, A_i \in \mathcal{S}^n\)
 
@@ -17,9 +17,9 @@ Recall homogeneous QCQP for \(x \in \mathbb R^n\):
 
 \begin{equation}
   \begin{aligned}
-    \textrm { Maximize } \quad & x^{T} Q x                                                      \\
-    \text { s.t. }  \quad      & x^{T} A_{i} x\; (\le, =, \ge) \; b_{i}, \forall i=1, \ldots, m \\
-                               & 0 \le x\le  1
+    (\mathbf{HQCQP}) \quad \mathrm{Maximize}\quad & x^{T} Q x                                                      \\
+    \text { s.t. }  \quad                         & x^{T} A_{i} x\; (\le, =, \ge) \; b_{i}, \forall i=1, \ldots, m \\
+                                                  & 0 \le x\le  1
   \end{aligned}
 \end{equation}
 
@@ -27,45 +27,46 @@ And inhomogeneous QCQP,
 
 \begin{equation}\label{eq:inhoqcqp}
   \begin{aligned}
-    \mathrm{Maximize}\quad & x^TQx +2 q^T x                                   \\
-    \mathrm{s.t.}  \quad   & x^{T} A_i x  + 2a_i^Tx   \; (\le, =, \ge) \; b_i \\
-                           & 0 \le x\le  1
+    (\mathbf{QCQP}) \quad \mathrm{Maximize}\quad & x^TQx +2 q^T x                                   \\
+    \mathrm{s.t.}  \quad                         & x^{T} A_i x  + 2a_i^Tx   \; (\le, =, \ge) \; b_i \\
+                                                 & 0 \le x\le  1
   \end{aligned}
 \end{equation}
 
 We mark some of the trivial techniques below.
+\begin{itemize}
+  \item One can always reformulate \eqref{eq:inhoqcqp} into a homogeneous problem by increasing the dimension of variables by \(1\).
+        \begin{equation}
+          \begin{aligned}
+            \textrm { Maximize } \quad & x^{T} Q x  + 2q^Tx        \\
+            =                          & \begin{bmatrix}x^T & t\end{bmatrix}
+            \begin{bmatrix} Q   & q \\ q^T & o \end{bmatrix}
+            \begin{bmatrix} x \\ t\end{bmatrix}                              \\
+            \mathrm{s.t.} \quad        & - 1\le t \le 1
+          \end{aligned}
+        \end{equation}
+  \item Also, a symmetrized version can be achieved by fact that \(x^TAx = x^TA^Tx\), let
+        \begin{equation}
+          \tilde A := \frac{A+A^T}{2}
+        \end{equation}
+\end{itemize}
 
 
-One can always reformulate \eqref{eq:inhoqcqp} into a homogeneous problem by increasing the dimension of variables by $1$.
 
-\begin{equation}
-  \begin{aligned}
-    \textrm { Maximize } \quad & x^{T} Q x  + 2q^Tx        \\
-    =                          & \begin{bmatrix}x^T & t\end{bmatrix}
-    \begin{bmatrix} Q   & q \\ q^T & o \end{bmatrix}
-    \begin{bmatrix} x \\ t\end{bmatrix}                              \\
-    \mathrm{s.t.} \quad        & - 1\le t \le 1
-  \end{aligned}
-\end{equation}
-
-Also, one can solve a symmetric version since \(x^TAx = x^TA^Tx\) by letting,
-\begin{equation}
-  \tilde A := \frac{A+A^T}{2}
-\end{equation}
 
 \subsection{SDP Relaxation}
 For \(x \in \mathbb{R}^{n}\), we have: \(x^{T} A_{i} x = A_i \bullet (xx^T)\) and \(xx^T \in \mathcal{S}^n_{+}\), which results in following relaxation using semidefinite cones, also called \textit{lifting} method or Shor relaxation,
 
 \begin{equation}\label{eq:shor_basic}
   \begin{aligned}
-    \mathrm{Maximize}\quad & Q\bullet Y   + 2q^T x                                            \\
-    \mathrm{s.t.}  \quad   & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
-                           & A_i \bullet Y +2 a_i^Tx \; (\le, =, \ge) \; b_i, \forall i       \\
-                           & 0\le x\le 1
+    (\textbf{Shor-Basic})\quad \mathrm{Maximize}\quad & Q\bullet Y   + 2q^T x                                            \\
+    \mathrm{s.t.}  \quad                              & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
+                                                      & A_i \bullet Y +2 a_i^Tx \; (\le, =, \ge) \; b_i, \forall i       \\
+                                                      & 0\le x\le 1
   \end{aligned}
 \end{equation}
 
-Notice QCQP with matrix variables can also be reformulated into a SDP based problem, let \(X \in \mathbb{R}^{n\times d}\), then \(X^{T} A_{i} X = A_i \bullet (XX^T)\)
+Notice QCQP with matrix variables can also be reformulated into a SDP based problem, let \(X \in \mathbb{R}^{n\times d}\), then \(X^{T} A_{i} X = A_i \bullet (XX^T)\), similarly,
 \begin{equation}
   \begin{aligned}
     \mathrm{Maximize}\quad & Q\bullet Y                                                       \\
@@ -74,21 +75,22 @@ Notice QCQP with matrix variables can also be reformulated into a SDP based prob
   \end{aligned}
 \end{equation}
 
-SDP relaxation \eqref{eq:shor_basic} can be unbounded in some case. A simple improvement to \eqref{eq:shor_basic} is to add bounds for the diagonal entries.
+SDP relaxations \eqref{eq:shor_basic} can be unbounded in some case. A simple improvement to \eqref{eq:shor_basic} is to add bounds for the diagonal entries.
 
 \begin{equation}\label{eq:shor}
   \begin{aligned}
-    \mathrm{Maximize}\quad & Q\bullet Y   + 2q^T x                                            \\
-    \mathrm{s.t.}  \quad   & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
-                           & A_i \bullet Y +2 a_i^Tx \; (\le, =, \ge) \; b_i, \forall i       \\
-                           & 0\le x\le 1                                                      \\
-                           & \mathrm{diag}(Y) \le x
+    (\mathbf{Shor}) \quad\mathrm{Maximize}\quad & Q\bullet Y   + 2q^T x                                            \\
+    \mathrm{s.t.}  \quad                        & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
+                                                & A_i \bullet Y +2 a_i^Tx \; (\le, =, \ge) \; b_i, \forall i       \\
+                                                & 0\le x\le 1                                                      \\
+                                                & \mathrm{diag}(Y) \le x
   \end{aligned}
 \end{equation}
 
+\subsubsection{RLT}
 There are many further enhancements to \eqref{eq:shor}, see \cite{bao_semidefinite_2011} for discussion on the strength of different relaxations. Here we discuss a few widely used methods using copositive cones and reformulation-linearization-techniques (RLT) cuts.
-
-
+\subsubsection{Copositive}
+\subsubsection{Dual}
 Consider the dual of primal SDP relaxation.
 \begin{equation}
   \begin{aligned}
@@ -128,21 +130,42 @@ Without loss of generality, we assume first \(r\) eigenvalues are positive, \(\l
   \end{aligned}
 \end{equation}
 
-By letting \(y_j \ge z_j^2, z_j = v_j^T x, j = 1, \cdots, n\), we introduce \(n\) (small) quadratic cones, then \eqref{eq:qpform} can be rewritten as:
+By letting \(s_j \ge z_j^2, z_j = v_j^T x, j = 1, \cdots, n\), then \eqref{eq:qpform} can be expressed by introducing \(n\) (2-\(d\)) quadratic cones, literally:
 
 \begin{equation}
   \begin{aligned}
-    x^TQx \le \lambda^Ty,\; (y_j, v^T_j x) \in \mathcal{Q}^2
+    x^TQx \le \sum_j s_j \cdot \lambda_j,\; (s_j, v^T_j x) \in \mathcal{Q}^2
   \end{aligned}
 \end{equation}
 
-A natural Many-Small-Cone (MSC) relaxation to  QCQP can be written as:
+This substitution uses a set of small quadratic cones instead of one semidefinite matrix of size \(n^2\). With some abuse of notation, suppose \(\lambda_i, V_i, i = 0, \cdots, m\) are eigenvalues and vectors for \(Q\) and \(A_i, i = 1,
+\cdots, m\), respectively. Following the same routine for each constraint, we describe the Many-Small-Cone (MSC) relaxation to QCQP, namely,
 
+\begin{equation}
+  \begin{aligned}
+    (\mathbf{MSC}) \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0 + q^Tx                              \\
+    \mathrm{s.t.} \quad                           & V_i z_i = x                        & i=0,...,m      \\
+                                                  & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m      \\
+    \label{quad}                                  & y_i \ge z_i \circ z_i              & i=0,...,m      \\
+                                                  & y_i^Te \le x^Te                    & i=0, \cdots, m
+  \end{aligned}
+\end{equation}
+The last set of constraints are placed to resolve unboundedness for the fact that the similarity transformation by any orthogonal basis \(V_i, \forall i\) preserves the value of \(\trace\) operator, namely:
+\begin{equation}
+  y_i^Te = \trace( V_i^Txx^T V_i) = \trace (xx^T) \le x^Te
+\end{equation}
 
+This method is closely related to D.C. and Convex SOCP relaxations to QCQP, see \cite{zheng_convex_2011}, \cite{zheng_nonconvex_2011}, \cite{jiang_simultaneous_2016}, \cite{ye_new_2003}. Recently, \cite{luo_new_2019} mention a similar formulation, by defining \(C_i = V_i\diag(\sqrt{|\lambda_i|}|)\). We list it below for convenience.
 
-
-
-
+\begin{equation}
+  \begin{aligned} \label{eq.rel.luo}
+    (\textbf{MSC-Luo})\quad \mathrm{Maximize: }\quad & y_0 ^Te + q^Tx                                      \\
+    \mathrm{s.t.} \quad                              & C_i z_i = x                        & i=0,...,m      \\
+                                                     & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m      \\
+                                                     & y_i \ge z_i \circ z_i              & i=0,...,m      \\
+                                                     & y^T\frac{1}{|\lambda|}  \le x^Te   & i=0, \cdots, m
+  \end{aligned}
+\end{equation}
 
 
 

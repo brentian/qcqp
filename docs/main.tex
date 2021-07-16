@@ -1,5 +1,4 @@
 \input{headers/header.mp}
-% \documentclass[draft]{svjour3}
 \title{Global QCQP Solver}
 \author{Chuwen Zhang}
 \date{\today}
@@ -7,12 +6,23 @@
 \usepackage{amsfonts} 
 \usepackage{amsmath}
 % \usepackage{mathptmx}
+\usepackage{stix}
 \usepackage{subfiles}
 \usepackage{graphicx} 
 \usepackage{subfig}
 \usepackage{bm}
 \usepackage[table]{xcolor}
 \usepackage[font=small,labelfont=bf]{caption}
+
+%%%%%%%%%%%%%%%%
+% start my commands
+%%%%%%%%%%%%%%%%
+\newcommand{\trace}{\mathbf{trace}}
+\newcommand{\diag}{\mathbf{diag}}
+%%%%%%%%%%%%%%%%
+% finish my commands
+%%%%%%%%%%%%%%%%
+
 
 \begin{document}
 
@@ -23,10 +33,10 @@
 }
 % \subfile{sections/intro.tex}
 \subfile{sections/sdp.tex}
-% \subfile{sections/app.tex}
-% \subfile{sections/app.qkp.tex}
-% \subfile{sections/bc.tex}
-% \subfile{sections/chord.tex}
+\subfile{sections/app.tex}
+\subfile{sections/app.qkp.tex}
+\subfile{sections/bc.tex}
+\subfile{sections/chord.tex}
 
 \bibliography{headers/qcqp}
 \bibliographystyle{headers/spmpsci}
