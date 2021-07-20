@@ -141,12 +141,12 @@ By letting \(s_j \ge z_j^2, z_j = v_j^T x, j = 1, \cdots, n\), then \eqref{eq:qp
 This substitution uses a set of small quadratic cones instead of one semidefinite matrix of size \(n^2\). With some abuse of notation, suppose \(\lambda_i, V_i, i = 0, \cdots, m\) are eigenvalues and vectors for \(Q\) and \(A_i, i = 1,
 \cdots, m\), respectively. Following the same routine for each constraint, we describe the Many-Small-Cone (MSC) relaxation to QCQP, namely,
 
-\begin{equation}
+\begin{equation}\label{eq.rel.msc}
   \begin{aligned}
     (\mathbf{MSC}) \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0 + q^Tx                              \\
     \mathrm{s.t.} \quad                           & V_i z_i = x                        & i=0,...,m      \\
                                                   & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m      \\
-    \label{quad}                                  & y_i \ge z_i \circ z_i              & i=0,...,m      \\
+                                                  & y_i \ge z_i \circ z_i              & i=0,...,m      \\
                                                   & y_i^Te \le x^Te                    & i=0, \cdots, m
   \end{aligned}
 \end{equation}
@@ -168,6 +168,14 @@ This method is closely related to D.C. and Convex SOCP relaxations to QCQP, see 
 \end{equation}
 
 
+In \cite{luo_new_2019}, box constraints for \(z_i\) can be calculated by its definition. For the case where \(x\in [0, 1]\), we show bounds are redundant and the two formulations are equivalent.
 
+\begin{theorem}
+  The relaxations \eqref{eq.rel.msc}, \eqref{eq.rel.luo} are equivalent.
+\end{theorem}
+
+\begin{proof}
+  We show the solution for any one of the relaxations can be derived from another. \\ Suppose $(x_0, z_0, y_0)$ is a feasible solution to \eqref{eq.rel.msc}, then $(x_0, \sqrt{\diag(|\lambda|)} z_0, \diag(|\lambda|) \cdot y_0)$ is feasible to \eqref{eq.rel.luo}. Conversely, if $(x_0, z_0, y_0)$ is feasible to \eqref{eq.rel.luo}, then we can construct $(x_0, \frac{1}{\sqrt{\diag(|\lambda|)}} z_0, \frac{1}{\diag(|\lambda|)}\cdot y_0)$ that is also feasible to \eqref{eq.rel.msc}. \qed
+\end{proof}
 
 \end{document}
