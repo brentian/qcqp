@@ -48,7 +48,7 @@ def shor(
     sense="max",
     verbose=True,
     solve=True,
-    r_parent: MSKResult=None,
+    r_parent: MSKResult = None,
     **kwargs
 ):
   """
@@ -134,10 +134,12 @@ def shor(
 def dshor(
     qp: QP,
     bounds: Bounds,
-    sense="max", verbose=True, solve=True, **kwargs
+    sense="min", verbose=True, solve=True, **kwargs
 ):
   """
-  dual of SDP relaxation
+  dual form of SDP relaxation
+    should be equal to primal form of
+    the SDP.
   Parameters
   -------
 
@@ -154,34 +156,48 @@ def dshor(
   
   Z = model.variable("Z", dom.inPSDCone(n + 1))
   Y = Z.slice([0, 0], [n, n])
-  x = Z.slice([0, n], [n, n + 1])
+  y = Z.slice([0, n], [n, n + 1])
   
-  # bounds
-  model.constraint(expr.sub(x, ub), dom.lessThan(0))
-  model.constraint(expr.sub(x, lb), dom.greaterThan(0))
-  model.constraint(expr.sub(Y.diag(), x), dom.lessThan(0))
-  model.constraint(Z.index(n, n), dom.equalsTo(1.))
-  for i in range(m):
-    if sign[i] == 0:
-      model.constraint(
-        expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
-        dom.equalsTo(b[i]))
-    elif sign[i] == -1:
-      model.constraint(
-        expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
-        dom.greaterThan(b[i]))
-    else:
-      model.constraint(
-        expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
-        dom.lessThan(b[i]))
+  # lambda, mu, v
+  l = model.variable("l", [m], dom.greaterThan(0))
+  mu = model.variable("m", [n], dom.greaterThan(0))
+  v = model.variable("v", [n], dom.greaterThan(0))
+  V = model.variable("V", [n, n], dom.greaterThan(0))
+  model.constraint(expr.sub(V.diag(), v), dom.equalsTo(0))
+  
+  sumA = 0.0
+  suma = np.zeros(q.shape)
+  for idx in range(m):
+    sumA = expr.add(sumA, expr.mul(A[idx], l.index(idx)))
+    suma = expr.add(suma, expr.mul(a[idx], l.index(idx)))
+  
+  model.constraint(
+    expr.add(
+      expr.add(
+        expr.sub(- Q,  Y),
+        expr.mulElm(np.eye(n), V)
+      ),
+      sumA
+    ), dom.equalsTo(0)
+  )
+  sum_temp = expr.sub(expr.sub(mu, expr.mul(2, y)), v)
+  model.constraint(
+    expr.add(
+      expr.add(
+        sum_temp,
+        suma
+      ), - q),
+    dom.greaterThan(0)
+  )
   
   # objectives
-  obj_expr = expr.add(expr.sum(expr.mulElm(Q, Y)), expr.dot(x, q))
+  obj_expr = expr.add(expr.add(expr.dot(l, b), Z.index(n, n)), expr.sum(mu))
+  # obj_expr = expr.add(1, expr.sum(mu))
   model.objective(mf.ObjectiveSense.Minimize
                   if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
   
   r = MSKResult()
-  r.xvar = x
+  r.xvar = y
   r.yvar = Y
   r.zvar = Z
   r.problem = model
@@ -189,7 +205,7 @@ def dshor(
     return r
   
   model.solve()
-  xval = x.level().reshape(xshape)
+  xval = y.level().reshape(xshape)
   r.yval = Y.level().reshape((n, n))
   r.xval = xval
   r.relax_obj = model.primalObjValue()

@@ -58,6 +58,7 @@ if __name__ == '__main__':
     "grb": bg_grb.qp_gurobi,
     "shor": bg_msk.shor,
     "eshor": bg_msk_msc.eshor,
+    "dshor": bg_msk.dshor,
     # "msc": bg_msk.msc,
     "emsc": bg_msk_msc.msc_diag,
     # "emscsdp": bg_msk_ex.msc_diag_sdp,
@@ -70,6 +71,7 @@ if __name__ == '__main__':
   pkwargs_dtl = {
     "emsc": {**kwargs, "decompose_method": "eig-type2", },
     "eshor": {**kwargs, "decompose_method": "eig-type2", },
+    "dshor": {**kwargs, "sense": "min"},
     # "emscsdp": {**kwargs, "decompose_method": "eig-type2", },
     # "msc_diag": {**kwargs, "decompose_method": "eig-typae2"},
     # "socp": {**kwargs, "decompose_method": "eig-type2"},
@@ -81,7 +83,6 @@ if __name__ == '__main__':
   # qp = QPI.block(n, m, r=2, eps=0.5)
   qp = QPI.normal(int(n), int(m), rho=0.2)
   bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
-  
   
   evals = []
   results = {}

@@ -17,9 +17,9 @@ Recall homogeneous QCQP for \(x \in \mathbb R^n\):
 
 \begin{equation}
   \begin{aligned}
-    (\mathbf{HQCQP}) \quad \mathrm{Maximize}\quad & x^{T} Q x                                                      \\
-    \text { s.t. }  \quad                         & x^{T} A_{i} x\; (\le, =, \ge) \; b_{i}, \forall i=1, \ldots, m \\
-                                                  & 0 \le x\le  1
+    \model{HQCQP} \quad \mathrm{Maximize}\quad & x^{T} Q x                                                       \\
+    \text { s.t. }  \quad                      & x^{T} A_{i} x\; (\le, =, \ge)  \; b_{i}, \forall i=1, \ldots, m \\
+                                               & 0 \le x\le  1
   \end{aligned}
 \end{equation}
 
@@ -27,20 +27,20 @@ And inhomogeneous QCQP,
 
 \begin{equation}\label{eq:inhoqcqp}
   \begin{aligned}
-    (\mathbf{QCQP}) \quad \mathrm{Maximize}\quad & x^TQx +2 q^T x                                   \\
-    \mathrm{s.t.}  \quad                         & x^{T} A_i x  + 2a_i^Tx   \; (\le, =, \ge) \; b_i \\
-                                                 & 0 \le x\le  1
+    \model{QCQP} \quad \mathrm{Maximize}\quad & x^TQx +q^T x                                     \\
+    \mathrm{s.t.}  \quad                      & x^{T} A_i x  + a_i^Tx   \; (\le, =, \ge)  \; b_i \\
+                                              & 0 \le x\le  1
   \end{aligned}
 \end{equation}
 
-We mark some of the trivial techniques below.
+We now assume a standard form with less-than-or-equal-to constraints. We mark some of the trivial techniques below.
 \begin{itemize}
   \item One can always reformulate \eqref{eq:inhoqcqp} into a homogeneous problem by increasing the dimension of variables by \(1\).
         \begin{equation}
           \begin{aligned}
-            \textrm { Maximize } \quad & x^{T} Q x  + 2q^Tx        \\
+            \textrm { Maximize } \quad & x^{T} Q x  + q^Tx         \\
             =                          & \begin{bmatrix}x^T & t\end{bmatrix}
-            \begin{bmatrix} Q   & q \\ q^T & o \end{bmatrix}
+            \begin{bmatrix} Q   & q / 2\\ q^T /2 & o \end{bmatrix}
             \begin{bmatrix} x \\ t\end{bmatrix}                              \\
             \mathrm{s.t.} \quad        & - 1\le t \le 1
           \end{aligned}
@@ -59,10 +59,10 @@ For \(x \in \mathbb{R}^{n}\), we have: \(x^{T} A_{i} x = A_i \bullet (xx^T)\) an
 
 \begin{equation}\label{eq:shor_basic}
   \begin{aligned}
-    (\textbf{Shor-Basic})\quad \mathrm{Maximize}\quad & Q\bullet Y   + 2q^T x                                            \\
-    \mathrm{s.t.}  \quad                              & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
-                                                      & A_i \bullet Y +2 a_i^Tx \; (\le, =, \ge) \; b_i, \forall i       \\
-                                                      & 0\le x\le 1
+    \model{Shor-Basic}\quad \mathrm{Maximize}\quad & Q\bullet Y   + q^T x                                             \\
+    \mathrm{s.t.}  \quad                           & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
+                                                   & A_i \bullet Y + a_i^Tx \; \le  \; b_i, \forall i                 \\
+                                                   & 0\le x\le 1
   \end{aligned}
 \end{equation}
 
@@ -71,7 +71,7 @@ Notice QCQP with matrix variables can also be reformulated into a SDP based prob
   \begin{aligned}
     \mathrm{Maximize}\quad & Q\bullet Y                                                       \\
     \mathrm{s.t.}  \quad   & Y-XX^T \succeq 0 \text { or }\begin{bmatrix} I_d & X^{T} \\ X & Y \end{bmatrix} \succeq 0 \\
-                           & A_i \bullet Y \; (\le, =, \ge) \; b_i, \forall i                 \\
+                           & A_i \bullet Y \; \le  \; b_i, \forall i                          \\
   \end{aligned}
 \end{equation}
 
@@ -79,38 +79,46 @@ SDP relaxations \eqref{eq:shor_basic} can be unbounded in some case. A simple im
 
 \begin{equation}\label{eq:shor}
   \begin{aligned}
-    (\mathbf{Shor}) \quad\mathrm{Maximize}\quad & Q\bullet Y   + 2q^T x                                            \\
-    \mathrm{s.t.}  \quad                        & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
-                                                & A_i \bullet Y +2 a_i^Tx \; (\le, =, \ge) \; b_i, \forall i       \\
-                                                & 0\le x\le 1                                                      \\
-                                                & \mathrm{diag}(Y) \le x
+    \model{Shor} \quad\mathrm{Maximize}\quad & Q\bullet Y   + q^T x                                             \\
+    \mathrm{s.t.}  \quad                     & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
+                                             & A_i \bullet Y + a_i^Tx \; \le  \; b_i, \forall i                 \\
+                                             & 0\le x\le 1                                                      \\
+                                             & \mathrm{diag}(Y) \le x
   \end{aligned}
 \end{equation}
+
+
+\subsubsection{Dual}
+Consider the dual of primal SDP relaxation with diagonal bound, cf. \eqref{eq:shor}
+\begin{equation}
+  \begin{aligned}
+    L = & \min_{x, Y} \; -\; Q\bullet Y - q^Tx + \sum_i \left( \lambda_i A_i \bullet Y  + \lambda_i a_i^Tx - \lambda_i b_i \right ) \\
+        & \diag(v) \bullet Y - v^T x + \mu^Tx - \mu^Te                                                                              \\
+        & - \begin{bmatrix}Y & x \\ x^T & 1\end{bmatrix} \bullet
+    \begin{bmatrix}Z & y \\ y^T & \alpha\end{bmatrix}                                                                                                      \\
+    =   & \min_{x, Y} \; - \lambda^T b - \mu^Te - \alpha                                                                            \\
+        & + Y \bullet \left(-Q + \sum_i\lambda_iA_i - Z + \diag(v)\right)                                                           \\
+        & + x^T\left(- q + \sum_i \lambda_i a_i + \mu - 2 y - v\right)
+  \end{aligned}
+\end{equation}
+
+And thus the dual \(\phi(\cdot) = \max_{(\cdot)} L\):
+
+\begin{equation}
+  \begin{aligned}
+    \model{Dual-Shor} \quad \textrm{Minimize: }\quad & \lambda^Tb + \mu^Te + \alpha                   \\
+    \mathrm{s.t.} \quad                              & Q = \sum_i \lambda_i A_i  + \diag(v)  -Z       \\
+                                                     & \sum_i \lambda_i a_i + \mu - 2 y - v - q \ge 0 \\
+                                                     & \begin{bmatrix}Z & y \\ y^T & \alpha\end{bmatrix} \succeq 0           \\
+                                                     & \lambda, \mu, v \ge 0
+  \end{aligned}
+\end{equation}
+
 
 \subsubsection{RLT}
 There are many further enhancements to \eqref{eq:shor}, see \cite{bao_semidefinite_2011} for discussion on the strength of different relaxations. Here we discuss a few widely used methods using copositive cones and reformulation-linearization-techniques (RLT) cuts.
 \subsubsection{Copositive}
-\subsubsection{Dual}
-Consider the dual of primal SDP relaxation.
-\begin{equation}
-  \begin{aligned}
-    L = & \max_{x, X} \; Q\bullet X + q^Tx + \sum_i \left( \lambda_i A_i \bullet X  + \lambda_i a_i^Tx - \lambda_i b_i \right ) + \mu^Tx - \mu^Te \\
-        & - \begin{bmatrix}X & x \\ x^T & 1\end{bmatrix} \bullet \begin{bmatrix}Y & y \\ y^T & 1\end{bmatrix}                                                                         \\
-    =   & \max_{x, X} \; - \lambda^Tb - \mu^Te - 1+X\bullet (Q + \sum_i\lambda_iA_i - Y) + x^T(q + \sum_i \lambda_i a_i + \mu - 2 y)
-  \end{aligned}
-\end{equation}
 
-And thus the dual,
-
-\begin{equation}
-  \begin{aligned}
-    \min_{\lambda, \mu, y, Y}\quad & \lambda^Tb + \mu^Te + 1                    \\
-    \mathrm{s.t.} \quad            & Y = Q + \sum_i \lambda_i A_i               \\
-                                   & q + \sum_i \lambda_i a_i + \mu - 2 y \le 0 \\
-                                   & Y \succeq yy^T                             \\
-                                   & \lambda, \mu \ge 0
-  \end{aligned}
-\end{equation}
 \subsection{SOCP Relaxation}
 
 We now consider another way of relaxing the original QCQP problem. Consider symmetric indefinite matrix \(Q \in \mathcal{S}^n\) and its spectral decomposition.
@@ -130,7 +138,7 @@ Without loss of generality, we assume first \(r\) eigenvalues are positive, \(\l
   \end{aligned}
 \end{equation}
 
-By letting \(s_j \ge z_j^2, z_j = v_j^T x, j = 1, \cdots, n\), then \eqref{eq:qpform} can be expressed by introducing \(n\) (2-\(d\)) quadratic cones, literally:
+By letting \(s_j \ge z_j^2, z_j = v_j^T x, j = 1, \cdots, n\), then \eqref{eq:qpform} can be expressed by introducing \(n\) (2-\(d\)) quadratic cones, literally,
 
 \begin{equation}
   \begin{aligned}
@@ -141,13 +149,13 @@ By letting \(s_j \ge z_j^2, z_j = v_j^T x, j = 1, \cdots, n\), then \eqref{eq:qp
 This substitution uses a set of small quadratic cones instead of one semidefinite matrix of size \(n^2\). With some abuse of notation, suppose \(\lambda_i, V_i, i = 0, \cdots, m\) are eigenvalues and vectors for \(Q\) and \(A_i, i = 1,
 \cdots, m\), respectively. Following the same routine for each constraint, we describe the Many-Small-Cone (MSC) relaxation to QCQP, namely,
 
-\begin{equation}
+\begin{equation}\label{eq.rel.msc}
   \begin{aligned}
-    (\mathbf{MSC}) \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0 + q^Tx                              \\
-    \mathrm{s.t.} \quad                           & V_i z_i = x                        & i=0,...,m      \\
-                                                  & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m      \\
-    \label{quad}                                  & y_i \ge z_i \circ z_i              & i=0,...,m      \\
-                                                  & y_i^Te \le x^Te                    & i=0, \cdots, m
+    \model{MSC} \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0 + q^Tx                              \\
+    \mathrm{s.t.} \quad                        & V_i z_i = x                        & i=0,...,m      \\
+                                               & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m      \\
+                                               & y_i \ge z_i \circ z_i              & i=0,...,m      \\
+                                               & y_i^Te \le x^Te                    & i=0, \cdots, m
   \end{aligned}
 \end{equation}
 The last set of constraints are placed to resolve unboundedness for the fact that the similarity transformation by any orthogonal basis \(V_i, \forall i\) preserves the value of \(\trace\) operator, namely:
@@ -159,15 +167,23 @@ This method is closely related to D.C. and Convex SOCP relaxations to QCQP, see 
 
 \begin{equation}
   \begin{aligned} \label{eq.rel.luo}
-    (\textbf{MSC-Luo})\quad \mathrm{Maximize: }\quad & y_0 ^Te + q^Tx                                      \\
-    \mathrm{s.t.} \quad                              & C_i z_i = x                        & i=0,...,m      \\
-                                                     & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m      \\
-                                                     & y_i \ge z_i \circ z_i              & i=0,...,m      \\
-                                                     & y^T\frac{1}{|\lambda|}  \le x^Te   & i=0, \cdots, m
+    \model{MSC-Luo}\quad \mathrm{Maximize: }\quad & y_0 ^Te + q^Tx                                      \\
+    \mathrm{s.t.} \quad                           & C_i z_i = x                        & i=0,...,m      \\
+                                                  & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m      \\
+                                                  & y_i \ge z_i \circ z_i              & i=0,...,m      \\
+                                                  & y^T\frac{1}{|\lambda|}  \le x^Te   & i=0, \cdots, m
   \end{aligned}
 \end{equation}
 
 
+In \cite{luo_new_2019}, box constraints for \(z_i\) can be calculated by its definition. For the case where \(x\in [0, 1]\), we show bounds are redundant and the two formulations are equivalent.
 
+\begin{theorem}
+  The relaxations \eqref{eq.rel.msc}, \eqref{eq.rel.luo} are equivalent.
+\end{theorem}
+
+\begin{proof}
+  We show the solution for any one of the relaxations can be derived from another. \\ Suppose $(x_0, z_0, y_0)$ is a feasible solution to \eqref{eq.rel.msc}, then $(x_0, \sqrt{\diag(|\lambda|)} z_0, \diag(|\lambda|) \cdot y_0)$ is feasible to \eqref{eq.rel.luo}. Conversely, if $(x_0, z_0, y_0)$ is feasible to \eqref{eq.rel.luo}, then we can construct $(x_0, \frac{1}{\sqrt{\diag(|\lambda|)}} z_0, \frac{1}{\diag(|\lambda|)}\cdot y_0)$ that is also feasible to \eqref{eq.rel.msc}. \qed
+\end{proof}
 
 \end{document}

@@ -9,3 +9,4 @@ list(APPEND EXTRA_INCLUDES "${PROJECT_SOURCE_DIR}/mip")
 # add the executable
 add_executable(null null.cpp)
 target_link_libraries(null PUBLIC ${EXTRA_LIBS})
+
