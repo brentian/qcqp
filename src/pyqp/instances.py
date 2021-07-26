@@ -129,6 +129,7 @@ class QP(object):
     
     return (upos, ipos), (uneg, ineg), mul, gamma.reshape((self.n, 1))
   
+  
   ########################
   # cliques and chordal sparsity
   ########################

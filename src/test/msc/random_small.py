@@ -23,11 +23,40 @@ import numpy as np
 import pandas as pd
 import sys
 
+###########
+# display options
+###########
+pd.set_option("display.max_columns", None)
+np.set_printoptions(
+  linewidth=200,
+  precision=4
+)
+
 import pyqp.bg_msk_msc
 from pyqp import bg_grb, bb, bg_msk, bg_msk_msc, bg_msk_chordal
 from pyqp import bb_msc, bb_msc2
 from pyqp.classes import QPI, Bounds
 import argparse
+import json
+
+methods = {
+  "grb": bg_grb.qp_gurobi,
+  "shor": bg_msk.shor,
+  "dshor": bg_msk.dshor,
+  "msc": bg_msk_msc.msc,
+  "emsc": bg_msk_msc.msc_diag,
+  "ssdp": bg_msk_chordal.ssdp,
+}
+
+method_codes = {
+  idx + 1: m
+  for idx, m in enumerate(methods)
+}
+
+method_helps = {
+  k: bg_msk.dshor.__doc__
+  for k, v in methods.items()
+}
 
 np.random.seed(1)
 
@@ -35,12 +64,16 @@ parser = argparse.ArgumentParser("QCQP runner")
 parser.add_argument("--n", type=int, help="dim of x", default=5)
 parser.add_argument("--m", type=int, help="if randomly generated num of constraints", default=5)
 parser.add_argument("--pc", type=str, help="if randomly generated problem type", default=5)
+parser.add_argument("--dump_instance", type=int, help="if save instance", default=0)
+parser.add_argument("--r", type=str, help=json.dumps(method_helps, indent=2), default="1,2,3")
 
 if __name__ == '__main__':
-  pd.set_option("display.max_columns", None)
+  
   parser.print_usage()
   args = parser.parse_args()
   n, m, pc = args.n, args.m, args.pc
+  r = map(int, args.r.split(","))
+  r_methods={method_codes[k] for k in r}
   verbose = True
   bool_use_shor = False
   evals = []
@@ -54,29 +87,17 @@ if __name__ == '__main__':
     bool_use_shor=bool_use_shor,
     rlt=True
   )
-  methods = {
-    "grb": bg_grb.qp_gurobi,
-    "shor": bg_msk.shor,
-    "eshor": bg_msk_msc.eshor,
-    "dshor": bg_msk.dshor,
-    # "msc": bg_msk.msc,
-    "emsc": bg_msk_msc.msc_diag,
-    # "emscsdp": bg_msk_ex.msc_diag_sdp,
-    "ssdp": bg_msk_chordal.ssdp,
-    # "ssdpblk": bg_msk_ex.ssdpblk
-  }
   
   # personal
-  pkwargs = {k: {**kwargs} for k in methods}
+  pkwargs = {k: {**kwargs} for k in r_methods}
   pkwargs_dtl = {
-    "emsc": {**kwargs, "decompose_method": "eig-type2", },
-    "eshor": {**kwargs, "decompose_method": "eig-type2", },
     "dshor": {**kwargs, "sense": "min"},
-    # "emscsdp": {**kwargs, "decompose_method": "eig-type2", },
-    # "msc_diag": {**kwargs, "decompose_method": "eig-typae2"},
-    # "socp": {**kwargs, "decompose_method": "eig-type2"},
+    "msc": {**kwargs, "decompose_method": "eig-type2"},
+    "emsc": {**kwargs, "decompose_method": "eig-type2"},
+    "socp": {**kwargs, "decompose_method": "eig-type2"},
   }
   pkwargs.update(pkwargs_dtl)
+  pkwargs = {k: v for k, v in pkwargs.items() if k in r_methods}
   # problem
   problem_id = f"{n}:{m}:{0}"
   # start
@@ -87,7 +108,8 @@ if __name__ == '__main__':
   evals = []
   results = {}
   # run methods
-  for k, func in methods.items():
+  for k in r_methods:
+    func = methods[k]
     print(k, pkwargs[k])
     qp1 = bb_msc.QP(*qp.unpack())
     qp1.decompose(**pkwargs[k])
@@ -105,3 +127,6 @@ if __name__ == '__main__':
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)
   print(df_eval[['prob_num', 'solve_time', 'relax_obj', 'method']].to_latex())
+  
+  if args.dump_instance:
+    pass

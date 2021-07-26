@@ -88,8 +88,8 @@ def shor(
   x = Z.slice([0, n], [n, n + 1])
   
   # bounds
-  model.constraint(expr.sub(x, ub), dom.lessThan(0))
-  model.constraint(expr.sub(x, lb), dom.greaterThan(0))
+  # model.constraint(expr.sub(x, ub), dom.lessThan(0))
+  # model.constraint(expr.sub(x, lb), dom.greaterThan(0))
   model.constraint(expr.sub(Y.diag(), x), dom.lessThan(0))
   model.constraint(Z.index(n, n), dom.equalsTo(1.))
   

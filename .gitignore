@@ -26,6 +26,8 @@ data/
 build-debug/
 build-rc/
 references/
+src/thirdparty/
+!src/thirdparty/CMakeLists.txt
 
 # mathematical programming
 *.lp

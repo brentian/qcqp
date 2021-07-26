@@ -1,17 +1,28 @@
 \documentclass[../main]{subfiles}
-
+\title{Warm start}
+\author{Chuwen Zhang}
+\date{\today}
 \begin{document}
+\maketitle
+{
+    \setcounter{tocdepth}{3}
+    \tableofcontents
+}
 \section{Warm start}
 Recall primal dual SDP (Shor) relaxation.
-\begin{equation}\label{eq:shor}
+\begin{equation}
     \begin{aligned}
         \model{Shor} \quad\mathrm{Maximize}\quad & Q\bullet Y   + q^T x                                             \\
         \mathrm{s.t.}  \quad                     & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
-                                                 & A_i \bullet Y + a_i^Tx \; \le  \; b_i, \forall i                 \\
                                                  & 0\le x\le 1                                                      \\
-                                                 & \mathrm{diag}(Y) \le x
     \end{aligned}
 \end{equation}
+For simplicity, we partition (extra) constraints into two subsets.
+\begin{align}
+    \label{eq.con.diag}    & \mathrm{diag}(Y) \le x                           \\
+    \label{eq.con.regular} & A_i \bullet Y + a_i^Tx \; \le  \; b_i, \forall i
+\end{align}
+We mark \eqref{eq.con.diag} as diagonal constraint.
 \begin{equation}
     \begin{aligned}
         \model{Dual-Shor} \quad \textrm{Minimize: }\quad & \lambda^Tb + \mu^Te + \alpha                   \\
@@ -21,9 +32,38 @@ Recall primal dual SDP (Shor) relaxation.
                                                          & \lambda, \mu, v \ge 0
     \end{aligned}
 \end{equation}
+
+
+\begin{lemma}
+    (Unconstrained) Suppose \(m = 0\), our primal dual formulation reduces to,
+    \begin{equation}
+        \begin{aligned}
+            \model{Shor} \quad\mathrm{Maximize}\quad & Q\bullet Y   + q^T x                                             \\
+            \mathrm{s.t.}  \quad                     & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
+                                                     & 0\le x\le 1                                                      \\
+                                                     & \mathrm{diag}(Y) \le x
+        \end{aligned}
+    \end{equation}
+    \begin{equation}
+        \begin{aligned}
+            \model{Dual-Shor} \quad \textrm{Minimize: }\quad & \mu^Te + \alpha                     \\
+            \mathrm{s.t.} \quad                              & Q = \diag(v)  -Z                    \\
+                                                             & \mu - 2 y - v - q \ge 0             \\
+                                                             & \begin{bmatrix}Z & y \\ y^T & \alpha\end{bmatrix} \succeq 0 \\
+                                                             & \mu, v \ge 0
+        \end{aligned}
+    \end{equation}
+\end{lemma}
+
+
 \subsection{Linear Cut}
 
-Suppose we have primal \((x, Y)^{k}\) and dual \((\lambda, \mu, v, y, Z, \alpha)^k\) at some iteration \(k\). We let \(B\bullet Y + c^T x \le e\) be a valid inequality for the primal solutions. The dual variable for the new problem \(\tilde\lambda\) has the following form,
+Suppose we have primal \((x, Y)^{k}\) and dual \((\lambda, \mu, v, y, Z, \alpha)^k\) at some iteration \(k\). Assume the following valid inequality for the primal solutions,
+\begin{equation*}
+    B\bullet Y + c^T x \le e
+\end{equation*}
+
+The dual variable for the new problem \(\tilde\lambda\) has the following form,
 \begin{equation}
     \tilde\lambda \equiv \begin{bmatrix}
         \lambda \\
@@ -53,10 +93,67 @@ The RLT cuts corresponding to bounds,
     \label{eq:ws.rlt.right} & Y_{ij} - u_j x_i - l_i x_j - l_i u_j \le 0
 \end{align}
 
+\paragraph{Left child}
 Consider the left child \(x_i \in [l_i, x_i^k < u_i]\), the lower bound is unchanged
 \begin{itemize}
     \item Since \(x_i \le x_i^k\) is active, then \(x_i < 1, \mu_i = 0\)
 \end{itemize}
+
+\subsection{SDP based warmstart}
+We first reformulate into standard SDP,
+
+Add a slack \(d\) to diagonal constraint \eqref{eq.con.diag}, and \(s_i\) to \(i\)-th constraint,
+\begin{equation}
+    \begin{aligned}
+         & \tilde n = n + 1 + (n + m)                                       \\
+         & \tilde{Y} = \begin{bmatrix}
+            xx^T & x &   &   \\
+            x^T  & 1 &   &   \\
+                 &   & d &   \\
+                 &   &   & s
+        \end{bmatrix}\in \mathscr S^{\tilde{n}}
+    \end{aligned}
+\end{equation}
+
+For diagonal constraint,
+\begin{equation*}
+    \diag(Y) \le x \Leftrightarrow e_ie_i^T \bullet Y - e_i^T x + e_i^T\diag(d)e_i + 0^Ts = 0
+\end{equation*}
+
+And the other,
+\begin{equation}
+    x^TA_ix + a_i^Tx + e_i^T\diag(s)e_i = \tilde{Y} \bullet    \begin{bmatrix}
+        A_i             & \frac{a_i}{2} &         &          \\
+        \frac{a_i^T}{2} & 0             &         &          \\
+                        &               & \bm 0_n &          \\
+                        &               &         & e_ie_i^T
+    \end{bmatrix} = b_i
+\end{equation}
+
+
+
+The standard form, homogeneous SDP,
+\begin{equation}
+    \begin{aligned}
+        \mathrm{Maximize}\quad & \begin{bmatrix}
+            Q & \frac{q}{2} & 0 \\ \frac{q^T}{2} & 0 & 0 \\ 0 & 0 & \bm 0_{m+n}
+        \end{bmatrix} \bullet \tilde Y                               \\
+        \mathrm{s.t.} \quad    & \tilde{Y}  \in \mathscr S^{\tilde{n}}_+                                   \\
+                               & \begin{bmatrix}  \bm 0_n &  &  \\  & 1 &  \\  & & \bm 0_{m+n} \end{bmatrix} \bullet \tilde Y = 1                           \\
+                               & \begin{bmatrix}
+            e_ie_i^T         & -\frac{e_i}{2} &          &         \\
+            -\frac{e_i^T}{2} & 0              &          &         \\
+                             &                & e_ie_i^T &         \\
+                             &                &          & \bm 0_m
+        \end{bmatrix} \bullet \tilde Y = 0   & \forall i=1,\cdots, n \\
+                               & \begin{bmatrix}
+            A_i             & \frac{a_i}{2} &         &          \\
+            \frac{a_i^T}{2} & 0             &         &          \\
+                            &               & \bm 0_n &          \\
+                            &               &         & e_ie_i^T
+        \end{bmatrix}\bullet \tilde{Y} = b_i & \forall i=1,\cdots, m \\
+    \end{aligned}
+\end{equation}
 
 
 
