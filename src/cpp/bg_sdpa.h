@@ -10,12 +10,19 @@
 #include "sdpa_call.h"
 
 class qp_sdpa {
+
 public:
     QP qp;
+    SDPA p;
+    bool solved = false;
 
-    qp_sdpa(QP &qp) : qp(qp) {};
 
-    void create_sdpa_p();
+    explicit qp_sdpa(QP &qp) : qp(qp) {};
+
+    ~qp_sdpa() { p.terminate(); }
+
+    void create_sdpa_p(bool solve = false, bool verbose = true);
+    void solve_sdpa_p(bool verbose=false);
 };
 
 

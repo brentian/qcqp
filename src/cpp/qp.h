@@ -14,7 +14,6 @@ public:
     eigen_matrix Q;
     eigen_matrix Qh;
     eigen_matrix Qhfull;
-//    eigen_matrix Qdiag;
     std::vector<eigen_matrix> Qdiag;
     std::vector<double> bdiag;
     bool verbose = false;

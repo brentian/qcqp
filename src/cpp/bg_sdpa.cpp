@@ -83,11 +83,17 @@ void display_solution_dtls(SDPA &p) {
 
 }
 
-
-void qp_sdpa::create_sdpa_p() {
+/**
+ * Create a SDPA instance;
+    notice SDPA use the
+      x,X in the primal
+      Y in the dual
+ * @param solve true then solve
+ * @param verbose true then verbose display.
+ */
+void qp_sdpa::create_sdpa_p(bool solve, bool verbose) {
 
     SDPA::printSDPAVersion(stdout);
-    SDPA p;
     p.setDisplay(stdout);
 
     // All parameteres are renewed
@@ -134,12 +140,26 @@ void qp_sdpa::create_sdpa_p() {
 //        inputBlockL(k + 2, 2, n, p,);
         p.inputElement(k + 2, 2, k + 1, k + 1, 1);
     }
+    if (solve) {
+        p.initializeUpperTriangle();
+        p.initializeSolve();
+        p.solve();
+        solved = true;
+        if (verbose) {
+            display_solution_dtls(p);
+        }
+    }
+}
+
+void qp_sdpa::solve_sdpa_p(bool verbose) {
     p.initializeUpperTriangle();
     p.initializeSolve();
     p.solve();
-
-    display_solution_dtls(p);
-    p.terminate();
+    solved = true;
+    if (verbose) {
+        display_solution_dtls(p);
+    }
 }
+
 
 
