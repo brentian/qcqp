@@ -1,0 +1,28 @@
+#set(DSDP_HOME $ENV{DSDP_HOME} CACHE PATH "DSDP root directory.")
+#message("Looking for DSDP in ${DSDP_HOME}")
+#if (APPLE)
+#    set(DSDP_INCLUDE_DIR "${DSDP_HOME}/include")
+#    find_library(DSDP_LIBRARY libdsdp.lib HINTS "${DSDP_HOME}/lib/stable")
+#    find_library(DSDP_BETA_LIBRARY libdsdp.lib HINTS "${DSDP_HOME}/lib/latest")
+#elseif (UNIX)
+#    set(DSDP_INCLUDE_DIR "${DSDP_HOME}/include")
+#    find_library(DSDP_LIBRARY libdsdp.lib HINTS "${DSDP_HOME}/lib/stable")
+#    find_library(DSDP_BETA_LIBRARY libdsdp.lib HINTS "${DSDP_HOME}/lib/latest")
+#endif ()
+
+set(DSDP_HOME "/Users/chuwen/tools/dsdp-5.8-macfix")
+message("Looking for DSDP in ${DSDP_HOME}")
+set(DSDP_INCLUDE_DIR "${DSDP_HOME}/include")
+find_library(DSDP_LIBRARY libdsdp.a HINTS "${DSDP_HOME}/lib/")
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(DSDP DEFAULT_MSG DSDP_LIBRARY DSDP_INCLUDE_DIR)
+
+if (DSDP_FOUND)
+    message("—- Found DSDP under ${DSDP_INCLUDE_DIR}")
+    set(DSDP_INCLUDE_DIRS ${DSDP_INCLUDE_DIR})
+    set(DSDP_LIBRARIES ${DSDP_LIBRARY})
+    message("—- Set DSDP lib  ${DSDP_LIBRARY}")
+endif (DSDP_FOUND)
+
+mark_as_advanced(DSDP_LIBRARY DSDP_INCLUDE_DIR)

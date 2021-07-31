@@ -100,9 +100,45 @@ Consider the left child \(x_i \in [l_i, x_i^k < u_i]\), the lower bound is uncha
 \end{itemize}
 
 \subsection{SDP based warmstart}
-We first reformulate into standard SDP,
 
-Add a slack \(d\) to diagonal constraint \eqref{eq.con.diag}, and \(s_i\) to \(i\)-th constraint,
+We first reformulate into standard SDP, by adding a slack \(d\) to diagonal constraint \eqref{eq.con.diag}, and \(s\) to the other constraints.
+
+
+For diagonal constraint,
+\begin{align*}
+    \diag(Y) \le x & \Leftrightarrow e_ie_i^T \bullet Y - e_i^T x + d^Te + 0^Ts = 0                                 \\
+                   & \Leftrightarrow e_ie_i^T \bullet Y - e_i^T x + e_i^T\diag(d)e_i + \bm 0^m \bullet \diag(s) = 0
+\end{align*}
+
+Using SDP cone and linear cones,
+\begin{equation}
+    \begin{aligned}
+        \mathrm{Maximize}\quad & \begin{bmatrix}
+            Q & \frac{q}{2} \\ \frac{q^T}{2} & 0
+        \end{bmatrix} \bullet Y                                       \\
+        \mathrm{s.t.} \quad    & Y  \in \mathscr S^{n+1}_+, d \in \mathbb{R}^n_+, s
+        \in \mathbb{R}^m_+                                                                                  \\
+                               & \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix} \bullet Y = 1                                   \\
+                               & \begin{bmatrix} e_ie_i^T         & -\frac{e_i}{2} \\ -\frac{e_i^T}{2} & 0 \end{bmatrix} \bullet Y + d= 0        & \forall i=1,\cdots, n \\
+                               & \begin{bmatrix} A_i             & \frac{a_i}{2} \\ \frac{a_i^T}{2} & 0 \end{bmatrix}\bullet Y + s_i = b_i    & \forall i=1,\cdots, m \\
+    \end{aligned}
+\end{equation}
+
+And dual form,
+
+\begin{align*}
+    \mathrm{Minimize} \quad & \alpha + b^Tx                                                                            \\
+    \mathrm{s.t.} \quad     & X =\alpha \cdot \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix}
+    + \sum_{i=1}^{n} z_{i} \begin{bmatrix} e_ie_i^T  & -\frac{e_i}{2} \\ -\frac{e_i^T}{2} & 0  \end{bmatrix}
+    + \sum_{i=1}^{m} x_{i} \begin{bmatrix} A_i  & \frac{a_i}{2} \\ \frac{a_i^T}{2} & 0 \end{bmatrix}
+    - \boldsymbol{F}_{0},                                                                                                                      \\
+                            & \sum_{i=1}^{m} \alpha_{i}^{1} x_{i} \leq \beta^{1}, \quad \sum_{i=1}^{m}  \alpha_{i}^{2} x_{i} \geq \beta^{2} .
+\end{align*}
+
+
+
+\paragraph{Pure SDP}
+We can also use pure SDP cones.
 \begin{equation}
     \begin{aligned}
          & \tilde n = n + 1 + (n + m)                                       \\
@@ -115,12 +151,7 @@ Add a slack \(d\) to diagonal constraint \eqref{eq.con.diag}, and \(s_i\) to \(i
     \end{aligned}
 \end{equation}
 
-For diagonal constraint,
-\begin{equation*}
-    \diag(Y) \le x \Leftrightarrow e_ie_i^T \bullet Y - e_i^T x + e_i^T\diag(d)e_i + 0^Ts = 0
-\end{equation*}
-
-And the other,
+And the constraints,
 \begin{equation}
     x^TA_ix + a_i^Tx + e_i^T\diag(s)e_i = \tilde{Y} \bullet    \begin{bmatrix}
         A_i             & \frac{a_i}{2} &         &          \\
@@ -129,8 +160,6 @@ And the other,
                         &               &         & e_ie_i^T
     \end{bmatrix} = b_i
 \end{equation}
-
-
 
 The standard form, homogeneous SDP,
 \begin{equation}
@@ -154,7 +183,4 @@ The standard form, homogeneous SDP,
         \end{bmatrix}\bullet \tilde{Y} = b_i & \forall i=1,\cdots, m \\
     \end{aligned}
 \end{equation}
-
-
-
 \end{document}

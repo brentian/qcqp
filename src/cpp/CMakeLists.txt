@@ -13,16 +13,18 @@ find_package(Eigen3 REQUIRED)
 find_package(SDPA)
 find_package(LAPACK)
 find_package(BLAS)
+find_package(DSDP)
 
 include_directories("./")
 include_directories("./include")
 include_directories(${SDPA_INCLUDE_DIR})
 include_directories(${EIGEN3_INCLUDE_DIR})
+include_directories(${DSDP_INCLUDE_DIR})
+
 # extra includes
 
 # subdir
 add_subdirectory(test)
-
 
 # add libs
 add_library(qp utils.h utils.cpp qp.h qp.cpp bg_sdpa.h bg_sdpa.cpp)
