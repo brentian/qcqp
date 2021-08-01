@@ -1,9 +1,9 @@
-set(SDPA_ROOT_DIR $ENV{SDPA_ROOT_DIR} CACHE PATH "SDPA root directory.")
-message("Looking for Sdpa in ${SDPA_ROOT_DIR}")
+set(SDPA_ROOT_DIR $ENV{SDPA_HOME} CACHE PATH "SDPA root directory.")
+message("Looking for SDPA in ${SDPA_ROOT_DIR}")
 
 
 if (APPLE)
-    message("Looking for Sdpa in ${SDPA_ROOT_DIR} for MacOS")
+    message("Looking for SDPA in ${SDPA_ROOT_DIR} for MacOS")
     find_path(SDPA_INCLUDE_DIR sdpa_call.h HINTS "${SDPA_ROOT_DIR}/include")
     find_path(Mumps_INCLUDE_DIR dmumps_c.h HINTS "${SDPA_ROOT_DIR}/mumps/build/include")
     find_library(SDPA_LIBRARY libsdpa.a HINTS "${SDPA_ROOT_DIR}/lib/")
@@ -31,14 +31,14 @@ include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(SDPA DEFAULT_MSG SDPA_LIBRARY SDPA_INCLUDE_DIR)
 
 if (SDPA_FOUND)
-    message("—- Found Sdpa under ${SDPA_INCLUDE_DIR}")
+    message("—- Found SDPA under ${SDPA_INCLUDE_DIR}")
     set(SDPA_INCLUDE_DIRS ${SDPA_INCLUDE_DIR} ${Mumps_INCLUDE_DIR})
     set(SDPA_LIBRARIES ${SDPA_LIBRARY} ${Mumps_LIBRARY1} ${Mumps_LIBRARY2}
             ${Mumps_LIBRARY3} ${Mumps_LIBRARY4}
 #            ${BLAS_LIBRARY}
             "pthread"
             ${FORTRAN_LIBRARY} ${FORTRAN_LIBRARY2})
-    message("—- Set Sdpa lib  ${SDPA_LIBRARY}")
+    message("—- Set SDPA lib  ${SDPA_LIBRARY}")
     if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         set(SDPA_LIBRARIES "${SDPA_LIBRARIES};m;pthread")
     endif (CMAKE_SYSTEM_NAME STREQUAL "Linux")

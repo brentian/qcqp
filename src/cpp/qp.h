@@ -25,5 +25,10 @@ public:
 
 };
 
-
+struct Result {
+    const int n, m, d;
+    double *x{};
+    double *X{};
+    Result(int n, int m, int d): n(n), m(m), d(d){};
+};
 #endif //QCQP_QP_H

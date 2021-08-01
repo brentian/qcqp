@@ -110,35 +110,44 @@ For diagonal constraint,
                    & \Leftrightarrow e_ie_i^T \bullet Y - e_i^T x + e_i^T\diag(d)e_i + \bm 0^m \bullet \diag(s) = 0
 \end{align*}
 
+To ease our notation, let:
+\begin{align*}
+     & \tilde Y = \begin{bmatrix} Y             & x \\ x^T & 1 \end{bmatrix}; \tilde Q = \begin{bmatrix} Q & \frac{q}{2} \\ \frac{q^T}{2} & 0 \end{bmatrix} ; \\
+     & \tilde E_i = \begin{bmatrix} e_ie_i^T  & -\frac{e_i}{2} \\ -\frac{e_i^T}{2} & 0 \end{bmatrix}, \forall i=1,\cdots,n;                 \\
+     & \tilde A_i = \begin{bmatrix} A_i             & \frac{a_i}{2} \\ \frac{a_i^T}{2} & 0 \end{bmatrix}, \forall i=1,\cdots,m;
+\end{align*}
+
 Using SDP cone and linear cones,
-\begin{equation}
+\begin{equation} \label{eq:ws.std.primal}
     \begin{aligned}
-        \mathrm{Maximize}\quad & \begin{bmatrix}
-            Q & \frac{q}{2} \\ \frac{q^T}{2} & 0
-        \end{bmatrix} \bullet Y                                       \\
-        \mathrm{s.t.} \quad    & Y  \in \mathscr S^{n+1}_+, d \in \mathbb{R}^n_+, s
-        \in \mathbb{R}^m_+                                                                                  \\
-                               & \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix} \bullet Y = 1                                   \\
-                               & \begin{bmatrix} e_ie_i^T         & -\frac{e_i}{2} \\ -\frac{e_i^T}{2} & 0 \end{bmatrix} \bullet Y + d= 0        & \forall i=1,\cdots, n \\
-                               & \begin{bmatrix} A_i             & \frac{a_i}{2} \\ \frac{a_i^T}{2} & 0 \end{bmatrix}\bullet Y + s_i = b_i    & \forall i=1,\cdots, m \\
+        \mathrm{Maximize}\quad & \tilde Q \bullet \tilde Y                                                         \\
+        \mathrm{s.t.} \quad    & \tilde Y  \in \mathscr S^{n+1}_+, d \in \mathbb{R}^n_+, s
+        \in \mathbb{R}^m_+                                                                                         \\
+                               & \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix} \bullet \tilde Y = 1                                   \\
+                               & \tilde E_i \bullet \tilde Y + d_i = 0                     & \forall i=1,\cdots, n \\
+                               & \tilde A_i \bullet \tilde Y + s_i = b_i                   & \forall i=1,\cdots, m \\
     \end{aligned}
 \end{equation}
 
 And dual form,
 
-\begin{align*}
-    \mathrm{Minimize} \quad & \alpha + b^Tx                                                                            \\
-    \mathrm{s.t.} \quad     & X =\alpha \cdot \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix}
-    + \sum_{i=1}^{n} z_{i} \begin{bmatrix} e_ie_i^T  & -\frac{e_i}{2} \\ -\frac{e_i^T}{2} & 0  \end{bmatrix}
-    + \sum_{i=1}^{m} x_{i} \begin{bmatrix} A_i  & \frac{a_i}{2} \\ \frac{a_i^T}{2} & 0 \end{bmatrix}
-    - \boldsymbol{F}_{0},                                                                                                                      \\
-                            & \sum_{i=1}^{m} \alpha_{i}^{1} x_{i} \leq \beta^{1}, \quad \sum_{i=1}^{m}  \alpha_{i}^{2} x_{i} \geq \beta^{2} .
-\end{align*}
+\begin{equation} \label{eq:ws.std.dual}
+    \begin{aligned}
+        \mathrm{Minimize} \quad & \alpha + b^Tx                                                    \\
+        \mathrm{s.t.} \quad     & x \in \mathbb{R}^m, z\in \mathbb{R}^n, X  \in \mathscr S^{n+1}_+ \\
+                                & X =\alpha \cdot \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix}
+        + \sum_{i=1}^{n} z_{i} \tilde{E_i}
+        + \sum_{i=1}^{m} x_{i} \tilde{A_i}
+        - \tilde{Q}
+    \end{aligned}
+\end{equation}
 
+KKT 
 
-
+\subsubsection{Remark}
+\paragraph{Feasible starting point} A
 \paragraph{Pure SDP}
-We can also use pure SDP cones.
+\eqref{eq:ws.std.primal} and \eqref{eq:ws.std.dual} can also be modeled by pure SDP cones.
 \begin{equation}
     \begin{aligned}
          & \tilde n = n + 1 + (n + m)                                       \\
@@ -183,4 +192,9 @@ The standard form, homogeneous SDP,
         \end{bmatrix}\bullet \tilde{Y} = b_i & \forall i=1,\cdots, m \\
     \end{aligned}
 \end{equation}
+
+Suppose we have a primal cut to \eqref{eq:ws.std.primal}:
+\begin{equation*}
+    B\bullet Y + c^T x \le \xi
+\end{equation*}
 \end{document}

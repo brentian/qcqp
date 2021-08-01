@@ -17,10 +17,11 @@
 
 using json = nlohmann::json;
 using eigen_array = Eigen::VectorXd;
-using eigen_row_array = Eigen::RowVectorXd;
 using eigen_matrix = Eigen::MatrixXd;
 using eigen_matmap = Eigen::Map<eigen_matrix>;
 using eigen_arraymap = Eigen::Map<eigen_array>;
+using eigen_const_arraymap = Eigen::Map<const eigen_array>;
+using eigen_const_matmap = Eigen::Map<const eigen_matrix>;
 
 json parse_json(char *fp);
 
