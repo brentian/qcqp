@@ -19,6 +19,8 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
+import collections
+
 import numpy as np
 import pandas as pd
 import sys
@@ -39,14 +41,14 @@ from pyqp.classes import QPI, Bounds
 import argparse
 import json
 
-methods = {
+methods = collections.OrderedDict({
   "grb": bg_grb.qp_gurobi,
   "shor": bg_msk.shor,
   "dshor": bg_msk.dshor,
   "msc": bg_msk_msc.msc,
   "emsc": bg_msk_msc.msc_diag,
   "ssdp": bg_msk_chordal.ssdp,
-}
+})
 
 method_codes = {
   idx + 1: m
@@ -64,7 +66,7 @@ parser = argparse.ArgumentParser("QCQP runner")
 parser.add_argument("--n", type=int, help="dim of x", default=5)
 parser.add_argument("--m", type=int, help="if randomly generated num of constraints", default=5)
 parser.add_argument("--pc", type=str, help="if randomly generated problem type", default=5)
-parser.add_argument("--dump_instance", type=int, help="if save instance", default=0)
+parser.add_argument("--dump_instance", type=int, help="if save instance", default=1)
 parser.add_argument("--r", type=str, help=json.dumps(method_helps, indent=2), default="1,2,3")
 
 if __name__ == '__main__':

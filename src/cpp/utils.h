@@ -36,4 +36,11 @@ void printMatrix(double *ele, int dim, char *printFormat,
 void printDimacsError(double dimacs_error[7], char *printFormat,
                       FILE *fpout);
 
+
+#ifndef QCQP_STRING_UTILS
+#define QCQP_STRING_UTILS
+namespace QCQPStrUtil {
+#define INTERVAL_STR "#############################\n"
+}
+#endif //QCQP_STRING_UTILS
 #endif //QCQP_UTILS_H

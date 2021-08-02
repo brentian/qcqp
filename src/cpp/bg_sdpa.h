@@ -25,6 +25,7 @@ struct Result_SDPA : Result {
 
     Result_SDPA construct_init_point(double lambda = 0.99);
 
+    void check_solution(QP &qp);
     void show();
 };
 

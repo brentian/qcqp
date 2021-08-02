@@ -140,25 +140,39 @@ void QP_SDPA::create_sdpa_p(bool solve, bool verbose) {
     int m = qp.m;
     int n = qp.n;
     p.inputConstraintNumber(1 + n + m);
-    p.inputBlockNumber(2);
+    if (m > 0) {
+        p.inputBlockNumber(3);
+    } else {
+        p.inputBlockNumber(2);
+    }
     p.inputBlockType(1, SDPA::SDP);
     p.inputBlockType(2, SDPA::LP);
-//    p.inputBlockType(3, SDPA::LP);
+    if (m > 0) {
+        p.inputBlockType(3, SDPA::LP);
+    }
     p.inputBlockSize(1, n + 1);
     p.inputBlockSize(2, -n);
-//    p.inputBlockSize(3, -m);
+    if (m > 0) {
+        p.inputBlockSize(3, -m);
+    }
     p.initializeUpperTriangleSpace();
 
     // Q
     input_block(0, 1, n + 1, p, qp.Qh);
     // Y[n, n] = 1
-    p.inputElement(1, 1, n + 1, n + 1, 1);
+    p.inputElement(1, 1, n + 1, n + 1, 1, true);
     p.inputCVec(1, 1);
     // diagonal Y <= xx^T
     for (int k = 0; k < n; ++k) {
-        eigen_matrix Qt = qp.Qdiag[k].block(0, 0, n + 1, n + 1);
-        input_block(k + 2, 1, n + 1, p, Qt);
-        p.inputElement(k + 2, 2, k + 1, k + 1, 1);
+        eigen_matrix Qd = qp.Qd[k].block(0, 0, n + 1, n + 1);
+        input_block(k + 2, 1, n + 1, p, Qd);
+        p.inputElement(k + 2, 2, k + 1, k + 1, 1, true);
+    } // sum up to n + 2 matrices
+    for (int i = 0; i < m; ++i) {
+        eigen_matrix A = qp.Ah[i];
+        input_block(n + 2 + i, 1, n + 1, p, A);
+        p.inputElement(n + 2 + i, 3, i + 1, i + 1, 1, true);
+        p.inputCVec(n + 2 + i, qp.b[i]);
     }
 
     // finish data matrices
@@ -210,8 +224,8 @@ void QP_SDPA::extract_solution() {
     auto X_ = p.getResultYMat(1);
     auto y_ = p.getResultXVec();
     auto Y_ = p.getResultXMat(1);
-    auto D_ = p.getResultYMat(2);
-//    r.S = p.getResultYMat(2);
+    r.D = p.getResultYMat(2);
+    r.S = p.getResultYMat(3);
     r.save_to_X(X_);
     r.save_to_Y(Y_);
     r.y = y_;
@@ -221,6 +235,7 @@ Result_SDPA QP_SDPA::get_solution() {
     return r;
 }
 
+
 Result_SDPA Result_SDPA::construct_init_point(double lambda) {
 
     double *X_ = new double[(n + 1) * (n + 1)]{0.0};
@@ -229,13 +244,13 @@ Result_SDPA Result_SDPA::construct_init_point(double lambda) {
 
     eigen_matmap X_init(X_, n + 1, n + 1);
     eigen_matmap Y_init(Y_, n + 1, n + 1);
-    eigen_arraymap y_init(y_, n);
+    eigen_arraymap y_init(y_, n + m + 1);
 
     for (int i = 0; i < n + 1; ++i) {
         X_init(i, i) += 1 - lambda;
         Y_init(i, i) += 1 - lambda;
     }
-    for (int i = 0; i < n; ++i) {
+    for (int i = 0; i < n + m + 1; ++i) {
         y_init(i) += lambda * y[i];
     };
     for (int i = 0; i < n + 1; ++i) {
@@ -252,7 +267,33 @@ Result_SDPA Result_SDPA::construct_init_point(double lambda) {
 }
 
 void Result_SDPA::show() {
-    cout << Xm<< endl;
-    cout << eigen_const_arraymap(y, n) << endl;
+    cout << "X (homo): " << endl;
+    cout << Xm << endl;
+
+    try {
+        cout << "d: " << endl;
+        cout << eigen_const_arraymap(D, n).matrix().adjoint() << endl;
+        cout << "s: " << endl;
+        cout << eigen_const_arraymap(S, m).matrix().adjoint() << endl;
+    }
+    catch (std::exception e) {
+        cout << "unsolved" << endl;
+    }
+    cout << "y: " << endl;
+    cout << eigen_const_arraymap(y, n + m + 1).matrix().adjoint() << endl;
+    cout << "Y (homo): " << endl;
     cout << Ym << endl;
+}
+
+void Result_SDPA::check_solution(QP &qp) {
+    int i = 0;
+    fprintf(stdout,
+            "check objectives: Q∙Y = %.3f, alpha + b∙x = %.3f\n",
+            (Xm * qp.Qh).trace(),
+            qp.b.dot(eigen_const_arraymap(y + n + 1, m)) + y[0]);
+    for (auto Ah: qp.Ah) {
+        fprintf(stdout, "check for contraint: %d, %.3f, %.3f, %.3f\n",
+                i, (Xm * Ah).trace(), S[i], qp.b[i]);
+        i++;
+    }
 }
