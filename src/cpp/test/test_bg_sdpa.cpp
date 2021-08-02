@@ -45,27 +45,41 @@ int main(int argc, char *argv[]) {
     using namespace std;
     std::cout << "########################\n";
     std::cout << "first solve\n";
+    std::cout << "########################\n";
     QP_SDPA qp_sdpa(qp);
     qp_sdpa.create_sdpa_p(false, false);
     qp_sdpa.solve_sdpa_p(true);
     qp_sdpa.extract_solution();
-    std::cout << "########################\n";
-    std::cout << "show some properties\n";
+    auto r1 = qp_sdpa.get_solution();
+    eigen_const_matmap Y(r1.Y, qp.n + 1, qp.n + 1);
+    eigen_const_matmap X(r1.X, qp.n + 1, qp.n + 1);
+    auto x = X.block(6, 0, 1, 6);
+    auto res = X.block(0, 0, 6, 6) \
+ - x.transpose() * x;
+    std::cout << "print solution: \n";
+    r1.show();
+    std::cout << "print residual: \n";
+    std::cout << res << std::endl;
 
-    eigen_const_matmap Y(qp_sdpa.r.Y, qp.n + 1, qp.n + 1);
-    eigen_const_matmap X(qp_sdpa.r.X, qp.n + 1, qp.n + 1);
-    std::cout << (X * Y).trace() << std::endl;
+    std::cout << "########################\n";
+    std::cout << "generate cut\n";
+    std::cout << "########################\n";
+
+    int i = 5;
+    int j = 1;
+    cout << r1.Xm(i, j) << endl;
+    std::cout << "########################\n";
+    std::cout << "second solve with cut\n";
+    std::cout << "########################\n";
 
     std::cout << "########################\n";
     std::cout << "test initial solution\n";
-    auto r = qp_sdpa.r.construct_init_point(0.99);
+    auto r = r1.construct_init_point(0.4);
     r.show();
-
-    std::cout << "########################\n";
     std::cout << "run with warm-start solution\n";
     QP_SDPA qp_sdpa1(qp);
     qp_sdpa1.create_sdpa_p(false, true);
-    qp_sdpa1.assign_initial_point(r.X, r.y, r.Y);
+    qp_sdpa1.assign_initial_point(r.X, r.y, r.Y, false);
     qp_sdpa1.solve_sdpa_p(true);
 
     return 0;

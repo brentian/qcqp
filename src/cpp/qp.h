@@ -26,9 +26,29 @@ public:
 };
 
 struct Result {
+public:
     const int n, m, d;
-    double *x{};
-    double *X{};
-    Result(int n, int m, int d): n(n), m(m), d(d){};
+    const double *x{};
+    const double *X{};
+    const double *y{};
+    const double *Y{};
+    const double *D{};
+    const double *S{};
+// eigen representations
+//  for some backend, may not be available
+//    eigen_const_arraymap xm;
+    eigen_const_matmap Xm;
+//    eigen_const_matmap Ym;
+//    eigen_const_arraymap Dm;
+//    eigen_const_arraymap Sm;
+
+    Result(int n, int m, int d) :
+            n(n), m(m), d(d), Xm(X, n+1, n+1){
+    };
+    void save_to_X(const double *X_){
+        X = X_;
+        new (&Xm) eigen_const_matmap(X_, n+1, n+1);
+    };
 };
+
 #endif //QCQP_QP_H

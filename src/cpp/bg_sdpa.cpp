@@ -101,12 +101,6 @@ void display_solution_dtls(SDPA &p) {
 }
 
 
-Result_SDPA::Result_SDPA(const int i, const int i1, const int i2) : Result(i, i1, i2) {
-}
-
-QP_SDPA::QP_SDPA(QP &qp) : qp(qp), r(qp.n, qp.m, qp.d) {
-}
-
 void QP_SDPA::solve_sdpa_p(bool verbose) {
     p.initializeUpperTriangle();
     p.initializeSolve();
@@ -190,7 +184,7 @@ void QP_SDPA::create_sdpa_p(bool solve, bool verbose) {
  *  While for QCQP,
  *      the primal is Q∙Y and the dual is of x∙b
  */
-void QP_SDPA::assign_initial_point(double *X_init, const double *y_init, const double *Y_init, bool dual_only) {
+void QP_SDPA::assign_initial_point(const double *X_init, const double *y_init, const double *Y_init, bool dual_only) {
 
     using namespace Eigen;
     eigen_const_arraymap y(y_init, qp.n);
@@ -213,36 +207,52 @@ void QP_SDPA::extract_solution() {
     if (!solved) {
         std::cerr << "has not been solved!" << std::endl;
     }
-    r.X = p.getResultYMat(1);
-    r.y = p.getResultXVec();
-    r.Y = p.getResultXMat(1);
-    r.D = p.getResultYMat(2);
+    auto X_ = p.getResultYMat(1);
+    auto y_ = p.getResultXVec();
+    auto Y_ = p.getResultXMat(1);
+    auto D_ = p.getResultYMat(2);
 //    r.S = p.getResultYMat(2);
+    r.save_to_X(X_);
+    r.save_to_Y(Y_);
+    r.y = y_;
+}
+
+Result_SDPA QP_SDPA::get_solution() {
+    return r;
 }
 
 Result_SDPA Result_SDPA::construct_init_point(double lambda) {
-    eigen_matmap X_old(X, n+1, n+1);
-    eigen_const_matmap Y_old(Y, n+1, n+1);
-    eigen_const_arraymap y_old(y, n+1);
-    eigen_matrix E(n+1, n+1);
-    E.setIdentity();
-    eigen_matrix X_init = eigen_matrix(n+1, n+1);
-    X_init << X_old.matrix() * lambda + E * (1-lambda);
-    eigen_matrix Y_init = eigen_matrix(n+1, n+1);
-    Y_init << Y_old.matrix() * lambda + E * (1-lambda);
-    eigen_matrix y_init = eigen_array :: Zero(n);
 
-//    X_init;
+    double *X_ = new double[(n + 1) * (n + 1)]{0.0};
+    double *Y_ = new double[(n + 1) * (n + 1)]{0.0};
+    double *y_ = new double[n]{0.0};
 
+    eigen_matmap X_init(X_, n + 1, n + 1);
+    eigen_matmap Y_init(Y_, n + 1, n + 1);
+    eigen_arraymap y_init(y_, n);
+
+    for (int i = 0; i < n + 1; ++i) {
+        X_init(i, i) += 1 - lambda;
+        Y_init(i, i) += 1 - lambda;
+    }
+    for (int i = 0; i < n; ++i) {
+        y_init(i) += lambda * y[i];
+    };
+    for (int i = 0; i < n + 1; ++i) {
+        for (int j = 0; j < n + 1; ++j) {
+            X_init(i, j) += lambda * Xm(i, j);
+            Y_init(i, j) += lambda * Ym(i, j);
+        }
+    }
     auto r = Result_SDPA(n, m, d);
-    r.X = X_init.data();
-    r.Y = Y_init.data();
-    r.y = y_init.data();
+    r.y = y_;
+    r.save_to_X(X_);
+    r.save_to_Y(Y_);
     return r;
 }
 
 void Result_SDPA::show() {
-    cout << eigen_matmap(X, n + 1, n + 1) << endl;
+    cout << Xm<< endl;
     cout << eigen_const_arraymap(y, n) << endl;
-    cout << eigen_const_matmap(Y, n + 1, n + 1) << endl;
+    cout << Ym << endl;
 }

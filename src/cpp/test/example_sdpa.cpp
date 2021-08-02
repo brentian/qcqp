@@ -77,7 +77,7 @@ int main ()
     // Problem1.setParameterUppwerBound(1.0e+5);
     // Problem1.setParameterBetaStar(0.1);
     // Problem1.setParameterBetaBar(0.2);
-    // Problem1.setParameterGammaStar(0.9);
+     Problem1.setParameterGammaStar(0.5);
     // Problem1.setParameterEpsilonDash(1.0e-7);
     // Problem1.setParameterPrintXVec((char*)"%+8.3e" );
     // Problem1.setParameterPrintXMat((char*)"%+8.3e" );

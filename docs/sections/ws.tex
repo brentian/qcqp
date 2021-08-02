@@ -101,6 +101,7 @@ Consider the left child \(x_i \in [l_i, x_i^k < u_i]\), the lower bound is uncha
 
 \subsection{SDP based warmstart}
 
+\paragraph{Standard form}
 We first reformulate into standard SDP, by adding a slack \(d\) to diagonal constraint \eqref{eq.con.diag}, and \(s\) to the other constraints.
 
 
@@ -142,10 +143,7 @@ And dual form,
     \end{aligned}
 \end{equation}
 
-KKT 
 
-\subsubsection{Remark}
-\paragraph{Feasible starting point} A
 \paragraph{Pure SDP}
 \eqref{eq:ws.std.primal} and \eqref{eq:ws.std.dual} can also be modeled by pure SDP cones.
 \begin{equation}
@@ -193,8 +191,16 @@ The standard form, homogeneous SDP,
     \end{aligned}
 \end{equation}
 
-Suppose we have a primal cut to \eqref{eq:ws.std.primal}:
+Suppose we have a primal cut to \eqref{eq:ws.std.primal}
+that cuts off current solution \((x^\circ, X^\circ, Y^\circ)\),
 \begin{equation*}
     B\bullet Y + c^T x \le \xi
 \end{equation*}
+\paragraph{RLT} for example, the RLT cut of the form \eqref{eq:ws.rlt.left}, the standard form is,
+\begin{equation*}
+    e_ie_j^T\bullet Y - u_i e_j^Tx - l_j e_i^Tx + u_i l_j \le 0
+    \Rightarrow \begin{bmatrix} e_ie_j^T  & - u_i e_j \\ - l_j e_i^T & 0 \end{bmatrix}
+    \bullet \tilde Y + \tilde s = - u_il_j
+\end{equation*}
+
 \end{document}
