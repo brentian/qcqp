@@ -45,15 +45,17 @@ public:
 // QP UTIL FUNCS.
 eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a);
 
-struct Result {
+class Result {
 public:
     const int n, m, d;
     double *x{};
     double *X{};
     double *y{};
     double *Y{};
-    double *D{};
     double *S{};
+    double *Dd{};
+    double *Sd{};
+    int m_with_cuts;
 // eigen representations
 //  for some backend, may not be available
 //    eigen_const_arraymap xm;
@@ -70,6 +72,7 @@ public:
         X = X_;
         new(&Xm) eigen_const_matmap(X_, n + 1, n + 1);
     };
+    double *D{};
 };
 
 #endif //QCQP_QP_H
