@@ -52,51 +52,51 @@ void display_solution_dtls(SDPA &p) {
             p.getDualError());
 
 
-    fprintf(stdout, "xVec = \n");
-    // p.printResultXVec();
-    printVector(p.getResultXVec(),
-                p.getConstraintNumber(), (char *) "%+8.3e",
-                stdout);
-
-    fprintf(stdout, "xMat = \n");
-    // p.printResultXMat();
-    for (int l = 0; l < p.getBlockNumber(); ++l) {
-        if (p.getBlockType(l + 1) == SDPA::SDP) {
-            printMatrix(p.getResultXMat(l + 1),
-                        p.getBlockSize(l + 1), (char *) "%+8.3e",
-                        stdout);
-        } else if (p.getBlockType(l + 1) == SDPA::SOCP) {
-            printf("current version does not support SOCP\n");
-        }
-        if (p.getBlockType(l + 1) == SDPA::LP) {
-            printVector(p.getResultXMat(l + 1),
-                        p.getBlockSize(l + 1), (char *) "%+8.3e",
-                        stdout);
-        }
-    }
-
-    fprintf(stdout, "yMat = \n");
-    // p.printResultYMat();
-    for (int l = 0; l < p.getBlockNumber(); ++l) {
-        if (p.getBlockType(l + 1) == SDPA::SDP) {
-            printMatrix(p.getResultYMat(l + 1),
-                        p.getBlockSize(l + 1), (char *) "%+8.3e",
-                        stdout);
-        } else if (p.getBlockType(l + 1) == SDPA::SOCP) {
-            printf("current version does not support SOCP\n");
-        }
-        if (p.getBlockType(l + 1) == SDPA::LP) {
-            printVector(p.getResultYMat(l + 1),
-                        p.getBlockSize(l + 1), (char *) "%+8.3e",
-                        stdout);
-        }
-    }
+//    fprintf(stdout, "xVec = \n");
+//    // p.printResultXVec();
+//    printVector(p.getResultXVec(),
+//                p.getConstraintNumber(), (char *) "%+8.3e",
+//                stdout);
+//
+//    fprintf(stdout, "xMat = \n");
+//    // p.printResultXMat();
+//    for (int l = 0; l < p.getBlockNumber(); ++l) {
+//        if (p.getBlockType(l + 1) == SDPA::SDP) {
+//            printMatrix(p.getResultXMat(l + 1),
+//                        p.getBlockSize(l + 1), (char *) "%+8.3e",
+//                        stdout);
+//        } else if (p.getBlockType(l + 1) == SDPA::SOCP) {
+//            printf("current version does not support SOCP\n");
+//        }
+//        if (p.getBlockType(l + 1) == SDPA::LP) {
+//            printVector(p.getResultXMat(l + 1),
+//                        p.getBlockSize(l + 1), (char *) "%+8.3e",
+//                        stdout);
+//        }
+//    }
+//
+//    fprintf(stdout, "yMat = \n");
+//    // p.printResultYMat();
+//    for (int l = 0; l < p.getBlockNumber(); ++l) {
+//        if (p.getBlockType(l + 1) == SDPA::SDP) {
+//            printMatrix(p.getResultYMat(l + 1),
+//                        p.getBlockSize(l + 1), (char *) "%+8.3e",
+//                        stdout);
+//        } else if (p.getBlockType(l + 1) == SDPA::SOCP) {
+//            printf("current version does not support SOCP\n");
+//        }
+//        if (p.getBlockType(l + 1) == SDPA::LP) {
+//            printVector(p.getResultYMat(l + 1),
+//                        p.getBlockSize(l + 1), (char *) "%+8.3e",
+//                        stdout);
+//        }
+//    }
 
     double dimacs_error[7];
     p.getDimacsError(dimacs_error);
     printDimacsError(dimacs_error, (char *) "%+8.3e", stdout);
-    fprintf(stdout, "total time = \n");
-    p.printComputationTime(stdout);
+//    fprintf(stdout, "total time = \n");
+//    p.printComputationTime(stdout);
 
 }
 
@@ -132,29 +132,32 @@ void QP_SDPA::create_sdpa_p(bool solve, bool verbose) {
     // p.setParameterPrintXMat((char*)"%+8.3e" );
     // p.setParameterPrintYMat((char*)"%+8.3e" );
     // p.setParameterPrintInformation((char*)"%+10.16e");
+
     if (verbose) {
         SDPA::printSDPAVersion(stdout);
         p.setDisplay(stdout);
-        p.printParameters(stdout);
+//        p.printParameters(stdout);
     }
     int m = qp.m;
     int n = qp.n;
     p.inputConstraintNumber(1 + n + m);
     if (m > 0) {
         p.inputBlockNumber(3);
+        p.inputBlockType(1, SDPA::SDP);
+        p.inputBlockSize(1, n + 1);
+        p.inputBlockType(2, SDPA::LP);
+        p.inputBlockSize(2, -n);
+        p.inputBlockType(3, SDPA::LP);
+        p.inputBlockSize(3, -m);
     } else {
         p.inputBlockNumber(2);
+        // unconstrained
+        p.inputBlockType(1, SDPA::SDP);
+        p.inputBlockSize(1, n + 1);
+        p.inputBlockType(2, SDPA::LP);
+        p.inputBlockSize(2, -n);
     }
-    p.inputBlockType(1, SDPA::SDP);
-    p.inputBlockType(2, SDPA::LP);
-    if (m > 0) {
-        p.inputBlockType(3, SDPA::LP);
-    }
-    p.inputBlockSize(1, n + 1);
-    p.inputBlockSize(2, -n);
-    if (m > 0) {
-        p.inputBlockSize(3, -m);
-    }
+
     p.initializeUpperTriangleSpace();
 
     // Q
@@ -215,6 +218,7 @@ void QP_SDPA::assign_initial_point(eigen_const_matmap X, eigen_const_arraymap y,
     if (!dual_only) {
         input_Y_init(p, X);
     }
+    p.setParameterEpsilonStar(1.0e-8);
 }
 
 void QP_SDPA::extract_solution() {
@@ -232,57 +236,53 @@ void QP_SDPA::extract_solution() {
 }
 
 Result_SDPA QP_SDPA::get_solution() {
-    return r;
+    return Result_SDPA(r);
 }
 
 
-Result_SDPA Result_SDPA::construct_init_point(double lambda) {
+void Result_SDPA::construct_init_point(Result_SDPA &r, double lambda) {
 
-    double *X_ = new double[(n + 1) * (n + 1)]{0.0};
-    double *Y_ = new double[(n + 1) * (n + 1)]{0.0};
-    double *y_ = new double[n]{0.0};
+    X = new double[(n + 1) * (n + 1)]{0.0};
+    Y = new double[(n + 1) * (n + 1)]{0.0};
+    y = new double[n + m + 1]{0.0};
 
-    eigen_matmap X_init(X_, n + 1, n + 1);
-    eigen_matmap Y_init(Y_, n + 1, n + 1);
-    eigen_arraymap y_init(y_, n + m + 1);
-
+    new(&Ym) eigen_const_matmap(Y, n + 1, n + 1);
+    new(&Xm) eigen_const_matmap(X, n + 1, n + 1);
     for (int i = 0; i < n + 1; ++i) {
-        X_init(i, i) += 1 - lambda;
-        Y_init(i, i) += 1 - lambda;
+        X[i * (n + 1) + i] += 1 - lambda;
+        Y[i * (n + 1) + i] += 1 - lambda;
     }
     for (int i = 0; i < n + m + 1; ++i) {
-        y_init(i) += lambda * y[i];
+        y[i] += lambda * r.y[i];
     };
     for (int i = 0; i < n + 1; ++i) {
         for (int j = 0; j < n + 1; ++j) {
-            X_init(i, j) += lambda * Xm(i, j);
-            Y_init(i, j) += lambda * Ym(i, j);
+            X[i * (n + 1) + j] += lambda * r.Xm(i, j);
+            Y[i * (n + 1) + j] += lambda * r.Ym(i, j);
         }
     }
-    auto r = Result_SDPA(n, m, d);
-    r.y = y_;
-    r.save_to_X(X_);
-    r.save_to_Y(Y_);
-    return r;
+    S = new double[n]{0.0};
+    D = new double[n]{0.0};
+    x = new double[n]{0.0};
 }
 
 void Result_SDPA::show() {
     cout << "X (homo): " << endl;
-    cout << Xm << endl;
+    cout << Xm.format(EIGEN_IO_FORMAT) << endl;
 
     try {
         cout << "d: " << endl;
-        cout << eigen_const_arraymap(D, n).matrix().adjoint() << endl;
+        cout << eigen_const_arraymap(D, n).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
         cout << "s: " << endl;
-        cout << eigen_const_arraymap(S, m).matrix().adjoint() << endl;
+        cout << eigen_const_arraymap(S, m).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
     }
     catch (std::exception e) {
         cout << "unsolved" << endl;
     }
     cout << "y: " << endl;
-    cout << eigen_const_arraymap(y, n + m + 1).matrix().adjoint() << endl;
+    cout << eigen_const_arraymap(y, n + m + 1).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
     cout << "Y (homo): " << endl;
-    cout << Ym << endl;
+    cout << Ym.format(EIGEN_IO_FORMAT) << endl;
 }
 
 void Result_SDPA::check_solution(QP &qp) {

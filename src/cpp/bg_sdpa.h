@@ -15,30 +15,30 @@ struct Result_SDPA : Result {
 
     Result_SDPA(int n, int m, int d) :
             Result(n, m, d),
-            Ym(Y, n + 1, n + 1) {
+            Ym(nullptr, n + 1, n + 1) {
     }
 
-    void save_to_Y(const double *Y_) {
+    void save_to_Y(double *Y_) {
         Y = Y_;
         new(&Ym) eigen_const_matmap(Y_, n + 1, n + 1);
     };
 
-    Result_SDPA construct_init_point(double lambda = 0.99);
+    void construct_init_point(Result_SDPA &r, double lambda = 0.99);
 
     void check_solution(QP &qp);
+
     void show();
 };
 
 class QP_SDPA {
 private:
-    QP qp;
-    SDPA p;
-    Result_SDPA r;
+    QP &qp;
 public:
+    Result_SDPA r;
+    SDPA p = SDPA();
     bool solved = false;
 
     explicit QP_SDPA(QP &qp) : qp(qp), r(qp.n, qp.m, qp.d) {
-
     }
 
     ~QP_SDPA() { p.terminate(); }

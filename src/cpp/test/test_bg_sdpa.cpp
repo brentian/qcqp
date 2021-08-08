@@ -83,9 +83,16 @@ int main(int argc, char *argv[]) {
     std::cout << "first solve\n";
     std::cout << INTERVAL_STR;
     QP_SDPA qp_sdpa(qp);
-    qp_sdpa.create_sdpa_p(false, false);
+    qp_sdpa.create_sdpa_p(false, true);
     qp_sdpa.solve_sdpa_p(true);
     qp_sdpa.extract_solution();
+//    qp_sdpa.p.copyCurrentToInit();
+//    qp_sdpa.p.setParameterEpsilonStar(1.0e-8);
+//
+//    qp_sdpa.p.setInitPoint(true);
+//    qp_sdpa.p.copyCurrentToInit();
+//    qp_sdpa.p.solve();
+
     auto r1 = qp_sdpa.get_solution();
     std::cout << INTERVAL_STR;
     std::cout << "check solution\n";
@@ -99,7 +106,7 @@ int main(int argc, char *argv[]) {
     std::cout << "print solution: \n";
     r1.show();
     std::cout << "print residual: \n";
-    std::cout << res << std::endl;
+    std::cout << res.format(EIGEN_IO_FORMAT) << std::endl;
 
     std::cout << INTERVAL_STR;
     std::cout << "generate cut\n";
@@ -114,7 +121,8 @@ int main(int argc, char *argv[]) {
 
     std::cout << INTERVAL_STR;
     std::cout << "test initial solution\n";
-    auto r = r1.construct_init_point(0.4);
+    auto r = Result_SDPA(r1.n, r1.m, r1.d);
+    r.construct_init_point(r1, 0.999);
     r.show();
     std::cout << "run with warm-start solution\n";
     QP_SDPA qp_sdpa1(qp);
