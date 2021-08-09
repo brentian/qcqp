@@ -37,6 +37,7 @@ void input_block(int k, int l, int size, SDPA &p, eigen_matrix &Q) {
 }
 
 void input_x_init(SDPA &p, eigen_const_arraymap &v) {
+
     for (int i = 0; i < v.size(); ++i) {
         p.inputInitXVec(i + 1, v[i]);
     }
@@ -155,81 +156,6 @@ void QP_SDPA::create_sdpa_p(bool solve, bool verbose) {
 
 }
 
-//void QP_SDPA::create_sdpa_p(bool solve, bool verbose) {
-//
-//
-//    // All parameteres are renewed
-//    p.setParameterType(SDPA::PARAMETER_DEFAULT);
-//
-//    // If necessary, each parameter can be set independently
-//    // p.setParameterMaxIteration(100);
-//    // p.setParameterEpsilonStar(1.0e-7);
-//    // p.setParameterLambdaStar(1.0e+2);
-//    // p.setParameterOmegaStar(2.0);
-//    // p.setParameterLowerBound(-1.0e+5);
-//    // p.setParameterUppwerBound(1.0e+5);
-//    // p.setParameterBetaStar(0.1);
-//    // p.setParameterBetaBar(0.2);
-//    // p.setParameterGammaStar(0.9);
-//    // p.setParameterEpsilonDash(1.0e-7);
-//    // p.setParameterPrintXVec((char*)"%+8.3e" );
-//    // p.setParameterPrintXMat((char*)"%+8.3e" );
-//    // p.setParameterPrintYMat((char*)"%+8.3e" );
-//    // p.setParameterPrintInformation((char*)"%+10.16e");
-//
-//    int m = qp.m;
-//    int n = qp.n;
-//    p.inputConstraintNumber(1 + n + m);
-//    if (m > 0) {
-//        p.inputBlockNumber(3);
-//        p.inputBlockType(1, SDPA::SDP);
-//        p.inputBlockSize(1, n + 1);
-//        p.inputBlockType(2, SDPA::LP);
-//        p.inputBlockSize(2, -n);
-//        p.inputBlockType(3, SDPA::LP);
-//        p.inputBlockSize(3, -m);
-//    } else {
-//        p.inputBlockNumber(2);
-//        // unconstrained
-//        p.inputBlockType(1, SDPA::SDP);
-//        p.inputBlockSize(1, n + 1);
-//        p.inputBlockType(2, SDPA::LP);
-//        p.inputBlockSize(2, -n);
-//    }
-//
-//    p.initializeUpperTriangleSpace();
-//
-//    // Q
-//    input_block(0, 1, n + 1, p, qp.Qh);
-//    // Y[n, n] = 1
-//    p.inputElement(1, 1, n + 1, n + 1, 1, true);
-//    p.inputCVec(1, 1);
-//    // diagonal Y <= xx^T
-//    for (int k = 0; k < n; ++k) {
-//        eigen_matrix Qd = qp.Qd[k].block(0, 0, n + 1, n + 1);
-//        input_block(k + 2, 1, n + 1, p, Qd);
-//        p.inputElement(k + 2, 2, k + 1, k + 1, 1, true);
-//    } // sum up to n + 2 matrices
-//    for (int i = 0; i < m; ++i) {
-//        eigen_matrix A = qp.Ah[i];
-//        input_block(n + 2 + i, 1, n + 1, p, A);
-//        p.inputElement(n + 2 + i, 3, i + 1, i + 1, 1, true);
-//        p.inputCVec(n + 2 + i, qp.b[i]);
-//    }
-//
-//    // finish data matrices
-//    if (solve) {
-//        p.initializeUpperTriangle();
-//        p.initializeSolve();
-//        p.solve();
-//        solved = true;
-//        if (verbose) {
-//            display_solution_dtls(p);
-//        }
-//    }
-//}
-//
-
 /**
  * Assign double* buffer into SDPA initial solutions.
  * @param X_init primal initial point as of QCQP,
@@ -297,7 +223,12 @@ void QP_SDPA::print_sdpa_formatted_solution() {
 
 /**
  * SDPA uses infeasible start, the initial point is:
+ *  primal dual pair
  *  X∙Y = 𝜇∙I
+ *  X(-1, -1) = alpha
+ *  D: y = alpha, Dd, Sd (1 + n + m)
+ *  P: _ = _    , D,  S
+ *
  * @param r
  * @param lambda
  * @param pool_size
@@ -305,17 +236,17 @@ void QP_SDPA::print_sdpa_formatted_solution() {
 void Result_SDPA::construct_init_point(Result_SDPA &r, double lambda, int pool_size) {
     m_with_cuts = r.m + pool_size; // total size
     int m_with_cuts_old = r.m_with_cuts; // old size
-
+    double mu = 2;
     X = new double[(n + 1) * (n + 1)]{0.0};
     Y = new double[(n + 1) * (n + 1)]{0.0};
-    y = new double[n + m_with_cuts + 1]{0.0};
-    D = new double[n]{0.0};
-    S = new double[m_with_cuts]{0.0};
-    Dd = new double[n]{0.0};
-    Sd = new double[m_with_cuts]{0.0};
+    y = new double[n + m_with_cuts + 1]{mu};
+    D = new double[n]{mu};
+    S = new double[m_with_cuts]{mu};
+    Dd = new double[n]{mu};
+    Sd = new double[m_with_cuts]{mu};
     // derived original x.
     x = new double[n]{0.0};
-    double mu = 10;
+
 
     new(&Ym) eigen_const_matmap(Y, n + 1, n + 1);
     new(&Xm) eigen_const_matmap(X, n + 1, n + 1);
@@ -323,29 +254,26 @@ void Result_SDPA::construct_init_point(Result_SDPA &r, double lambda, int pool_s
         X[i * (n + 1) + i] += (1 - lambda) * mu;
         Y[i * (n + 1) + i] += (1 - lambda) * mu;
     }
-    for (int i = 0; i < n + m_with_cuts_old + 1; ++i) {
-        y[i] += lambda * r.y[i];
-    };
     for (int i = 0; i < n + 1; ++i) {
         for (int j = 0; j < n + 1; ++j) {
             X[i * (n + 1) + j] += lambda * r.Xm(i, j);
             Y[i * (n + 1) + j] += lambda * r.Ym(i, j);
         }
     }
+    for (int i = 0; i < n + m_with_cuts_old + 1; ++i) {
+        y[i] = lambda * r.y[i] + (1 - lambda) * mu;
+    };
+    y[n + m_with_cuts] = mu;
+
     // slack with size n (diagonal)
     for (int i = 0; i < n; ++i) {
-        D[i] += lambda * r.D[i] + (1 - lambda) * mu;
-        Dd[i] += lambda * r.Dd[i] + (1 - lambda) * mu;
+        Dd[i] = y[i + 1];
+        D[i] = mu * mu / y[i + 1];
     }
     // slack with size (r.m + pool_size)
-    for (int i = 0; i < m_with_cuts_old; ++i) {
-        S[i] += lambda * r.S[i];
-        Sd[i] += lambda * r.Sd[i];
-    }
-
     for (int i = 0; i < m_with_cuts; ++i) {
-        S[i] += (1 - lambda) * mu;
-        Sd[i] += (1 - lambda) * mu;
+        Sd[i] = y[i + n + 1];
+        S[i] = mu * mu / y[i + n + 1];
     };
 
 }
@@ -367,7 +295,7 @@ void Result_SDPA::show() {
     }
     cout << "y: " << endl;
     cout << eigen_const_arraymap(y, n + m_with_cuts + 1).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
-    cout << "Y (homo): " << endl;
+     cout << "Y (homo): " << endl;
     cout << Ym.format(EIGEN_IO_FORMAT) << endl;
 }
 

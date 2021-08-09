@@ -143,16 +143,23 @@ And dual form,
     \end{aligned}
 \end{equation}
 
-By the perturbed complementary condition,
+By the perturbed complementary condition, construct
 
 \begin{equation} \label{eq:ws.std.lc}
     \begin{aligned}
-         & X \tilde Y = \mu I_{n+1}                     \\
-         & z \circ d =  \mu e_n, \; x \circ s = \mu e_m
+         & X = \tilde Y = \mu I_{n+1}           \\
+         & z = d =  \mu e_n, \; x = s = \mu e_m
     \end{aligned}
 \end{equation}
 
-We construct an initial point from last iterate and
+We construct an initial point from last iterate and an initial point by \eqref{eq:ws.std.lc}.
+
+\begin{align*}
+    X := \lambda X^0 + (1-\lambda) \mu I_{n+1}                \\
+    \tilde Y :=  \lambda \tilde Y^0 + (1-\lambda) \mu I_{n+1} \\
+    d  :=  \lambda d^0 + (1-\lambda) \mu e_{n} \\
+    x :=  \lambda x^0 + (1-\lambda) \mu e_{m} \\
+\end{align*}
 
 \paragraph{Pure SDP}
 \eqref{eq:ws.std.primal} and \eqref{eq:ws.std.dual} can also be modeled by pure SDP cones.

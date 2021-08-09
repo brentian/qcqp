@@ -119,9 +119,10 @@ int main(int argc, char *argv[]) {
     qp_sdpa1.create_sdpa_p(false, false);
     std::cout << "generate initial solution\n";
     auto r = Result_SDPA(r1.n, r1.m, r1.d);
-    r.construct_init_point(r1, 0, qp_sdpa1.cp.size());
+    r.construct_init_point(r1, 0.90, qp_sdpa1.cp.size());
     r.show();
-    qp_sdpa1.assign_initial_point(r, false);
+    qp_sdpa1.assign_initial_point(r, true);
+    qp_sdpa1.print_sdpa_formatted_solution();
     qp_sdpa1.solve_sdpa_p(true);
     qp_sdpa1.extract_solution();
     auto r2 = qp_sdpa1.get_solution();
