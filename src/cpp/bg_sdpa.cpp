@@ -128,7 +128,6 @@ void QP_SDPA::create_sdpa_p(bool solve, bool verbose) {
         p.inputElement(k + 2, 2, k + 1, k + 1, 1, true);
     } // sum up to n + 2 matrices
     for (int i = 0; i < m_with_cuts; ++i) {
-
         if (i < m) {
             input_block(n + 2 + i, 1, n + 1, p, qp.Ah[i]);
             p.inputElement(n + 2 + i, 3, i + 1, i + 1, 1, true);
@@ -140,7 +139,6 @@ void QP_SDPA::create_sdpa_p(bool solve, bool verbose) {
             p.inputElement(n + 2 + i, 3, i + 1, i + 1, 1, true);
             p.inputCVec(n + 2 + i, c.b);
         };
-
     }
 
     // finish data matrices

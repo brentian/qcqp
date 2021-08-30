@@ -27,6 +27,6 @@ include_directories(${DSDP_INCLUDE_DIR})
 add_subdirectory(test)
 
 # add libs
-add_library(qp utils.h utils.cpp qp.h qp.cpp bg_sdpa.h bg_sdpa.cpp cut.cpp cut.h)
+add_library(qp utils.h utils.cpp qp.h qp.cpp bg_sdpa.h bg_sdpa.cpp cut.cpp cut.h bg_dsdp.cpp bg_dsdp.h)
 target_link_libraries(qp PRIVATE ${SDPA_LIBRARIES} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} nlohmann_json::nlohmann_json)
 

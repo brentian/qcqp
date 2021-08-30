@@ -35,7 +35,9 @@ void printMatrix(double *ele, int dim, char *printFormat,
 
 void printDimacsError(double dimacs_error[7], char *printFormat,
                       FILE *fpout);
+double *get_lower_triangular(const eigen_matrix& Q);
 
+double *input_lower_triangular(double *lowert, int n);
 
 #ifndef QCQP_STRING_UTILS
 #define QCQP_STRING_UTILS
