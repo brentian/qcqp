@@ -311,6 +311,8 @@ void Result_SDPA::check_solution(QP &qp) {
     cout << "Residual: Y - xx.T:" << endl;
     eigen_const_arraymap xm(x, n);
     cout << Xm.block(0, 0, n, n) - xm.matrix() * xm.matrix().adjoint() << endl;
+    cout << "Comple: X∙S:" << endl;
+    cout << Xm * Ym << endl;
 }
 
 

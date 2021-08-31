@@ -3,7 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <iostream>
 /*! \file maxcut.c
   \brief Most Basic Example: read graph from file, formulate the SDP relaxation of maximum cut
 problem, solve using DSDP, and apply randomized algorithm to generate
@@ -40,6 +40,9 @@ int main(int argc, char *argv[]) {
     if (info) {
         printf("Problem reading file\n");
         return 1;
+    }
+    else{
+        std::cout << nnodes << std::endl;
     }
 
     MaxCut(nnodes, nedges, node1, node2, weight);

@@ -57,14 +57,14 @@ public:
     CutPool cp;
     DSDP p = DSDP();
     bool solved = false;
-    int m_with_cuts;
-    int m;
-    explicit QP_DSDP(QP &qp) : qp(qp), r(qp.n, qp.m, qp.d) {
+    const int m_with_cuts{};
+    const int m;
+    explicit QP_DSDP(QP &qp) : qp(qp), r(qp.n, qp.m, qp.d), m(qp.m), m_with_cuts(cp.size() + qp.m)  {
     }
 
 //    ~QP_DSDP() { p.terminate(); }
 
-    void create_problem(bool solve = false, bool verbose = true);
+    void create_problem(bool solve = false, bool verbose = true, bool use_lp_cone=false);
 
     void assign_initial_point(Result_DSDP &r, bool dual_only);
 

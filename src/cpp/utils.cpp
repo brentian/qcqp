@@ -67,10 +67,9 @@ void printDimacsError(double dimacs_error[7], char *printFormat,
     fprintf(fpout, "\n");
 }
 
-double *get_lower_triangular(const eigen_matrix &Q) {
+void get_lower_triangular(const eigen_matrix &Q, double *arr) {
     // todo, better
     int n = Q.cols();
-    std::vector<double> arr(n * (n + 1) / 2);
     int ct = 0;
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j <= i; ++j) {
@@ -78,11 +77,9 @@ double *get_lower_triangular(const eigen_matrix &Q) {
             ct++;
         }
     }
-    return arr.data();
 }
 
-double *input_lower_triangular(double *lowert, int n) {
-    auto full_x = new double[n * n]{0.0};
+void input_lower_triangular(const double *lowert, double *full_x, int n) {
     int ct = 0;
     for (int i = 0; i < n; i++) {
         for (int j = 0; j <= i; j++) {
@@ -91,6 +88,5 @@ double *input_lower_triangular(double *lowert, int n) {
             ct++;
         }
     }
-    return full_x;
 }
 
