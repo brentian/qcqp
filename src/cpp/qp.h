@@ -41,18 +41,21 @@ public:
 
     void show();
 };
-// QP UTIL FUNCS.
-eigen_matrix homogenize_quadratic_form(eigen_matmap map, eigen_arraymap map1);
 
-struct Result {
+// QP UTIL FUNCS.
+eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a);
+
+class Result {
 public:
     const int n, m, d;
-    const double *x{};
-    const double *X{};
-    const double *y{};
-    const double *Y{};
-    const double *D{};
-    const double *S{};
+    double *x{};
+    double *X{};
+    double *y{};
+    double *Y{};
+    double *S{};
+    double *Dd{};
+    double *Sd{};
+    int m_with_cuts;
 // eigen representations
 //  for some backend, may not be available
 //    eigen_const_arraymap xm;
@@ -62,13 +65,14 @@ public:
 //    eigen_const_arraymap Sm;
 
     Result(int n, int m, int d) :
-            n(n), m(m), d(d), Xm(X, n + 1, n + 1) {
+            n(n), m(m), d(d), Xm(nullptr, n + 1, n + 1) {
     };
 
-    void save_to_X(const double *X_) {
+    void save_to_X(double *X_) {
         X = X_;
         new(&Xm) eigen_const_matmap(X_, n + 1, n + 1);
     };
+    double *D{};
 };
 
 #endif //QCQP_QP_H

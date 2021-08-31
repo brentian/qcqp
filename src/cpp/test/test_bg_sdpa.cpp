@@ -60,11 +60,20 @@
  */
 int main(int argc, char *argv[]) {
 
-    double Q[] = {0., 0., 0., 0., 0., 0., 0., 2.,
-                  0., 0., 0., -1.5, 0., 0., 0., 1.,
-                  0., 0., 0., 0., 1., 0., -1., 1.5,
-                  0., 0., 0., -1., 2., 0., 0., -1.5,
-                  0., 1.5, 0., 0.};
+
+//    double Q[] = {1., 0., 0., 0., 0., 0.,
+//                  0., 1., 0., 0., 0., 0.,
+//                  0., 0., 1., 0., 0., 0.,
+//                  0., 0., 0., 1., 0., 0.,
+//                  0., 0., 0., 0., 1., 0.,
+//                  0., 0., 0., 0., 0., 1.};
+//    double q[] = {0, 0, 0, 0, 0, 0};
+    double Q[] = {0., 0., 0., 0., 0., 0.,
+                  0., 2., 0., 0., 0., -1.5,
+                  0., 0., 0., 1., 0., 0.,
+                  0., 0., 1., 0., -1., 1.5,
+                  0., 0., 0., -1., 2., 0.,
+                  0., -1.5, 0., 1.5, 0., 0.};
     double q[] = {3, 0, 3, 4, 3, 4};
     double A[] = {9., -1., 4.5, 6.5, -1.5, -1.5, -1., -5., -3.5, -1.,
                   -4.5, 3.5, 4.5, -3.5, 8., -1.5, 3.5, -2.5, 6.5,
@@ -83,44 +92,50 @@ int main(int argc, char *argv[]) {
     std::cout << "first solve\n";
     std::cout << INTERVAL_STR;
     QP_SDPA qp_sdpa(qp);
-    qp_sdpa.create_sdpa_p(false, false);
+    qp_sdpa.create_sdpa_p(false, true);
     qp_sdpa.solve_sdpa_p(true);
     qp_sdpa.extract_solution();
+    qp_sdpa.print_sdpa_formatted_solution();
+//    qp_sdpa.p.copyCurrentToInit();
+//    qp_sdpa.p.setParameterEpsilonStar(1.0e-8);
+//
+//    qp_sdpa.p.setInitPoint(true);
+//    qp_sdpa.p.copyCurrentToInit();
+//    qp_sdpa.p.solve();
+    qp_sdpa.p.printParameters(stdout);
+
     auto r1 = qp_sdpa.get_solution();
     std::cout << INTERVAL_STR;
     std::cout << "check solution\n";
     r1.check_solution(qp);
     std::cout << INTERVAL_STR;
-    eigen_const_matmap Y(r1.Y, qp.n + 1, qp.n + 1);
-    eigen_const_matmap X(r1.X, qp.n + 1, qp.n + 1);
-    auto x = X.block(6, 0, 1, 6);
-    auto res = X.block(0, 0, 6, 6) \
- - x.transpose() * x;
     std::cout << "print solution: \n";
     r1.show();
-    std::cout << "print residual: \n";
-    std::cout << res << std::endl;
-
-    std::cout << INTERVAL_STR;
-    std::cout << "generate cut\n";
     std::cout << INTERVAL_STR;
 
-    int i = 0;
-    int j = 0;
-    cout << r1.Xm(i, j) << endl;
+
     std::cout << INTERVAL_STR;
     std::cout << "second solve with cut\n";
-    std::cout << INTERVAL_STR;
-
-    std::cout << INTERVAL_STR;
-    std::cout << "test initial solution\n";
-    auto r = r1.construct_init_point(0.4);
-    r.show();
-    std::cout << "run with warm-start solution\n";
+    std::cout << "and run with warm-start solution\n";
     QP_SDPA qp_sdpa1(qp);
-    qp_sdpa1.create_sdpa_p(false, true);
-    qp_sdpa1.assign_initial_point(r.X, r.y, r.Y, false);
+    // generate cut
+    std::cout << "generate cut\n";
+    std::cout << INTERVAL_STR;
+    auto ct = RLT_SDPA();
+    ct.create_from_bound(qp.n, 1, 1, 0, 0.6964, 0, 0.6964);
+    qp_sdpa1.cp.push_back(ct);
+    // generate cut finished
+    qp_sdpa1.create_sdpa_p(false, false);
+    std::cout << "generate initial solution\n";
+    auto r = Result_SDPA(r1.n, r1.m, r1.d);
+    r.construct_init_point(r1, 0.90, qp_sdpa1.cp.size());
+    r.show();
+    qp_sdpa1.assign_initial_point(r, true);
+    qp_sdpa1.print_sdpa_formatted_solution();
     qp_sdpa1.solve_sdpa_p(true);
-
-    return 0;
+    qp_sdpa1.extract_solution();
+    auto r2 = qp_sdpa1.get_solution();
+    r2.show();
+    std::cout << "finished\n";
+    return 1;
 }

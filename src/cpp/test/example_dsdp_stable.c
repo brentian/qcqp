@@ -127,7 +127,7 @@ int SetStableSetData(DSDP dsdp, SDPCone sdpcone, int nodes, int edges, EdgeMat E
     /* Diagonal elements must equal 1 */
     for (i=0;i<nnodes;i++){
         info = DSDPSetDualObjective(dsdp,i+1,1.0);CHKERR(info);
-        info = DSDPSetY0(dsdp,i+1,0.0);CHKERR(info);
+//        info = DSDPSetY0(dsdp,i+1,0.0);CHKERR(info);
         info = SDPConeSetASparseVecMat(sdpcone,0,i+1,nnodes,1.0,0,iptr+i,diag+i,1);CHKERR(info);
     }
 
@@ -138,9 +138,9 @@ int SetStableSetData(DSDP dsdp, SDPCone sdpcone, int nodes, int edges, EdgeMat E
     */
     for (i=0; i<edges; i++){
         info = SDPConeAddARankOneMat(sdpcone,0,i+nnodes+1,nnodes,1.0,0,Edge[i].indd,Edge[i].v,3);
-        if (0==1){info = SDPConeViewDataMatrix(sdpcone,0,i+nnodes+1);CHKERR(info);}
+        info = SDPConeViewDataMatrix(sdpcone,0,i+nnodes+1);CHKERR(info);
         info = DSDPSetDualObjective(dsdp,i+nnodes+1,1.0);CHKERR(info);
-        info = DSDPSetY0(dsdp,i+nnodes+1,0.0);CHKERR(info);
+//        info = DSDPSetY0(dsdp,i+nnodes+1,0.0);CHKERR(info);
     }
 
     /* The initial point y is feasible and near the central path */

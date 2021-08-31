@@ -6,7 +6,18 @@
 #define QCQP_CUT_H
 
 
-class Cut {
+#include "utils.h"
+
+struct Cut {
+    eigen_matrix B;
+    double b;
+};
+
+struct RLT: Cut{
+
+};
+
+struct Bound{
 
 };
 
