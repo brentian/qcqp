@@ -93,10 +93,10 @@ void QP_SDPA::create_sdpa_p(bool solve, bool verbose) {
     p.setParameterType(SDPA::PARAMETER_DEFAULT);
     // actualize size
     m = qp.m;
-    m_with_cuts = m + cp.size();
-    r.m_with_cuts = m_with_cuts;
+    ydim = m + cp.size();
+    r.ydim = ydim;
     int n = qp.n;
-    p.inputConstraintNumber(1 + n + m_with_cuts);
+    p.inputConstraintNumber(1 + n + ydim);
     if (m > 0) {
         p.inputBlockNumber(3);
         p.inputBlockType(1, SDPA::SDP);
@@ -104,7 +104,7 @@ void QP_SDPA::create_sdpa_p(bool solve, bool verbose) {
         p.inputBlockType(2, SDPA::LP);
         p.inputBlockSize(2, -n);
         p.inputBlockType(3, SDPA::LP);
-        p.inputBlockSize(3, -m_with_cuts);
+        p.inputBlockSize(3, -ydim);
     } else {
         p.inputBlockNumber(2);
         // unconstrained
@@ -127,7 +127,7 @@ void QP_SDPA::create_sdpa_p(bool solve, bool verbose) {
         input_block(k + 2, 1, n + 1, p, Qd);
         p.inputElement(k + 2, 2, k + 1, k + 1, 1, true);
     } // sum up to n + 2 matrices
-    for (int i = 0; i < m_with_cuts; ++i) {
+    for (int i = 0; i < ydim; ++i) {
         if (i < m) {
             input_block(n + 2 + i, 1, n + 1, p, qp.Ah[i]);
             p.inputElement(n + 2 + i, 3, i + 1, i + 1, 1, true);
@@ -203,7 +203,7 @@ void QP_SDPA::extract_solution() {
     r.save_to_X(X_);
     r.save_to_Y(Y_);
     r.y = y_;
-    r.x = new double[r.n]{0.0};
+    r.x = new double [r.n];
     for (int i = 0; i < r.n; ++i) {
         r.x[i] = r.Xm(r.n, i);
     }
@@ -232,8 +232,8 @@ void QP_SDPA::print_sdpa_formatted_solution() {
  * @param pool_size
  */
 void Result_SDPA::construct_init_point(Result_SDPA &r, double lambda, int pool_size) {
-    m_with_cuts = r.m + pool_size; // total size
-    int m_with_cuts_old = r.m_with_cuts; // old size
+    int m_with_cuts = r.m + pool_size; // total size
+    int m_with_cuts_old = r.ydim; // old size
     double mu = 2;
     X = new double[(n + 1) * (n + 1)]{0.0};
     Y = new double[(n + 1) * (n + 1)]{0.0};
@@ -286,13 +286,13 @@ void Result_SDPA::show() {
         cout << "d: " << endl;
         cout << eigen_const_arraymap(D, n).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
         cout << "s: " << endl;
-        cout << eigen_const_arraymap(S, m_with_cuts).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
+        cout << eigen_const_arraymap(S, ydim).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
     }
     catch (std::exception e) {
         cout << "unsolved" << endl;
     }
     cout << "y: " << endl;
-    cout << eigen_const_arraymap(y, n + m_with_cuts + 1).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
+    cout << eigen_const_arraymap(y, n + ydim + 1).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
      cout << "Y (homo): " << endl;
     cout << Ym.format(EIGEN_IO_FORMAT) << endl;
 }

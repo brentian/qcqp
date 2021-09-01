@@ -52,27 +52,26 @@ public:
     double *X{};
     double *y{};
     double *Y{};
+    double *D{};
     double *S{};
     double *Dd{};
     double *Sd{};
-    int m_with_cuts;
+    int ydim{};
 // eigen representations
 //  for some backend, may not be available
 //    eigen_const_arraymap xm;
     eigen_const_matmap Xm;
-//    eigen_const_matmap Ym;
+    eigen_const_matmap Ym;
 //    eigen_const_arraymap Dm;
 //    eigen_const_arraymap Sm;
 
-    Result(int n, int m, int d) :
-            n(n), m(m), d(d), Xm(nullptr, n + 1, n + 1) {
-    };
+    Result(int n, int m, int d);
 
-    void save_to_X(double *X_) {
-        X = X_;
-        new(&Xm) eigen_const_matmap(X_, n + 1, n + 1);
-    };
-    double *D{};
+    ~Result();
+
+    void save_to_X(double *X_);
+    void save_to_Y(double *Y_);;
+
 };
 
 #endif //QCQP_QP_H

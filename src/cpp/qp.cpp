@@ -89,4 +89,35 @@ eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a) {
     return Ah;
 }
 
+Result::Result(int n, int m, int d) :
+        n(n), m(m), d(d),
+        Xm(nullptr, n + 1, n + 1),
+        Ym(nullptr, n + 1, n + 1) {
+    ydim = m;
+}
+
+
+Result::~Result() {
+
+//    delete[] X;
+//    delete[] Y;
+//    delete[] y;
+//    delete[] D;
+//    delete[] S;
+//    delete[] Dd;
+//    delete[] Sd;
+//    // derived original primal x.
+//    delete[] x;
+}
+
+void Result::save_to_X(double *X_) {
+    X = X_;
+    new(&Xm) eigen_const_matmap(X_, n + 1, n + 1);
+}
+
+
+void Result::save_to_Y(double *Y_) {
+    Y = Y_;
+    new(&Ym) eigen_const_matmap(Y_, n + 1, n + 1);
+}
 

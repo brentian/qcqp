@@ -26,7 +26,6 @@ std::string dsdp_stopreason(DSDPTerminationReason st) {
 
 
 void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
-    DSDP dsdp;
 
 
     // number of variables (for original)
@@ -50,6 +49,7 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
     double _ei_val[] = {1.0, -0.5};
     int *_ei_idx = new int[2 * n]{0};
     double *_ah_data = new double[n_lower_tr * m_with_cuts]{0.0};
+
     // dynamic arrays for solution
     double *slack = new double[nvar]{0.0};
     double *surplus = new double[nvar]{0.0};
@@ -59,11 +59,9 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
     int xsize;
 
     // declare the problem
-    SDPCone sdpcone;
-    BCone bcone;
-    DSDPCreate(nvar, &dsdp);
-    DSDPCreateSDPCone(dsdp, 1, &sdpcone);
-    DSDPCreateBCone(dsdp, &bcone);
+    DSDPCreate(nvar, &p);
+    DSDPCreateSDPCone(p, 1, &sdpcone);
+    DSDPCreateBCone(p, &bcone);
     // todo ? set block size and sparsity
     //    SDPConeSetBlockSize(sdpcone, 0, nvar);
     //    SDPConeSetBlockSize(sdpcone, 1, n);
@@ -93,7 +91,7 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
             1 // int64 nnz
     );
     if (verbose) SDPConeViewDataMatrix(sdpcone, 0, 1);
-    DSDPSetDualObjective(dsdp, 1, 1.0);
+    DSDPSetDualObjective(p, 1, 1.0);
     // Y <= xx^T,
     // \tilde Y ∙ E_i + \diag(d) ∙ \diag(e_i)
     // zi, Ei: k = 2 + (0, ..., n - 1)
@@ -117,7 +115,7 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
         BConeSetUpperBound(bcone, k + 2, 0);
         //  @note: equivalent
         //      BConeSetPSlackVariable(bcone, k + 2);
-        DSDPSetDualObjective(dsdp, vari, 0.0);
+        DSDPSetDualObjective(p, vari, 0.0);
     }
 
     // constraints
@@ -138,7 +136,7 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
                     n_lower_tr
             );
             BConeSetPSlackVariable(bcone, vari);
-            DSDPSetDualObjective(dsdp, vari, qp.b[k]);
+            DSDPSetDualObjective(p, vari, qp.b[k]);
         } else {
             // provided by Cutpool
             Cut c = cp[k - m];
@@ -155,6 +153,8 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
         }
         BConeView(bcone);
     }
+    // set solution buffers
+    SDPConeSetXArray(sdpcone, 0, );
 
     // set parameters
     int info;
@@ -162,20 +162,19 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
     //    info = DSDPSetPotentialParameter(dsdp, 5);
     //    info = DSDPReuseMatrix(dsdp, 0);
     //    info = DSDPSetPNormTolerance(dsdp, 1.0);
-    DSDPSetStandardMonitor(dsdp, 1);
-    info = DSDPSetPenaltyParameter(dsdp, nvar);
-    info = DSDPSetup(dsdp);
-    info = DSDPSolve(dsdp);
+    DSDPSetStandardMonitor(p, 1);
+    info = DSDPSetPenaltyParameter(p, nvar);
+    info = DSDPSetup(p);
+    info = DSDPSolve(p);
 
     // solutions
     DSDPSolutionType pdfeasible;
     DSDPTerminationReason reason;
-    DSDPGetSolutionType(dsdp, &pdfeasible);
-    DSDPStopReason(dsdp, &reason);
-    info = DSDPComputeX(dsdp);
-
+    DSDPGetSolutionType(p, &pdfeasible);
+    DSDPStopReason(p, &reason);
+    info = DSDPComputeX(p);
     SDPConeGetXArray(sdpcone, 0, &xx, &xsize);
-    DSDPGetY(dsdp, y, nvar);
+    DSDPGetY(p, y, nvar);
     BConeCopyX(bcone, surplus, slack, nvar);
     input_lower_triangular(xx, x, ndim);
     eigen_matmap X(x, ndim, ndim);
@@ -228,10 +227,13 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
         );
     }
 
-    DSDPDestroy(dsdp);
     // frees
     delete[] _tilde_q_data;
     delete[] _ei_idx;
     delete[] _ah_data;
+
+}
+
+void QP_DSDP::extract_solution() {
 
 }
