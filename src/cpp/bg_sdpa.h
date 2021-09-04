@@ -20,9 +20,6 @@ public:
 
     void construct_init_point(Result_SDPA &r, double lambda = 0.99, int pool_size = 0);
 
-    void check_solution(QP &qp);
-
-    void show();
 };
 
 struct Bound_SDPA : Bound {
@@ -43,7 +40,7 @@ struct RLT_SDPA : RLT {
     void create_from_bound(int n, int i, int j, double li, double ui, double lj, double uj);
 };
 
-typedef std::vector<Cut> CutPool;
+
 
 class QP_SDPA {
 private:
@@ -61,17 +58,17 @@ public:
 
     ~QP_SDPA() { p.terminate(); }
 
-    void create_sdpa_p(bool solve = false, bool verbose = true);
+    void create_problem(bool solve = false, bool verbose = true);
 
     void assign_initial_point(Result_SDPA &r, bool dual_only);
 
-    void solve_sdpa_p(bool verbose = false);
+    void optimize(bool verbose = false);
 
     void extract_solution();
 
     void print_sdpa_formatted_solution();
 
-    Result_SDPA get_solution();
+    Result_SDPA get_solution() const;
 };
 
 

@@ -6,6 +6,7 @@
 #define QCQP_QP_H
 
 #include "utils.h"
+#include "cut.h"
 
 class QP {
 public:
@@ -42,8 +43,6 @@ public:
     void show();
 };
 
-// QP UTIL FUNCS.
-eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a);
 
 class Result {
 public:
@@ -70,8 +69,16 @@ public:
     ~Result();
 
     void save_to_X(double *X_);
-    void save_to_Y(double *Y_);;
 
+    void save_to_Y(double *Y_);
+
+    void show();
+
+    void check_solution(QP &qp);
+    void check_solution(QP &qp, const CutPool& cp);
 };
 
 #endif //QCQP_QP_H
+
+// QP UTIL FUNCS.
+eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a);

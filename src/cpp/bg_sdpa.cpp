@@ -72,7 +72,7 @@ void input_Y_init(SDPA &p, eigen_const_matmap &v) {
 }
 
 
-void QP_SDPA::solve_sdpa_p(bool verbose) {
+void QP_SDPA::optimize(bool verbose) {
     p.initializeUpperTriangle();
     p.initializeSolve();
     if (verbose) {
@@ -88,7 +88,7 @@ void QP_SDPA::solve_sdpa_p(bool verbose) {
     }
 }
 
-void QP_SDPA::create_sdpa_p(bool solve, bool verbose) {
+void QP_SDPA::create_problem(bool solve, bool verbose) {
     // All parameteres are renewed
     p.setParameterType(SDPA::PARAMETER_DEFAULT);
     // actualize size
@@ -203,13 +203,13 @@ void QP_SDPA::extract_solution() {
     r.save_to_X(X_);
     r.save_to_Y(Y_);
     r.y = y_;
-    r.x = new double [r.n];
+    r.x = new double[r.n];
     for (int i = 0; i < r.n; ++i) {
         r.x[i] = r.Xm(r.n, i);
     }
 }
 
-Result_SDPA QP_SDPA::get_solution() {
+Result_SDPA QP_SDPA::get_solution() const {
     return Result_SDPA(r);
 }
 
@@ -274,45 +274,6 @@ void Result_SDPA::construct_init_point(Result_SDPA &r, double lambda, int pool_s
         S[i] = mu * mu / y[i + n + 1];
     };
 
-}
-
-void Result_SDPA::show() {
-    cout << "X (homo): " << endl;
-    cout << Xm.format(EIGEN_IO_FORMAT) << endl;
-    cout << "x: " << endl;
-    cout << eigen_const_arraymap(x, n).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
-
-    try {
-        cout << "d: " << endl;
-        cout << eigen_const_arraymap(D, n).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
-        cout << "s: " << endl;
-        cout << eigen_const_arraymap(S, ydim).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
-    }
-    catch (std::exception e) {
-        cout << "unsolved" << endl;
-    }
-    cout << "y: " << endl;
-    cout << eigen_const_arraymap(y, n + ydim + 1).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
-     cout << "Y (homo): " << endl;
-    cout << Ym.format(EIGEN_IO_FORMAT) << endl;
-}
-
-void Result_SDPA::check_solution(QP &qp) {
-    int i = 0;
-    fprintf(stdout,
-            "check objectives: Q∙Y = %.3f, alpha + b∙x = %.3f\n",
-            (Xm * qp.Qh).trace(),
-            qp.b.dot(eigen_const_arraymap(y + n + 1, m)) + y[0]);
-    for (auto Ah: qp.Ah) {
-        fprintf(stdout, "check for contraint: %d, %.3f, %.3f, %.3f\n",
-                i, (Xm * Ah).trace(), S[i], qp.b[i]);
-        i++;
-    }
-    cout << "Residual: Y - xx.T:" << endl;
-    eigen_const_arraymap xm(x, n);
-    cout << Xm.block(0, 0, n, n) - xm.matrix() * xm.matrix().adjoint() << endl;
-    cout << "Comple: X∙S:" << endl;
-    cout << Xm * Ym << endl;
 }
 
 

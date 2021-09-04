@@ -3,12 +3,15 @@
 // test for sdpa backend
 //
 
-#include "bg_dsdp.h"
+
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <string>
 #include <iostream>
+#include "bg_dsdp.h"
+#include "bg_dsdp_cut.h"
+
 
 int main(int argc, char *argv[]) {
 //    double Q[] = {1., 0., 0., 0., 0., 0.,
@@ -43,7 +46,28 @@ int main(int argc, char *argv[]) {
     std::cout << INTERVAL_STR;
     std::cout << "first solve\n";
     std::cout << INTERVAL_STR;
-    QP_DSDP qp_dsdp(qp);
-    qp_dsdp.create_problem();
+    QP_DSDP p(qp);
+    p.create_problem();
+    p.optimize();
+    p.extract_solution();
+    auto r = p.get_solution();
+    r.check_solution(qp);
+    r.show();
+    auto r1 = Result_DSDP(qp.n, qp.m, qp.d);
+    auto ct = RLT_DSDP(qp.n, 1, 1, 0.6964, 1, 0.6964, 1);
+//    auto ct = RLT_DSDP(qp.n, 1, 1, 0.0, 0.6964, 0.0, 0.6964);
+    QP_DSDP p1(qp);
+    p1.cp.push_back(ct);
+    p1.create_problem();
+//    DSDPSetR0(p1.p,0.1);
+    r1.construct_init_point(r, 0.99, p1.cp.size());
+    p1.assign_initial_point(r1, true);
+    p1.optimize();
+    p1.extract_solution();
+    p1.r.check_solution(qp, p1.cp);
+    p1.r.show();
+    // generate cuts
+
+
     return 1;
 }

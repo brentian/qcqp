@@ -27,37 +27,7 @@ std::string dsdp_stopreason(DSDPTerminationReason st) {
 
 void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
 
-
-    // number of variables (for original)
-    int n = qp.n;
-    // problem size
-    int ndim = n + 1; // homogeneous
-    int n_p_square = (n + 1) * (n + 1); // # nnz in the full matrix
-    int n_lower_tr = (n + 1) * (n + 2) / 2; // # nnz in the lower triangular block
-    // total number of constrs;
-    // - 1 for ynn = 1
-    // - n diagonal constr: y[i, i] <= x[i]
-    // - m_with_cuts
-    //      - m quadratic constr
-    //      - cp.size() cuts
-    int nvar = n + m_with_cuts + 1;
-
-    // dynamic arrays
-    double *_tilde_q_data = new double[n_lower_tr]{0.0};
-    double val[] = {1.0};
-    int idx[] = {n_lower_tr - 1};
-    double _ei_val[] = {1.0, -0.5};
-    int *_ei_idx = new int[2 * n]{0};
-    double *_ah_data = new double[n_lower_tr * m_with_cuts]{0.0};
-
-    // dynamic arrays for solution
-    double *slack = new double[nvar]{0.0};
-    double *surplus = new double[nvar]{0.0};
-    double *x = new double[ndim * ndim]{0.0};
-    double *xx = new double[nvar]{0.0};
-    double *y = new double[nvar]{0.0};
-    int xsize;
-
+    setup();
     // declare the problem
     DSDPCreate(nvar, &p);
     DSDPCreateSDPCone(p, 1, &sdpcone);
@@ -86,8 +56,8 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
             ndim, //int64 n,
             1.0, //double alpha,
             0, //int64 ishift
-            idx, //const int64 ind[],
-            val, //const double val[],
+            _one_idx, //const int64 ind[],
+            _one_val, //const double val[],
             1 // int64 nnz
     );
     if (verbose) SDPConeViewDataMatrix(sdpcone, 0, 1);
@@ -118,13 +88,16 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
         DSDPSetDualObjective(p, vari, 0.0);
     }
 
+
     // constraints
     // xi, Ai: k = 2 + n + (0, ..., m + #cuts - 1)
     for (int k = 0; k < m_with_cuts; ++k) {
         int vari = k + n + 2;
         int slice = k * n_lower_tr;
         if (k < m) {
+#if dbg
             std::cout << qp.Ah[k] << std::endl;
+#endif
             get_lower_triangular(qp.Ah[k], _ah_data + slice);
             SDPConeSetADenseVecMat(
                     sdpcone,
@@ -140,22 +113,39 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
         } else {
             // provided by Cutpool
             Cut c = cp[k - m];
-        };
-    }
-    if (verbose) {
-        for (int k = 0; k < nvar + 1; ++k) {
-            fprintf(stdout,
-                    "@showing constraint %d, dual-obj: %.3f \n",
-                    k,
-                    1.0
-            );
-            SDPConeViewDataMatrix(sdpcone, 0, k);
-        }
-        BConeView(bcone);
-    }
-    // set solution buffers
-    SDPConeSetXArray(sdpcone, 0, );
 
+#if dbg
+
+#endif
+            SDPConeSetSparseVecMat(
+                    sdpcone,
+                    0,
+                    vari,
+                    ndim,
+                    0,
+                    c.index,
+                    c.vals,
+                    c.size
+            );
+            BConeSetPSlackVariable(bcone, vari);
+            std::cout << c.B << std::endl;
+            DSDPSetDualObjective(p, vari, c.b);
+        }
+        std::cout << 1 << std::endl;
+    }
+#if dbg
+
+    for (int k = 0; k < nvar + 1; ++k) {
+        fprintf(stdout,
+                "@showing constraint %d, dual-obj: %.3f \n",
+                k,
+                1.0
+        );
+        SDPConeViewDataMatrix(sdpcone, 0, k);
+    }
+    BConeView(bcone);
+
+#endif
     // set parameters
     int info;
     //    info = DSDPSetGapTolerance(dsdp, 0.001);
@@ -165,8 +155,27 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
     DSDPSetStandardMonitor(p, 1);
     info = DSDPSetPenaltyParameter(p, nvar);
     info = DSDPSetup(p);
-    info = DSDPSolve(p);
+}
 
+
+void QP_DSDP::extract_solution() {
+    int info;
+    if (!solved) throw std::exception();
+    __unused int xsize;
+
+    // tempo buffers
+    // dynamic arrays for solution
+    double *slack = new double[nvar]{0.0};
+    double *surplus = new double[nvar]{0.0};
+    double *xx;
+    double *xmat = new double[ndim * ndim]{0.0};
+    double *ymat = new double[ndim * ndim]{0.0};
+    r.y = new double[nvar]{0.0};
+    r.x = new double[r.n];
+    r.D = new double[r.n];
+    r.S = new double[m_with_cuts];
+    r.ydim = nvar;
+    eigen_matmap ymat_s(ymat, ndim, ndim);
     // solutions
     DSDPSolutionType pdfeasible;
     DSDPTerminationReason reason;
@@ -174,66 +183,111 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
     DSDPStopReason(p, &reason);
     info = DSDPComputeX(p);
     SDPConeGetXArray(sdpcone, 0, &xx, &xsize);
-    DSDPGetY(p, y, nvar);
+    DSDPGetY(p, r.y, nvar);
     BConeCopyX(bcone, surplus, slack, nvar);
-    input_lower_triangular(xx, x, ndim);
-    eigen_matmap X(x, ndim, ndim);
-    eigen_arraymap ye(y, nvar);
-    eigen_arraymap sl(slack, nvar);
-    eigen_arraymap su(surplus, nvar);
-    eigen_matrix S = eigen_matrix::Zero(ndim, ndim);
-    // compute dual variable S
+    // primal
+    input_lower_triangular(xx, xmat, ndim);
+    r.save_to_X(xmat);
+
+    for (int i = 0; i < r.n; ++i) {
+        r.x[i] = r.Xm(r.n, i);
+    }
     for (int i = 0; i < n; ++i) {
-        int vari = i + 2;
-        S -= qp.Qd[i].block(0, 0, ndim, ndim) * y[vari];
+        int vari = i + 1;
+        ymat_s -= qp.Qd[i].block(0, 0, ndim, ndim) * r.y[vari];
     }
-    for (int i = 0; i < m_with_cuts; ++i) {
-        int vari = i + n + 2;
-        S -= qp.Ah[i] * y[vari];
+    for (int i = 0; i < m; ++i) {
+        int vari = i + n + 1;
+        ymat_s -= qp.Ah[i] * r.y[vari];
     }
-
-    S(ndim - 1, ndim - 1) -= y[0];
-    S -= qp.Qh;
-    // views.
-    SDPConeViewX(sdpcone, 0, ndim, xx, xsize);
-    std::cout << X << std::endl;
-    std::cout << S << std::endl;
-    std::cout << ye.transpose() << std::endl;
-    std::cout << "slacks" << std::endl;
-    std::cout << sl.transpose() << std::endl;
-    std::cout << su.transpose() << std::endl;
-    std::cout << "checks" << std::endl;
-    fprintf(stdout,
-            "check for objective, primal %.3f, dual %.3f\n",
-            -(X * qp.Qh).trace(),
-            ye(0)
-    );
-    for (int k = 0; k < n; ++k) {
-        fprintf(stdout,
-                "check for diag contraint: %d, %.3f, %.3f, %.3f\n",
-                k,
-                (qp.Qd[k].block(0, 0, ndim, ndim) * X).trace(),
-                sl(k + 1),
-                su(k + 1)
-        );
+    for (int i = m; i < m_with_cuts; ++i) {
+        int vari = i + n + 1;
+        ymat_s -= cp[i - m].B * r.y[vari];
     }
-    for (int k = 0; k < m_with_cuts; ++k) {
-        fprintf(stdout,
-                "check for quadratic contraint: %d, %.3f, %.3f, %.3f\n",
-                k,
-                (qp.Ah[k].block(0, 0, ndim, ndim) * X).trace(),
-                sl(k + 1 + n),
-                su(k + 1 + n)
-        );
+    ymat_s(ndim - 1, ndim - 1) -= r.y[0];
+    ymat_s -= qp.Qh;
+    r.save_to_Y(ymat);
+    for (int i = 1; i <= n; ++i) {
+        r.D[i - 1] = slack[i];
+    }
+    for (int i = n + 1; i <= n + m_with_cuts; ++i) {
+        r.S[i - n - 1] = slack[i];
     }
 
-    // frees
-    delete[] _tilde_q_data;
-    delete[] _ei_idx;
-    delete[] _ah_data;
+#if dbg
+    std::cout << dsdp_status(pdfeasible) << std::endl;
+    std::cout << dsdp_stopreason(reason) << std::endl;
+#endif
+    delete[] slack;
+    delete[] surplus;
+}
+
+QP_DSDP::QP_DSDP(QP &qp) : qp(qp), r(qp.n, qp.m, qp.d), n(qp.n), m(qp.m) {
+    // number of variables (for original)
+    // problem size
+    ndim = n + 1; // homogeneous
+    n_p_square = (n + 1) * (n + 1); // # nnz in the full matrix
+    n_lower_tr = (n + 1) * (n + 2) / 2; // # nnz in the lower triangular block
+}
+
+void QP_DSDP::setup() {
+    // total number of constrs;
+    // - 1 for ynn = 1
+    // - n diagonal constr: y[i, i] <= x[i]
+    // - m_with_cuts
+    //      - m quadratic constr
+    //      - cp.size() cuts
+    m_with_cuts = cp.size() + m;
+    nvar = n + m_with_cuts + 1;
+    // dynamic arrays
+    _tilde_q_data = new double[n_lower_tr]{0.0};
+    _one_idx[0] = n_lower_tr - 1;
+    _ei_val[0] = 1.0;
+    _ei_val[1] = -0.5;
+    _ei_idx = new int[2 * n]{0};
+    _ah_data = new double[n_lower_tr * m_with_cuts]{0.0};
 
 }
 
-void QP_DSDP::extract_solution() {
+void QP_DSDP::optimize() {
+    int info = DSDPSolve(p);
+    solved = true;
+}
 
+QP_DSDP::~QP_DSDP() {
+    DSDPDestroy(p); // frees
+    delete[] _tilde_q_data;
+    delete[] _ei_idx;
+    delete[] _ah_data;
+}
+
+void QP_DSDP::assign_initial_point(Result_DSDP &r_another, bool dual_only) {
+    DSDPSetR0(p, r_another.r0);
+    if (nvar != r_another.ydim) {
+        throw std::exception();
+    }
+    for (int i = 0; i < r_another.ydim; i++) {
+        DSDPSetY0(p, i + 1, r_another.y[i]);
+    }
+}
+
+Result_DSDP QP_DSDP::get_solution() const {
+    return Result_DSDP{r};
+}
+
+
+void Result_DSDP::construct_init_point(Result_DSDP &r, double lambda, int pool_size) {
+    ydim = n + m + pool_size + 1;
+    y = new double[ydim]{0.0};
+    r0 = (1 - lambda);
+    for (int i = 0; i < r.ydim; i++) {
+        y[i] = r.y[i];
+    }
+
+
+}
+
+Result_DSDP::Result_DSDP(int n, int m, int d) :
+        Result(n, m, d) {
+    r0 = 0;
 }
