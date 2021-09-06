@@ -100,19 +100,19 @@ def shor(
     # need control for the HSD model
     pass
   
-  # for i in range(m):
-  #   if sign[i] == 0:
-  #     model.constraint(
-  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
-  #       dom.equalsTo(b[i]))
-  #   elif sign[i] == -1:
-  #     model.constraint(
-  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
-  #       dom.greaterThan(b[i]))
-  #   else:
-  #     model.constraint(
-  #       expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
-  #       dom.lessThan(b[i]))
+  for i in range(m):
+    if sign[i] == 0:
+      model.constraint(
+        expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+        dom.equalsTo(b[i]))
+    elif sign[i] == -1:
+      model.constraint(
+        expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+        dom.greaterThan(b[i]))
+    else:
+      model.constraint(
+        expr.add(expr.sum(expr.mulElm(Y, A[i])), expr.dot(x, a[i])),
+        dom.lessThan(b[i]))
   #
   # objectives
   obj_expr = expr.add(expr.sum(expr.mulElm(Q, Y)), expr.dot(x, q))

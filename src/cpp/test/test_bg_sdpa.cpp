@@ -92,8 +92,8 @@ int main(int argc, char *argv[]) {
     std::cout << "first solve\n";
     std::cout << INTERVAL_STR;
     QP_SDPA qp_sdpa(qp);
-    qp_sdpa.create_sdpa_p(false, true);
-    qp_sdpa.solve_sdpa_p(true);
+    qp_sdpa.create_problem(false, true);
+    qp_sdpa.optimize(true);
     qp_sdpa.extract_solution();
     qp_sdpa.print_sdpa_formatted_solution();
 //    qp_sdpa.p.copyCurrentToInit();
@@ -125,14 +125,14 @@ int main(int argc, char *argv[]) {
     ct.create_from_bound(qp.n, 1, 1, 0, 0.6964, 0, 0.6964);
     qp_sdpa1.cp.push_back(ct);
     // generate cut finished
-    qp_sdpa1.create_sdpa_p(false, false);
+    qp_sdpa1.create_problem(false, false);
     std::cout << "generate initial solution\n";
     auto r = Result_SDPA(r1.n, r1.m, r1.d);
     r.construct_init_point(r1, 0.90, qp_sdpa1.cp.size());
     r.show();
     qp_sdpa1.assign_initial_point(r, true);
     qp_sdpa1.print_sdpa_formatted_solution();
-    qp_sdpa1.solve_sdpa_p(true);
+    qp_sdpa1.optimize(true);
     qp_sdpa1.extract_solution();
     auto r2 = qp_sdpa1.get_solution();
     r2.show();

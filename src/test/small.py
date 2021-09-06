@@ -19,73 +19,103 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
-import argparse
+import collections
 
 import numpy as np
 import pandas as pd
 import sys
-from pyqp import bg_grb, bg_msk, bg_msk_chordal, bb_chord
-from pyqp import bb, bb_msc, \
-  bb_msc2, bb_diag, bb_socp
-from pyqp.classes import QPI, QP, Bounds
+
+###########
+# display options
+###########
+
+
+pd.set_option("display.max_columns", None)
+np.set_printoptions(
+  linewidth=200,
+  precision=4
+)
+
+import pyqp.bg_msk_msc
+
+from pyqp import bg_grb, bb, bg_msk, bg_msk_msc, bg_msk_chordal
+from pyqp import bb_msc, bb_msc2
+from pyqp.classes import QP, Bounds
+import argparse
+import json
+
+methods = collections.OrderedDict({
+  "grb": bg_grb.qp_gurobi,
+  "shor": bg_msk.shor,
+  "dshor": bg_msk.dshor,
+  "msc": bg_msk_msc.msc,
+  "emsc": bg_msk_msc.msc_diag,
+  "ssdp": bg_msk_chordal.ssdp,
+})
+
+method_codes = {
+  idx + 1: m
+  for idx, m in enumerate(methods)
+}
+
+method_helps = {
+  k: bg_msk.dshor.__doc__
+  for k, v in methods.items()
+}
 
 np.random.seed(1)
+
 parser = argparse.ArgumentParser("QCQP runner")
-parser.add_argument("--n", type=int, help="dim of x", default=5)
-parser.add_argument("--m", type=int, help="if randomly generated num of constraints", default=5)
-parser.add_argument("--pc", type=str, help="if randomly generated problem type", default="5")
-parser.add_argument("--relax", type=int, help="relax integral constraints, solve as fractional", default=1)
+parser.add_argument("--fpath", type=str, help="path of the instance")
+parser.add_argument("--dump_instance", type=int, help="if save instance", default=1)
+parser.add_argument("--r", type=str, help=json.dumps(method_helps, indent=2), default="1,2,3")
 
 if __name__ == '__main__':
-  pd.set_option("display.max_columns", None)
+  
   parser.print_usage()
   args = parser.parse_args()
-  n, m, pc, relax = args.n, args.m, args.pc, args.relax
-  verbose = False
+  fpath = args.fpath
+  r = map(int, args.r.split(","))
+  r_methods = {method_codes[k] for k in r}
+  verbose = True
   bool_use_shor = False
   evals = []
-  # problem
-  problem_id = f"{n}:{m}:{0}"
-  
-  # global args
   params = bb_msc.BCParams()
-  params.backend_name = 'msk'
-  params.relax = relax
-  params.time_limit = 30
+  params.time_limit = 50
   kwargs = dict(
-    relax=relax,
+    relax=True,
     sense="max",
     verbose=verbose,
     params=params,
     bool_use_shor=bool_use_shor,
     rlt=True
   )
-  methods = {
-    "grb": bg_grb.qp_gurobi,
-    "shor": bb.bb_box,
-    # "ssdp": bb_chord.bb_box,
-    # "emsc": bb_msc.bb_box,
-    # "emscsdp": bg_msk_ex.msc_diag_sdp,
-    
-  }
+  
   # personal
-  pkwargs = {k: kwargs for k in methods}
+  pkwargs = {k: {**kwargs} for k in r_methods}
   pkwargs_dtl = {
-    # "emsc": {**kwargs, "decompose_method": "eig-type2", "branch_name": "vio"},
-    # "ssdp": {**kwargs, "func": bg_msk_ex.ssdp},
-    # "bb_msc_diag": {**kwargs, "decompose_method": "eig-type2", "branch_name": "bound"},
-    # "bb_msc_socp": {**kwargs, "func": bg_msk.msc_socp_relaxation}
+    "dshor": {**kwargs, "sense": "min"},
+    "msc": {**kwargs, "decompose_method": "eig-type2"},
+    "emsc": {**kwargs, "decompose_method": "eig-type2"},
+    "socp": {**kwargs, "decompose_method": "eig-type2"},
   }
   pkwargs.update(pkwargs_dtl)
+  pkwargs = {k: v for k, v in pkwargs.items() if k in r_methods}
+
+  qp = QP.read(fpath)
+  
+  n, m = qp.n, qp.m
+  # problem
+  problem_id = f"{n}:{m}:{0}"
   # start
-  qp = QPI.normal(int(n), int(m), rho=0.2)
-  qp = QPI.block(n, m, r=2, eps=0.5)
+  
   bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
   
   evals = []
   results = {}
   # run methods
-  for k, func in methods.items():
+  for k in r_methods:
+    func = methods[k]
     print(k, pkwargs[k])
     qp1 = bb_msc.QP(*qp.unpack())
     qp1.decompose(**pkwargs[k])
@@ -95,13 +125,15 @@ if __name__ == '__main__':
     results[k] = r
   
   for k, r in results.items():
-    print(f"{k} benchmark @{r.true_obj}")
+    print(f"{k} benchmark @{r.relax_obj}")
     print(f"{k} benchmark x\n"
           f"{r.xval.round(3)}")
     r.check(qp)
   
   df_eval = pd.DataFrame.from_records(evals)
-  
   print(df_eval)
+  print(r.xval)
+  print(df_eval[['prob_num', 'solve_time', 'relax_obj', 'method']].to_latex())
   
-  print(df_eval.to_latex())
+  if args.dump_instance:
+    pass

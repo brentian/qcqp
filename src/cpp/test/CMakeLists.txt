@@ -19,12 +19,12 @@ add_executable(example_dsdp_readsdpa example_dsdp_readsdpa.c)
 target_link_libraries(example_dsdp_readsdpa PRIVATE ${DSDP_LIBRARIES})
 
 add_executable(example_dsdp_color example_dsdp_color.cpp)
-target_link_libraries(example_dsdp_color PRIVATE ${DSDP_LIBRARIES} qp nlohmann_json::nlohmann_json)
+target_link_libraries(example_dsdp_color PRIVATE ${DSDP_LIBRARIES} qp)
 
 # my examples
 add_executable(test_sdpa test_bg_sdpa.cpp)
-target_link_libraries(test_sdpa PRIVATE qp nlohmann_json::nlohmann_json)
+target_link_libraries(test_sdpa PRIVATE qp)
 
 
 add_executable(test_dsdp test_bg_dsdp.cpp)
-target_link_libraries(test_dsdp PRIVATE qp ${DSDP_LIBRARIES} nlohmann_json::nlohmann_json)
+target_link_libraries(test_dsdp PRIVATE qp qpio ${DSDP_LIBRARIES} nlohmann_json::nlohmann_json)

@@ -12,24 +12,24 @@
 Recall primal dual SDP (Shor) relaxation.
 \begin{equation}
     \begin{aligned}
-        \model{Shor} \quad\mathrm{Maximize}\quad & Q\bullet Y   + q^T x                                             \\
-        \mathrm{s.t.}  \quad                     & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
-                                                 & 0\le x\le 1                                                      \\
+        \model{Shor} \quad\mx\quad & Q\bullet X   + q^T x                                             \\
+        \mathrm{s.t.}  \quad       & X-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & X \end{bmatrix} \succeq 0 \\
+                                   & 0\le x\le 1                                                      \\
     \end{aligned}
 \end{equation}
 For simplicity, we partition (extra) constraints into two subsets.
 \begin{align}
-    \label{eq.con.diag}    & \mathrm{diag}(Y) \le x                           \\
-    \label{eq.con.regular} & A_i \bullet Y + a_i^Tx \; \le  \; b_i, \forall i
+    \label{eq.con.diag}    & \mathrm{diag}(X) \le x                           \\
+    \label{eq.con.regular} & A_i \bullet X + a_i^Tx \; \le  \; b_i, \forall i
 \end{align}
-We mark \eqref{eq.con.diag} as diagonal constraint.
+We mark \eqref{eq.con.diag} as diagonal constraint, and \eqref{eq.con.regular} as quadratic constraints that also includes linear constraints.
 \begin{equation}
     \begin{aligned}
-        \model{Dual-Shor} \quad \textrm{Minimize: }\quad & \lambda^Tb + \mu^Te + \alpha                   \\
-        \mathrm{s.t.} \quad                              & Q = \sum_i \lambda_i A_i  + \diag(v)  -Z       \\
-                                                         & \sum_i \lambda_i a_i + \mu - 2 y - v - q \ge 0 \\
-                                                         & \begin{bmatrix}Z & y \\ y^T & \alpha\end{bmatrix} \succeq 0            \\
-                                                         & \lambda, \mu, v \ge 0
+        \model{Dual-Shor} \quad \mn\quad & \lambda^Tb + \mu^Te + \alpha                   \\
+        \mathrm{s.t.} \quad              & Q = \sum_i \lambda_i A_i  + \diag(v)  -Z       \\
+                                         & \sum_i \lambda_i a_i + \mu - 2 y - v - q \ge 0 \\
+                                         & \begin{bmatrix}Z & y \\ y^T & \alpha\end{bmatrix} \succeq 0            \\
+                                         & \lambda, \mu, v \ge 0
     \end{aligned}
 \end{equation}
 
@@ -38,66 +38,57 @@ We mark \eqref{eq.con.diag} as diagonal constraint.
     (Unconstrained) Suppose \(m = 0\), our primal dual formulation reduces to,
     \begin{equation}
         \begin{aligned}
-            \model{Shor} \quad\mathrm{Maximize}\quad & Q\bullet Y   + q^T x                                             \\
-            \mathrm{s.t.}  \quad                     & Y-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & Y \end{bmatrix} \succeq 0 \\
-                                                     & 0\le x\le 1                                                      \\
-                                                     & \mathrm{diag}(Y) \le x
+            \model{Shor} \quad\mx\quad & Q\bullet X   + q^T x                                             \\
+            \mathrm{s.t.}  \quad       & X-xx^T \succeq 0 \text { or }\begin{bmatrix} 1 & x^{T} \\ x & X \end{bmatrix} \succeq 0 \\
+                                       & 0\le x\le 1                                                      \\
+                                       & \mathrm{diag}(X) \le x
         \end{aligned}
     \end{equation}
     \begin{equation}
         \begin{aligned}
-            \model{Dual-Shor} \quad \textrm{Minimize: }\quad & \mu^Te + \alpha                     \\
-            \mathrm{s.t.} \quad                              & Q = \diag(v)  -Z                    \\
-                                                             & \mu - 2 y - v - q \ge 0             \\
-                                                             & \begin{bmatrix}Z & y \\ y^T & \alpha\end{bmatrix} \succeq 0 \\
-                                                             & \mu, v \ge 0
+            \model{Dual-Shor} \quad \mn\quad & \mu^Te + \alpha                     \\
+            \mathrm{s.t.} \quad              & Q = \diag(v)  -Z                    \\
+                                             & \mu - 2 y - v - q \ge 0             \\
+                                             & \begin{bmatrix}Z & y \\ y^T & \alpha\end{bmatrix} \succeq 0 \\
+                                             & \mu, v \ge 0
         \end{aligned}
     \end{equation}
 \end{lemma}
 
 
-\subsection{Linear Cut}
+% \subsection{Linear Cut}
 
-Suppose we have primal \((x, Y)^{k}\) and dual \((\lambda, \mu, v, y, Z, \alpha)^k\) at some iteration \(k\). Assume the following valid inequality for the primal solutions,
-\begin{equation*}
-    B\bullet Y + c^T x \le e
-\end{equation*}
+% Suppose we have primal \((x, X)^{k}\) and dual \((\lambda, \mu, v, y, Z, \alpha)^k\) at some iteration \(k\). Assume the following valid inequality for the primal solutions,
+% \begin{equation*}
+%     B\bullet X + c^T x \le e
+% \end{equation*}
 
-The dual variable for the new problem \(\tilde\lambda\) has the following form,
-\begin{equation}
-    \tilde\lambda \equiv \begin{bmatrix}
-        \lambda \\
-        t
-    \end{bmatrix}
-\end{equation}
+% The dual variable for the new problem \(\tilde\lambda\) has the following form,
+% \begin{equation}
+%     \tilde\lambda \equiv \begin{bmatrix}
+%         \lambda \\
+%         t
+%     \end{bmatrix}
+% \end{equation}
 
-\begin{equation} \label{eq:ws.dual.linearc}
-    \begin{aligned}
-        \textrm{Minimize: }\quad & t \cdot e +  \lambda^Tb + \mu^Te + \alpha                  \\
-        \mathrm{s.t.} \quad      & Q = t \cdot B + \sum_i \lambda_i A_i  + \diag(v)  - Z      \\
-                                 & t \cdot c + \sum_i \lambda_i a_i + \mu - 2 y - v - q \ge 0 \\
-                                 & \begin{bmatrix}Z & y \\ y^T & \alpha\end{bmatrix} \succeq 0                        \\
-                                 & t, \lambda, \mu, v \ge 0
-    \end{aligned}
-\end{equation}
+% \begin{equation} \label{eq:ws.dual.linearc}
+%     \begin{aligned}
+%         \mn\quad            & t \cdot e +  \lambda^Tb + \mu^Te + \alpha                  \\
+%         \mathrm{s.t.} \quad & Q = t \cdot B + \sum_i \lambda_i A_i  + \diag(v)  - Z      \\
+%                             & t \cdot c + \sum_i \lambda_i a_i + \mu - 2 y - v - q \ge 0 \\
+%                             & \begin{bmatrix}Z & y \\ y^T & \alpha\end{bmatrix} \succeq 0                        \\
+%                             & t, \lambda, \mu, v \ge 0
+%     \end{aligned}
+% \end{equation}
 
-We see \eqref{eq:ws.dual.linearc} has a dummy feasible solution such that \((\begin{bmatrix}
-    \lambda^k \\ 0\end{bmatrix}, \mu^k, v^k, y^k, Z^k, \alpha^k)\)
+% We see \eqref{eq:ws.dual.linearc} has a dummy feasible solution such that \((\begin{bmatrix}
+%     \lambda^k \\ 0\end{bmatrix}, \mu^k, v^k, y^k, Z^k, \alpha^k)\)
 
-\subsubsection{RLT after Branching}
-We consider the simple case within the branch and cut process. Suppose we pivot on a \(x_i^k\) which lies in the interior of \(\left[l_i + \epsilon, u_i -\epsilon\right]\) with small tolerance \(\epsilon \ge 0\).
-
-The RLT cuts corresponding to bounds,
-\begin{align}
-    \label{eq:ws.rlt.left}  & Y_{ij} - u_i x_j - l_j x_i - l_j u_i \le 0 \\
-    \label{eq:ws.rlt.right} & Y_{ij} - u_j x_i - l_i x_j - l_i u_j \le 0
-\end{align}
-
-\paragraph{Left child}
-Consider the left child \(x_i \in [l_i, x_i^k < u_i]\), the lower bound is unchanged
-\begin{itemize}
-    \item Since \(x_i \le x_i^k\) is active, then \(x_i < 1, \mu_i = 0\)
-\end{itemize}
+% \paragraph{Left child}
+% Consider the left child \(x_i \in [l_i, x_i^k < u_i]\), the lower bound is unchanged
+% \begin{itemize}
+%     \item Since \(x_i \le x_i^k\) is active, then \(x_i < 1, \mu_i = 0\)
+% \end{itemize}
 
 \subsection{SDP based warmstart}
 
@@ -107,26 +98,27 @@ We first reformulate into standard SDP, by adding a slack \(d\) to diagonal cons
 
 For diagonal constraint,
 \begin{align*}
-    \diag(Y) \le x & \Leftrightarrow e_ie_i^T \bullet Y - e_i^T x + d^Te + 0^Ts = 0                                 \\
-                   & \Leftrightarrow e_ie_i^T \bullet Y - e_i^T x + e_i^T\diag(d)e_i + \bm 0^m \bullet \diag(s) = 0
+    \diag(X) \le x & \Leftrightarrow e_ie_i^T \bullet X - e_i^T x + d^Te + 0^Ts = 0                                 \\
+                   & \Leftrightarrow e_ie_i^T \bullet X - e_i^T x + e_i^T\diag(d)e_i + \bm 0^m \bullet \diag(s) = 0
 \end{align*}
 
 To ease our notation, let:
 \begin{align*}
-     & \tilde Y = \begin{bmatrix} Y             & x \\ x^T & 1 \end{bmatrix}; \tilde Q = \begin{bmatrix} Q & \frac{q}{2} \\ \frac{q^T}{2} & 0 \end{bmatrix} ; \\
-     & \tilde E_i = \begin{bmatrix} e_ie_i^T  & -\frac{e_i}{2} \\ -\frac{e_i^T}{2} & 0 \end{bmatrix}, \forall i=1,\cdots,n;                 \\
-     & \tilde A_i = \begin{bmatrix} A_i             & \frac{a_i}{2} \\ \frac{a_i^T}{2} & 0 \end{bmatrix}, \forall i=1,\cdots,m;
+     & \tilde X = \begin{bmatrix} X             & x \\ x^T & 1 \end{bmatrix}, \tilde Q = \begin{bmatrix} Q & \frac{q}{2} \\ \frac{q^T}{2} & 0 \end{bmatrix} ; \\
+     & \tilde E_i = \begin{bmatrix} e_ie_i^T  & -\frac{e_i}{2} \\ -\frac{e_i^T}{2} & 0 \end{bmatrix}, \forall i=1,\cdots,n;                \\
+     & \tilde A_i = \begin{bmatrix} A_i             & \frac{a_i}{2} \\ \frac{a_i^T}{2} & 0 \end{bmatrix}, \forall i=1,\cdots,m;               \\
+     & \tilde y = \begin{bmatrix} \alpha; & z; & y \end{bmatrix}
 \end{align*}
 
 Using SDP cone and linear cones,
 \begin{equation} \label{eq:ws.std.primal}
     \begin{aligned}
-        \mathrm{Maximize}\quad & \tilde Q \bullet \tilde Y                                                         \\
-        \mathrm{s.t.} \quad    & \tilde Y  \in \mathscr S^{n+1}_+, d \in \mathbb{R}^n_+, s
-        \in \mathbb{R}^m_+                                                                                         \\
-                               & \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix} \bullet \tilde Y = 1                                   \\
-                               & \tilde E_i \bullet \tilde Y + d_i = 0                     & \forall i=1,\cdots, n \\
-                               & \tilde A_i \bullet \tilde Y + s_i = b_i                   & \forall i=1,\cdots, m \\
+        \mx\quad            & \tilde Q \bullet \tilde X                                                         \\
+        \mathrm{s.t.} \quad & \tilde X  \in \mathscr S^{n+1}_+, d \in \mathbb{R}^n_+, s
+        \in \mathbb{R}^m_+                                                                                      \\
+                            & \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix} \bullet \tilde X = 1                                   \\
+                            & \tilde E_i \bullet \tilde X + d_i = 0                     & \forall i=1,\cdots, n \\
+                            & \tilde A_i \bullet \tilde X + s_i = b_i                   & \forall i=1,\cdots, m \\
     \end{aligned}
 \end{equation}
 
@@ -134,39 +126,109 @@ And dual form,
 
 \begin{equation} \label{eq:ws.std.dual}
     \begin{aligned}
-        \mathrm{Minimize} \quad & \alpha + b^Tx                                                    \\
-        \mathrm{s.t.} \quad     & x \in \mathbb{R}^m, z\in \mathbb{R}^n, X  \in \mathscr S^{n+1}_+ \\
-                                & X =\alpha \cdot \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix}
+        \mn \quad           & \alpha + b^Ty                                                                           \\
+        \mathrm{s.t.} \quad & \alpha \in \mathbb{R}, y \in \mathbb{R}^m, z\in \mathbb{R}^n, Y  \in \mathscr S^{n+1}_+ \\
+                            & Y =\alpha \cdot \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix}
         + \sum_{i=1}^{n} z_{i} \tilde{E_i}
-        + \sum_{i=1}^{m} x_{i} \tilde{A_i}
+        + \sum_{i=1}^{m} y_{i} \tilde{A_i}
         - \tilde{Q}
     \end{aligned}
 \end{equation}
 
-By the perturbed complementary condition, construct
+The perturbed complementary condition,
 
 \begin{equation} \label{eq:ws.std.lc}
     \begin{aligned}
-         & X = \tilde Y = \mu I_{n+1}           \\
-         & z = d =  \mu e_n, \; x = s = \mu e_m
+         & Y = \tilde X = \mu I_{n+1}           \\
+         & z = d =  \mu e_n, \; y = s = \mu e_m
     \end{aligned}
 \end{equation}
 
-We construct an initial point from last iterate and an initial point by \eqref{eq:ws.std.lc}.
+% \paragraph{Primal Dual}
+% We construct an initial point from last iterate and an initial point by \eqref{eq:ws.std.lc}.
 
-\begin{align*}
-    X := \lambda X^0 + (1-\lambda) \mu I_{n+1}                \\
-    \tilde Y :=  \lambda \tilde Y^0 + (1-\lambda) \mu I_{n+1} \\
-    d  :=  \lambda d^0 + (1-\lambda) \mu e_{n} \\
-    x :=  \lambda x^0 + (1-\lambda) \mu e_{m} \\
-\end{align*}
+% \begin{align*}
+%     Y := \lambda Y^0 + (1-\lambda) \mu I_{n+1}                \\
+%     \tilde X :=  \lambda \tilde X^0 + (1-\lambda) \mu I_{n+1} \\
+%     d  :=  \lambda d^0 + (1-\lambda) \mu e_{n}                \\
+%     y :=  \lambda y^0 + (1-\lambda) \mu e_{m}                 \\
+% \end{align*}
 
+\paragraph{Dual}
+The dual scaling algorithm \cite{benson_solving_2000} solves \eqref{eq:ws.std.dual} by the following implementation,
+let \(\mathcal{A}^T \tilde y = \alpha \cdot \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix}
++ \sum_{i=1}^{n} z_{i} \tilde{E_i}
++ \sum_{i=1}^{m} y_{i} \tilde{A_i}\), \(\tilde b = [1; 0; b]\)
+
+\begin{equation} \label{eq:ws.dsdp.dual}
+    \begin{aligned}
+        % \mn \quad           & C\bullet X+u^{T} x^{u}-l^{T} x^{l}              \\
+        % \mathrm{s.t.} \quad & \mathcal{A} X+
+        %                     & \langle I, X\rangle                             \\
+        %                     & \langle I, X\rangle                             \\
+        %                     & X \in K, \quad x^{u} \geq 0, \quad x^{l} \geq 0 \\
+        \mx \quad           & \tilde b^T \tilde y-\Gamma r                                              \\
+        \mathrm{s.t.} \quad & - \tilde{Q}-\mathcal{A}^T \tilde y+I_{n+1} r= Y, Y \in \mathscr S^{n+1}_+ \\
+                            & \quad r \ge 0                                                             \\
+                            & \tilde y_{[1:]} \le 0
+    \end{aligned}
+\end{equation}
+
+and \(\Gamma\) corresponds to the upper bound over \(\trace(\tilde X)\) by \(I_{n+1} \bullet \tilde X \le \Gamma\) in the primal problem. The initial point \(\tilde y_0, Y_0, r_0\) by \(y_0 = 0, r_0 = \tau\) where \(\tau\) is big enough to make \(Y_0\) psd.
+Suppose we add new cuts to the problem along with extra dual variables,
+
+\begin{equation}
+    \mathcal B^T\mu = \sum_i \mu_i \tilde B_i
+\end{equation}
+
+\begin{equation}
+    \begin{aligned}
+        % \mn \quad           & C\bullet X+u^{T} x^{u}-l^{T} x^{l}              \\
+        % \mathrm{s.t.} \quad & \mathcal{A} X+
+        %                     & \langle I, X\rangle                             \\
+        %                     & \langle I, X\rangle                             \\
+        %                     & X \in K, \quad x^{u} \geq 0, \quad x^{l} \geq 0 \\
+        \mx \quad           & \tilde b^T \tilde y + \tilde f^T \mu-\Gamma r                                                 \\
+        \mathrm{s.t.} \quad & - \tilde{Q}-\mathcal{A}^T \tilde y - \mathcal{B}^T\mu +I_{n+1} r= Y, Y \in \mathscr S^{n+1}_+ \\
+                            & \quad r \ge 0                                                                                 \\
+                            & \tilde y_{[1:]} \le 0, \mu \le 0
+    \end{aligned}
+\end{equation}
+
+A safe warm-start point, where \(\epsilon\) is a small number.
+\begin{itemize}
+    \item \(\mu := 0, \tilde{y} := \tilde y_0\),
+    \item \(r := \epsilon \)
+\end{itemize}
+
+The initial point requires \(\Gamma\) be reasonably big.
+
+% By last solution \(y_0\), we can find an estimate,
+
+% \begin{equation}
+%     a
+% \end{equation}
+
+\subsection{RLT after Branching}
+We consider the simple case within the branch and cut process. Suppose we pivot on a \(x_i^k\) which lies in the interior of \(\left[l_i + \epsilon, u_i -\epsilon\right]\) with small tolerance \(\epsilon \ge 0\).
+
+The RLT cuts corresponding to bounds,
+\begin{align}
+    \label{eq:ws.rlt.left} & X_{ij} - u_i x_j - l_j x_i + l_j u_i \le 0        \\
+    \label{eq:ws.rlt.mat}  & \tilde X \bullet \begin{bmatrix}
+        e_ie_j^T                  & - (l_j e_i + u_i e_j) / 2 \\
+        - (l_j e_i + u_i e_j) / 2 & u_i l_j
+    \end{bmatrix} \le 0
+\end{align}
+
+\subsection{Implementation Details}
+\subsubsection{Modeling slack variables}
 \paragraph{Pure SDP}
 \eqref{eq:ws.std.primal} and \eqref{eq:ws.std.dual} can also be modeled by pure SDP cones.
 \begin{equation}
     \begin{aligned}
          & \tilde n = n + 1 + (n + m)                                       \\
-         & \tilde{Y} = \begin{bmatrix}
+         & \tilde{X} = \begin{bmatrix}
             xx^T & x &   &   \\
             x^T  & 1 &   &   \\
                  &   & d &   \\
@@ -177,7 +239,7 @@ We construct an initial point from last iterate and an initial point by \eqref{e
 
 And the constraints,
 \begin{equation}
-    x^TA_ix + a_i^Tx + e_i^T\diag(s)e_i = \tilde{Y} \bullet    \begin{bmatrix}
+    x^TA_ix + a_i^Tx + e_i^T\diag(s)e_i = \tilde{X} \bullet    \begin{bmatrix}
         A_i             & \frac{a_i}{2} &         &          \\
         \frac{a_i^T}{2} & 0             &         &          \\
                         &               & \bm 0_n &          \\
@@ -188,36 +250,24 @@ And the constraints,
 The standard form, homogeneous SDP,
 \begin{equation}
     \begin{aligned}
-        \mathrm{Maximize}\quad & \begin{bmatrix}
+        \mx\quad            & \begin{bmatrix}
             Q & \frac{q}{2} & 0 \\ \frac{q^T}{2} & 0 & 0 \\ 0 & 0 & \bm 0_{m+n}
-        \end{bmatrix} \bullet \tilde Y                               \\
-        \mathrm{s.t.} \quad    & \tilde{Y}  \in \mathscr S^{\tilde{n}}_+                                   \\
-                               & \begin{bmatrix}  \bm 0_n &  &  \\  & 1 &  \\  & & \bm 0_{m+n} \end{bmatrix} \bullet \tilde Y = 1                           \\
-                               & \begin{bmatrix}
+        \end{bmatrix} \bullet \tilde X                               \\
+        \mathrm{s.t.} \quad & \tilde{X}  \in \mathscr S^{\tilde{n}}_+                                   \\
+                            & \begin{bmatrix}  \bm 0_n &  &  \\  & 1 &  \\  & & \bm 0_{m+n} \end{bmatrix} \bullet \tilde X = 1                           \\
+                            & \begin{bmatrix}
             e_ie_i^T         & -\frac{e_i}{2} &          &         \\
             -\frac{e_i^T}{2} & 0              &          &         \\
                              &                & e_ie_i^T &         \\
                              &                &          & \bm 0_m
-        \end{bmatrix} \bullet \tilde Y = 0   & \forall i=1,\cdots, n \\
-                               & \begin{bmatrix}
+        \end{bmatrix} \bullet \tilde X = 0   & \forall i=1,\cdots, n \\
+                            & \begin{bmatrix}
             A_i             & \frac{a_i}{2} &         &          \\
             \frac{a_i^T}{2} & 0             &         &          \\
                             &               & \bm 0_n &          \\
                             &               &         & e_ie_i^T
-        \end{bmatrix}\bullet \tilde{Y} = b_i & \forall i=1,\cdots, m \\
+        \end{bmatrix}\bullet \tilde{X} = b_i & \forall i=1,\cdots, m \\
     \end{aligned}
 \end{equation}
-
-Suppose we have a primal cut to \eqref{eq:ws.std.primal}
-that cuts off current solution \((x^\circ, X^\circ, Y^\circ)\),
-\begin{equation*}
-    B\bullet Y + c^T x \le \xi
-\end{equation*}
-\paragraph{RLT} for example, the RLT cut of the form \eqref{eq:ws.rlt.left}, the standard form is,
-\begin{equation*}
-    e_ie_j^T\bullet Y - u_i e_j^Tx - l_j e_i^Tx + u_i l_j \le 0
-    \Rightarrow \begin{bmatrix} e_ie_j^T  & - u_i e_j \\ - l_j e_i^T & 0 \end{bmatrix}
-    \bullet \tilde Y + \tilde s = - u_il_j
-\end{equation*}
 
 \end{document}
