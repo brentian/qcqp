@@ -156,9 +156,30 @@ The perturbed complementary condition,
 
 \paragraph{Dual}
 The dual scaling algorithm \cite{benson_solving_2000} solves \eqref{eq:ws.std.dual} by the following implementation,
-let \(\mathcal{A}^{*} \tilde y = \alpha \cdot \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix}
+let \(\mathcal{A}^T \tilde y = \alpha \cdot \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix}
 + \sum_{i=1}^{n} z_{i} \tilde{E_i}
 + \sum_{i=1}^{m} y_{i} \tilde{A_i}\), \(\tilde b = [1; 0; b]\)
+
+\begin{equation} \label{eq:ws.dsdp.dual}
+    \begin{aligned}
+        % \mn \quad           & C\bullet X+u^{T} x^{u}-l^{T} x^{l}              \\
+        % \mathrm{s.t.} \quad & \mathcal{A} X+
+        %                     & \langle I, X\rangle                             \\
+        %                     & \langle I, X\rangle                             \\
+        %                     & X \in K, \quad x^{u} \geq 0, \quad x^{l} \geq 0 \\
+        \mx \quad           & \tilde b^T \tilde y-\Gamma r                                              \\
+        \mathrm{s.t.} \quad & - \tilde{Q}-\mathcal{A}^T \tilde y+I_{n+1} r= Y, Y \in \mathscr S^{n+1}_+ \\
+                            & \quad r \ge 0                                                             \\
+                            & \tilde y_{[1:]} \le 0
+    \end{aligned}
+\end{equation}
+
+and \(\Gamma\) corresponds to the upper bound over \(\trace(\tilde X)\) by \(I_{n+1} \bullet \tilde X \le \Gamma\) in the primal problem. The initial point \(\tilde y_0, Y_0, r_0\) by \(y_0 = 0, r_0 = \tau\) where \(\tau\) is big enough to make \(Y_0\) psd.
+Suppose we add new cuts to the problem along with extra dual variables,
+
+\begin{equation}
+    \mathcal B^T\mu = \sum_i \mu_i \tilde B_i
+\end{equation}
 
 \begin{equation}
     \begin{aligned}
@@ -167,15 +188,26 @@ let \(\mathcal{A}^{*} \tilde y = \alpha \cdot \begin{bmatrix}  \bm 0_n &  \\  & 
         %                     & \langle I, X\rangle                             \\
         %                     & \langle I, X\rangle                             \\
         %                     & X \in K, \quad x^{u} \geq 0, \quad x^{l} \geq 0 \\
-        \mx \quad           & \tilde b^T \tilde y-\Gamma r                                                \\
-        \mathrm{s.t.} \quad & - \tilde{Q}-\mathcal{A}^{*} \tilde y+I_{n+1} r= Y, Y \in \mathscr S^{n+1}_+ \\
-                            & \quad r \ge 0                                                               \\
-                            & \tilde y_{[1:]} \le 0
+        \mx \quad           & \tilde b^T \tilde y + \tilde f^T \mu-\Gamma r                                                 \\
+        \mathrm{s.t.} \quad & - \tilde{Q}-\mathcal{A}^T \tilde y - \mathcal{B}^T\mu +I_{n+1} r= Y, Y \in \mathscr S^{n+1}_+ \\
+                            & \quad r \ge 0                                                                                 \\
+                            & \tilde y_{[1:]} \le 0, \mu \le 0
     \end{aligned}
 \end{equation}
 
-and \(\Gamma\) corresponds to the upper bound over \(\trace(\tilde X)\) by \(I_{n+1} \bullet \tilde X \le \Gamma\) in the primal problem. The initial point \(\tilde y_0, Y_0, r_0\) by \(y_0 = 0, r_0 = \tau\) where \(\tau\) is big enough to make \(Y_0\) psd.
-Suppose we add new cuts to the problem, \(\tilde B \bullet \tilde X  \le f \)
+A safe warm-start point, where \(\epsilon\) is a small number.
+\begin{itemize}
+    \item \(\mu := 0, \tilde{y} := \tilde y_0\),
+    \item \(r := \epsilon \)
+\end{itemize}
+
+The initial point requires \(\Gamma\) be reasonably big.
+
+% By last solution \(y_0\), we can find an estimate,
+
+% \begin{equation}
+%     a
+% \end{equation}
 
 \subsection{RLT after Branching}
 We consider the simple case within the branch and cut process. Suppose we pivot on a \(x_i^k\) which lies in the interior of \(\left[l_i + \epsilon, u_i -\epsilon\right]\) with small tolerance \(\epsilon \ge 0\).

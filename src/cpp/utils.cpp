@@ -4,19 +4,6 @@
 
 #include "utils.h"
 
-json parse_json(char *fp) {
-    using namespace std;
-    ifstream ifs(fp);
-    json _json = json::parse(ifs);
-    return _json;
-}
-
-json parse_json(const std::string &fp) {
-    using namespace std;
-    ifstream ifs(fp);
-    json _json = json::parse(ifs);
-    return _json;
-}
 
 void printVector(double *ele, int dim, char *printFormat, FILE *fpout) {
     fprintf(fpout, "[ ");
@@ -108,5 +95,5 @@ int query_index_lt(int i, int j) {
         il = j;
         jl = i;
     }
-    return (il + 1) * il / 2  + jl;
+    return (il + 1) * il / 2 + jl;
 }

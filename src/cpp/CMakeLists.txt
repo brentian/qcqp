@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # eigen
+# @using latest ver in 3rd party
 find_package(Eigen3 REQUIRED)
 
 # sdpa
@@ -27,6 +28,18 @@ include_directories(${DSDP_INCLUDE_DIR})
 add_subdirectory(test)
 
 # add libs
-add_library(qp utils.h utils.cpp qp.h qp.cpp bg_sdpa.h bg_sdpa.cpp cut.cpp cut.h bg_dsdp.cpp bg_dsdp.h bg_dsdp_cut.cpp bg_dsdp_cut.h)
-target_link_libraries(qp PRIVATE ${SDPA_LIBRARIES} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} nlohmann_json::nlohmann_json)
+add_library(
+        qp qcqp.h qcqp.cpp
+        qp.h qp.cpp
+        cut.h cut.cpp
+        branch.h branch.cpp
+        result.h result.cpp
+        utils.h utils.cpp
+        bg_dsdp.h bg_dsdp.cpp bg_dsdp_cut.h bg_dsdp_cut.cpp
+        bg_sdpa.h bg_sdpa.cpp
+)
 
+target_link_libraries(qp PRIVATE ${SDPA_LIBRARIES} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+
+add_library(qpio io.h io.cpp)
+target_link_libraries(qpio PRIVATE nlohmann_json::nlohmann_json)

@@ -6,7 +6,6 @@
 #define QCQP_QP_H
 
 #include "utils.h"
-#include "cut.h"
 
 class QP {
 public:
@@ -43,42 +42,7 @@ public:
     void show();
 };
 
-
-class Result {
-public:
-    const int n, m, d;
-    double *x{};
-    double *X{};
-    double *y{};
-    double *Y{};
-    double *D{};
-    double *S{};
-    double *Dd{};
-    double *Sd{};
-    int ydim{};
-// eigen representations
-//  for some backend, may not be available
-//    eigen_const_arraymap xm;
-    eigen_const_matmap Xm;
-    eigen_const_matmap Ym;
-//    eigen_const_arraymap Dm;
-//    eigen_const_arraymap Sm;
-
-    Result(int n, int m, int d);
-
-    ~Result();
-
-    void save_to_X(double *X_);
-
-    void save_to_Y(double *Y_);
-
-    void show();
-
-    void check_solution(QP &qp);
-    void check_solution(QP &qp, const CutPool& cp);
-};
-
-#endif //QCQP_QP_H
-
 // QP UTIL FUNCS.
 eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a);
+
+#endif //QCQP_QP_H

@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import numpy.linalg as nl
 
@@ -129,7 +131,6 @@ class QP(object):
     
     return (upos, ipos), (uneg, ineg), mul, gamma.reshape((self.n, 1))
   
-  
   ########################
   # cliques and chordal sparsity
   ########################
@@ -147,7 +148,7 @@ class QP(object):
     a = cc1.intersection(cc2)
     ic = []
     if len(a) > 0:
-      ic  = [a]
+      ic = [a]
     # now we compute pairwise intersections
     self.cc = cc
     self.ic = ic
@@ -164,7 +165,7 @@ class QP(object):
         self.node_to_Eir[l].append(idx_cr)
     self.g = g
     self.g_chordal = g_chordal
-
+  
   @staticmethod
   def create_er_from_clique(cr, n):
     nr = len(cr)
@@ -172,6 +173,39 @@ class QP(object):
     for row, col in enumerate(cr):
       Er[row, col] = 1
     return Er
+  
+  ####################
+  # serialization
+  ####################
+  def serialize(self, wdir):
+    import json
+    import os
+    import time
+    stamp = time.time()
+    
+    fname = os.path.join(wdir, f"{self.n}_{self.m}.{stamp}.json")
+    data = {}
+    data['n'] = self.n
+    data['m'] = self.m
+    data['d'] = self.d
+    data['Q'] = self.Q.flatten().astype(float).tolist()
+    data['q'] = self.q.flatten().astype(float).tolist()
+    data['A'] = self.A.flatten().astype(float).tolist()
+    data['a'] = self.a.flatten().astype(float).tolist()
+    data['b'] = self.b.flatten().astype(float).tolist()
+    json.dump(data, open(fname, 'w'))
+  
+  @classmethod
+  def read(cls, fpath):
+    data = json.load(open(fpath, 'r'))
+    n, m, d = data['n'], data['m'], data['d']
+    Q = np.array(data['Q']).reshape((n, n))
+    q = np.array(data['q']).reshape((n, 1))
+    A = np.array(data['A']).reshape((m, n, n))
+    a = np.array(data['a']).reshape((m, n, 1))
+    b = np.array(data['b'])
+    sign = np.ones(m)
+    return cls(Q, q, A, a, b, sign)
 
 
 class QPInstanceUtils(object):

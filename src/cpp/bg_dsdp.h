@@ -11,7 +11,7 @@
 #include "cut.h"
 
 
-#define dbg 1
+#define DSDP_SDP_DBG 1
 
 class Result_DSDP : public Result {
 public:
@@ -71,7 +71,7 @@ public:
 
     void create_problem(bool solve = false, bool verbose = true, bool use_lp_cone = false);
 
-    void assign_initial_point(Result_DSDP &r_another, bool dual_only);
+    void assign_initial_point(Result_DSDP &r_another, bool dual_only) const;
 
     void extract_solution();
 

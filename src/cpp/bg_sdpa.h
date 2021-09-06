@@ -22,20 +22,20 @@ public:
 
 };
 
-struct Bound_SDPA : Bound {
-
-    double *xlb{};
-    double *xub{};
-
-    Bound_SDPA(int n) {
-        xlb = new double[n]{0.0};
-        xub = new double[n]{0.0};
-    }
-};
+//struct Bound_SDPA : Bound {
+//
+//    double *xlb{};
+//    double *xub{};
+//
+//    Bound_SDPA(int n) {
+//        xlb = new double[n]{0.0};
+//        xub = new double[n]{0.0};
+//    }
+//};
 
 struct RLT_SDPA : RLT {
 
-    void create_from_bound(int n, int i, int j, Bound_SDPA &bd);
+//    void create_from_bound(int n, int i, int j, Bound_SDPA &bd);
 
     void create_from_bound(int n, int i, int j, double li, double ui, double lj, double uj);
 };
