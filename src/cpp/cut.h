@@ -8,7 +8,7 @@
 
 #include "utils.h"
 #include "branch.h"
-#define QCQP_CUT_DBG 1
+
 struct Cut {
     eigen_matrix B;
     double b;

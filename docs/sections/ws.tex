@@ -155,10 +155,15 @@ The perturbed complementary condition,
 % \end{align*}
 
 \paragraph{Dual}
-The dual scaling algorithm \cite{benson_solving_2000} solves \eqref{eq:ws.std.dual} by the following implementation,
-let \(\mathcal{A}^T \tilde y = \alpha \cdot \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix}
-+ \sum_{i=1}^{n} z_{i} \tilde{E_i}
-+ \sum_{i=1}^{m} y_{i} \tilde{A_i}\), \(\tilde b = [1; 0; b]\)
+The dual scaling algorithm \cite{benson_solving_2000} solves \eqref{eq:ws.std.dual} by the following implementation, let
+
+\begin{equation}
+    \mathcal{A}^T \tilde y = \alpha \cdot \begin{bmatrix}  \bm 0_n &  \\  & 1  \end{bmatrix}
+    + \sum_{i=1}^{n} z_{i} \tilde{E_i}
+    + \sum_{i=1}^{m} y_{i} \tilde{A_i}, \tilde b = [1; 0; b]
+\end{equation}
+
+The dual scaling formulation,
 
 \begin{equation} \label{eq:ws.dsdp.dual}
     \begin{aligned}
@@ -174,12 +179,14 @@ let \(\mathcal{A}^T \tilde y = \alpha \cdot \begin{bmatrix}  \bm 0_n &  \\  & 1 
     \end{aligned}
 \end{equation}
 
-and \(\Gamma\) corresponds to the upper bound over \(\trace(\tilde X)\) by \(I_{n+1} \bullet \tilde X \le \Gamma\) in the primal problem. The initial point \(\tilde y_0, Y_0, r_0\) by \(y_0 = 0, r_0 = \tau\) where \(\tau\) is big enough to make \(Y_0\) psd.
-Suppose we add new cuts to the problem along with extra dual variables,
+\(\Gamma \ge 0\) corresponds to the upper bound over \(\trace(\tilde X)\) by \(I_{n+1} \bullet \tilde X \le \Gamma\) in the primal problem. The initial point \(\tilde y_0, Y_0, r_0\) by \(y_0 = 0, r_0 = \tau\) where \(\tau\) is big enough to make \(Y_0\) psd.
+Suppose we add new cuts to the problem, in the dual problem, we have a set of extra dual variables \(\mu\):
 
 \begin{equation}
     \mathcal B^T\mu = \sum_i \mu_i \tilde B_i
 \end{equation}
+
+
 
 \begin{equation}
     \begin{aligned}

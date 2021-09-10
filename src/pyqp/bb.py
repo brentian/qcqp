@@ -202,8 +202,6 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   if backend_func is None:
     if backend_name == 'msk':
       backend_func = bg_msk.shor
-    elif backend_name == 'cvx':
-      backend_func = bg_cvx.shor_relaxation
     else:
       raise ValueError("not implemented")
   # root

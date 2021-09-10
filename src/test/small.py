@@ -44,14 +44,15 @@ from pyqp.classes import QP, Bounds
 import argparse
 import json
 
-methods = collections.OrderedDict({
-  "grb": bg_grb.qp_gurobi,
-  "shor": bg_msk.shor,
-  "dshor": bg_msk.dshor,
-  "msc": bg_msk_msc.msc,
-  "emsc": bg_msk_msc.msc_diag,
-  "ssdp": bg_msk_chordal.ssdp,
-})
+methods = collections.OrderedDict([
+  ("grb", bg_grb.qp_gurobi),
+  ("shor", bg_msk.shor),
+  ("dshor", bg_msk.dshor),
+  ("msc", bg_msk_msc.msc),
+  ("emsc", bg_msk_msc.msc_diag),
+  ("ssdp", bg_msk_chordal.ssdp),
+  ("bb", bb.bb_box),
+])
 
 method_codes = {
   idx + 1: m
@@ -68,7 +69,7 @@ np.random.seed(1)
 parser = argparse.ArgumentParser("QCQP runner")
 parser.add_argument("--fpath", type=str, help="path of the instance")
 parser.add_argument("--dump_instance", type=int, help="if save instance", default=1)
-parser.add_argument("--r", type=str, help=json.dumps(method_helps, indent=2), default="1,2,3")
+parser.add_argument("--r", type=str, help=method_codes.__str__(), default="1,2,-1")
 
 if __name__ == '__main__':
   
@@ -82,6 +83,7 @@ if __name__ == '__main__':
   evals = []
   params = bb_msc.BCParams()
   params.time_limit = 50
+  params.backend_name = 'msk'
   kwargs = dict(
     relax=True,
     sense="max",
@@ -101,7 +103,7 @@ if __name__ == '__main__':
   }
   pkwargs.update(pkwargs_dtl)
   pkwargs = {k: v for k, v in pkwargs.items() if k in r_methods}
-
+  
   qp = QP.read(fpath)
   
   n, m = qp.n, qp.m

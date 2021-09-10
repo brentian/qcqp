@@ -26,6 +26,7 @@ include_directories(${DSDP_INCLUDE_DIR})
 
 # subdir
 add_subdirectory(test)
+add_subdirectory(bbtest)
 
 # add libs
 add_library(
@@ -37,7 +38,7 @@ add_library(
         utils.h utils.cpp
         bg_dsdp.h bg_dsdp.cpp bg_dsdp_cut.h bg_dsdp_cut.cpp
         bg_sdpa.h bg_sdpa.cpp
-)
+        tree.cpp tree.h)
 
 target_link_libraries(qp PRIVATE ${SDPA_LIBRARIES} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 

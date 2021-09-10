@@ -41,8 +41,7 @@ struct RLT_SDPA : RLT {
 };
 
 
-
-class QP_SDPA {
+class QP_SDPA : public Backend {
 private:
     QP &qp;
 public:

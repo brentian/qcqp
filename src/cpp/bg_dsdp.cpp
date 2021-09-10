@@ -60,7 +60,9 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
             _one_val, //const double val[],
             1 // int64 nnz
     );
-    if (verbose) SDPConeViewDataMatrix(sdpcone, 0, 1);
+#if DSDP_SDP_DBG
+    SDPConeViewDataMatrix(sdpcone, 0, 1);
+#endif
     DSDPSetDualObjective(p, 1, 1.0);
     // Y <= xx^T,
     // \tilde Y ∙ E_i + \diag(d) ∙ \diag(e_i)
@@ -145,7 +147,12 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
     //    info = DSDPSetPNormTolerance(dsdp, 1.0);
     //    info = DSDPSetPenaltyParameter(p, nvar);
     DSDPSetPenaltyParameter(p, 1e4);
+#if DSDP_SDP_DBG
     DSDPSetStandardMonitor(p, 1);
+#else
+    DSDPSetStandardMonitor(p, -1);
+#endif
+
     info = DSDPSetup(p);
 }
 
@@ -309,4 +316,8 @@ void Result_DSDP::construct_init_point(Result_DSDP &r, double lambda, int pool_s
 Result_DSDP::Result_DSDP(int n, int m, int d) :
         Result(n, m, d) {
     r0 = 0;
+}
+
+Node_DSDP::Node_DSDP(QP &qp): p(qp) {
+
 }

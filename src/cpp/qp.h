@@ -42,6 +42,12 @@ public:
     void show();
 };
 
+class Backend {
+
+public:
+    explicit Backend(QP &qp);
+};
+
 // QP UTIL FUNCS.
 eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a);
 

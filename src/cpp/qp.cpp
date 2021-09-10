@@ -90,3 +90,6 @@ eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a) {
 }
 
 
+Backend::Backend(QP &qp) {
+
+}
