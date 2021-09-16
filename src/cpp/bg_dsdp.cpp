@@ -159,7 +159,7 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
 
 void QP_DSDP::extract_solution() {
     int info;
-    if (!solved) throw std::exception();
+    if (!bool_solved) throw std::exception();
     __unused int xsize;
 
     // tempo buffers
@@ -250,15 +250,19 @@ void QP_DSDP::setup() {
     _ei_idx = new int[2 * n]{0};
     _ah_data = new double[n_lower_tr * m_with_cuts]{0.0};
 
+    bool_setup = true;
+
 }
 
 void QP_DSDP::optimize() {
     int info = DSDPSolve(p);
-    solved = true;
+    bool_solved = true;
 }
 
 QP_DSDP::~QP_DSDP() {
-    DSDPDestroy(p); // frees
+    if (bool_setup) {
+        DSDPDestroy(p);
+    }// frees
     delete[] _tilde_q_data;
     delete[] _ei_idx;
     delete[] _ah_data;
@@ -318,6 +322,18 @@ Result_DSDP::Result_DSDP(int n, int m, int d) :
     r0 = 0;
 }
 
-Node_DSDP::Node_DSDP(long id, QP &qp) {
+Node_DSDP::Node_DSDP(long id, QP &qp, long parent_id, long depth,
+                     double bound, double primal_val,
+                     double abs_time, double create_time, double solve_time) : p(qp) {
 
+    this->id = id;
+    this->parent_id = parent_id;
+    this->depth = depth;
+    this->depth = depth;
+    this->bound = bound;
+    this->primal_val = primal_val;
+    // timers
+    this->abs_time = abs_time;
+    this->create_time = create_time;
+    this->solve_time = solve_time;
 }
