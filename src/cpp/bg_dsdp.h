@@ -82,24 +82,6 @@ public:
 
 };
 
-class Node_DSDP : public Node {
-public:
-    QP_DSDP p;
-    long id;
-    long parent_id;
-    long depth;
-    double bound;
-    double primal_val;
-    double abs_time;
-    double create_time;
-    double solve_time;
 
-    explicit Node_DSDP(
-            long id, QP &qp, // no dfts.
-            long parent_id = -1, long depth = 0,
-            double bound = 0.0, double primal_val = 0.0,
-            double abs_time = 0.0, double create_time = 0.0, double solve_time = 0.0
-    );
-};
 
 #endif //QCQP_BG_DSDP_H

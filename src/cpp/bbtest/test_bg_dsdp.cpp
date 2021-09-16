@@ -36,6 +36,8 @@ int main(int argc, char *argv[]) {
     get_arr(test, "a", a);
     get_arr(test, "b", b);
     QP qp = QP(n, m, d, Q, q, A, a, b);
+    Tree_DSDP tree;
+    tree.run(qp);
     Bound root_b(n);
 //    qp.show();
 
@@ -45,12 +47,10 @@ int main(int argc, char *argv[]) {
     std::cout << "first solve\n";
     std::cout << INTERVAL_STR;
     Node_DSDP root(0, qp);
-
-    QP_DSDP p(qp);
-    p.create_problem();
-    p.optimize();
-    p.extract_solution();
-    auto r = p.get_solution();
+    root.create_problem();
+    root.optimize();
+    root.extract_solution();
+    auto r = root.get_solution();
 //    check_solution(r, qp);
 //    r.show();
     Branch br(r);

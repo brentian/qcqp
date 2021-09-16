@@ -38,7 +38,8 @@ add_library(
         utils.h utils.cpp
         bg_dsdp.h bg_dsdp.cpp bg_dsdp_cut.h bg_dsdp_cut.cpp
         bg_sdpa.h bg_sdpa.cpp
-        tree.cpp tree.h)
+        tree.cpp tree.h
+        bb_dsdp.cpp bb_dsdp.h)
 
 target_link_libraries(qp PRIVATE ${SDPA_LIBRARIES} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 

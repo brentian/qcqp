@@ -262,10 +262,10 @@ void QP_DSDP::optimize() {
 QP_DSDP::~QP_DSDP() {
     if (bool_setup) {
         DSDPDestroy(p);
+        delete[] _tilde_q_data;
+        delete[] _ei_idx;
+        delete[] _ah_data;
     }// frees
-    delete[] _tilde_q_data;
-    delete[] _ei_idx;
-    delete[] _ah_data;
 }
 
 void QP_DSDP::assign_initial_point(Result_DSDP &r_another, bool dual_only) const {
@@ -322,18 +322,3 @@ Result_DSDP::Result_DSDP(int n, int m, int d) :
     r0 = 0;
 }
 
-Node_DSDP::Node_DSDP(long id, QP &qp, long parent_id, long depth,
-                     double bound, double primal_val,
-                     double abs_time, double create_time, double solve_time) : p(qp) {
-
-    this->id = id;
-    this->parent_id = parent_id;
-    this->depth = depth;
-    this->depth = depth;
-    this->bound = bound;
-    this->primal_val = primal_val;
-    // timers
-    this->abs_time = abs_time;
-    this->create_time = create_time;
-    this->solve_time = solve_time;
-}
