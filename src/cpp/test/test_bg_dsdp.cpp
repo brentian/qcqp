@@ -67,6 +67,7 @@ int main(int argc, char *argv[]) {
     }
     p1.optimize();
     p1.extract_solution();
+    p1.r.show();
 //    check_solution(p1.r, qp, p1.cp);
 //    p1.r.show();
 

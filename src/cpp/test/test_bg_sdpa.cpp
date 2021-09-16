@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
     std::cout << INTERVAL_STR;
     std::cout << "first solve\n";
     std::cout << INTERVAL_STR;
-    QP_SDPA qp_sdpa(qp);
+    QP_SDPA qp_sdpa(<#initializer#>, qp);
     qp_sdpa.create_problem(false, true);
     qp_sdpa.optimize(true);
     qp_sdpa.extract_solution();
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
     std::cout << INTERVAL_STR;
     std::cout << "second solve with cut\n";
     std::cout << "and run with warm-start solution\n";
-    QP_SDPA qp_sdpa1(qp);
+    QP_SDPA qp_sdpa1(<#initializer#>, qp);
     // generate cut
     std::cout << "generate cut\n";
     std::cout << INTERVAL_STR;

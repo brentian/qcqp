@@ -225,7 +225,7 @@ void QP_DSDP::extract_solution() {
     delete[] surplus;
 }
 
-QP_DSDP::QP_DSDP(QP &qp) : qp(qp), r(qp.n, qp.m, qp.d), n(qp.n), m(qp.m) {
+QP_DSDP::QP_DSDP(QP &qp) : Backend(qp), qp(qp), r(qp.n, qp.m, qp.d), n(qp.n), m(qp.m) {
     // number of variables (for original)
     // problem size
     ndim = n + 1; // homogeneous
@@ -318,6 +318,6 @@ Result_DSDP::Result_DSDP(int n, int m, int d) :
     r0 = 0;
 }
 
-Node_DSDP::Node_DSDP(QP &qp): p(qp) {
+Node_DSDP::Node_DSDP(long id, QP &qp) {
 
 }

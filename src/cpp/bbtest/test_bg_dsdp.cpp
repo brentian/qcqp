@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
     std::cout << INTERVAL_STR;
     std::cout << "first solve\n";
     std::cout << INTERVAL_STR;
-    Node_DSDP root(qp);
+    Node_DSDP root(0, qp);
 
     QP_DSDP p(qp);
     p.create_problem();

@@ -52,7 +52,7 @@ public:
     int ydim;
     int m;
 
-    explicit QP_SDPA(QP &qp) : qp(qp), r(qp.n, qp.m, qp.d) {
+    explicit QP_SDPA(QP &qp) : Backend(qp), qp(qp), r(qp.n, qp.m, qp.d) {
     }
 
     ~QP_SDPA() { p.terminate(); }

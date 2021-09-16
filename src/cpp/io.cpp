@@ -18,7 +18,7 @@ json parse_json(const std::string &fp) {
     return _json;
 }
 
-void *get_arr(json &js, std::string key, double *data) {
+void get_arr(json &js, std::string key, double *data) {
     auto vec = js[key].get<std::vector<double>>();
     std::copy(vec.begin(), vec.end(), data);
 }
