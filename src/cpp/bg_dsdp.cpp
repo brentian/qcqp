@@ -162,6 +162,7 @@ void QP_DSDP::extract_solution() {
     if (!bool_solved) throw std::exception();
     __unused int xsize;
 
+
     // tempo buffers
     // dynamic arrays for solution
     double *slack = new double[nvar]{0.0};
@@ -216,6 +217,11 @@ void QP_DSDP::extract_solution() {
     eigen_const_arraymap xm(r.x, n);
 
     r.Res = (r.Xm.block(0, 0, n, n) - xm.matrix() * xm.matrix().adjoint()).cwiseAbs();
+    // compute primal dual values
+    // objectives
+    DSDPGetDObjective(p, &bound);
+    bound = -bound; // fix sense
+    primal = qp.inhomogeneous_obj_val(r.x);
 
 #if DSDP_SDP_DBG
     std::cout << dsdp_status(pdfeasible) << std::endl;

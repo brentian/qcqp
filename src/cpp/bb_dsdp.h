@@ -11,6 +11,7 @@
 #include "cut.h"
 #include "tree.h"
 #include "bg_dsdp.h"
+#include "bg_dsdp_cut.h"
 
 
 //template Node<QP_DSDP> Node_DSDP;
@@ -18,19 +19,28 @@ class Node_DSDP : public Node {
 public:
 
     QP_DSDP p;
+    bool bool_solved = false;
+    bool bool_setup = false;
 
     Node_DSDP(long id, QP &qp, // no dfts.
               long parent_id = -1, long depth = 0,
-              double bound = 0.0, double primal_val = 0.0,
-              double abs_time = 0.0, double create_time = 0.0, double solve_time = 0.0
+              double parent_bound = 1e6,
+              double bound = 0.0, double primal_val = 0.0
     );
 
-    void create_problem() {
+    void create_problem(CutPool &cp) {
+        time(&opt_start_time);
+        // push cuts
+        p.cp = cp;
         p.create_problem();
+        bool_setup = true;
     }
 
     void optimize() {
         p.optimize();
+        bool_solved = true;
+        time(&opt_end_time);
+        solve_time = difftime(opt_end_time, opt_start_time);
     }
 
     void extract_solution();
@@ -38,13 +48,28 @@ public:
     Result_DSDP get_solution() const {
         return p.get_solution();
     }
+
 };
 
 class Tree_DSDP : public Tree {
 public:
-    std::stack<Node_DSDP> queue;
+    time_t timer;
+    std::map<long, Node_DSDP> queue;
+
 
     int run(QP &qp);
+
+
+    template<typename KeyType, typename ValueType>
+    std::pair<KeyType, ValueType> fetch_next();
 };
+
+template<typename KeyType, typename ValueType>
+std::pair<KeyType, ValueType> get_max(const std::map<KeyType, ValueType> &x) {
+    using pairtype = std::pair<KeyType, ValueType>;
+    return *std::max_element(x.begin(), x.end(), [](const pairtype &p1, const pairtype &p2) {
+        return p1.second < p2.second;
+    });
+}
 
 #endif //QCQP_BB_DSDP_H

@@ -82,6 +82,12 @@ void QP::show() {
     std::cout << INTERVAL_STR;
 }
 
+double QP::inhomogeneous_obj_val(double *x) const {
+    eigen_arraymap xm(x, n);
+    auto obj = xm.dot(q) + xm.adjoint() * Q *xm;
+    return obj;
+}
+
 eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a) {
 
     eigen_matrix Ah(A.cols() + 1, A.cols() + 1);

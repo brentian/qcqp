@@ -12,6 +12,7 @@
 #include "tree.h"
 
 
+
 class Result_DSDP : public Result {
 public:
     double r0;
@@ -63,6 +64,12 @@ public:
     // value for quadratic constraints
     double *_ah_data;
 
+    // objectives
+    // this primal value is simply extract the vector from homonegenized problem
+    //  I do not implement any primal heuristic here.
+    double primal = 1e6;
+    double bound = -1e6;
+
     explicit QP_DSDP(QP &qp);
 
     ~QP_DSDP();
@@ -81,7 +88,6 @@ public:
 
 
 };
-
 
 
 #endif //QCQP_BG_DSDP_H

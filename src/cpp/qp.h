@@ -6,6 +6,10 @@
 #define QCQP_QP_H
 
 #include "utils.h"
+#include <queue>
+#include <stack>
+#include <map>
+#include <ctime>
 
 class QP {
 public:
@@ -40,6 +44,8 @@ public:
     void create_diag_Q(int n, int m);
 
     void show();
+
+    double inhomogeneous_obj_val(double *x) const;
 };
 
 class Backend {

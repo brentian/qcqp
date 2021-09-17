@@ -5,8 +5,7 @@
 #ifndef QCQP_TREE_H
 #define QCQP_TREE_H
 
-#include <queue>
-#include <stack>
+
 #include "cut.h"
 #include "branch.h"
 #include "result.h"
@@ -48,22 +47,29 @@ public:
     long id;
     long parent_id;
     long depth;
+    double parent_bound;
     double obj_bound;
     double primal_val;
-    double abs_time;
-    double create_time;
+    time_t opt_start_time;
+    time_t create_time;
+    time_t opt_end_time;
     double solve_time;
-    CutPool ct;
-
-    void attach_cuts(CutPool another_cp);
+    // Cut and variable bound
+    //    CutPool ct;
+    //    Bound bd;
+    //    void attach_cuts(CutPool another_cp);
+    //    void attach_bound(Bound &another);
+    //    CutPool get_cuts();
 };
 
 
 class Tree {
 public:
 //    std::stack<Node> queue;
-
-    virtual int run(QP &qp);
+    std::map<long, Bound> bound_queue;
+    std::map<long, CutPool> cut_queue;
+    std::map<long, double> ub_queue;
+    virtual int run(QP &qp) = 0;
 };
 
 

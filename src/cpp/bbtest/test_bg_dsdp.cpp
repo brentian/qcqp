@@ -38,39 +38,18 @@ int main(int argc, char *argv[]) {
     QP qp = QP(n, m, d, Q, q, A, a, b);
     Tree_DSDP tree;
     tree.run(qp);
-    Bound root_b(n);
-//    qp.show();
 
-
-    using namespace std;
-    std::cout << INTERVAL_STR;
-    std::cout << "first solve\n";
-    std::cout << INTERVAL_STR;
-    Node_DSDP root(0, qp);
-    root.create_problem();
-    root.optimize();
-    root.extract_solution();
-    auto r = root.get_solution();
-//    check_solution(r, qp);
-//    r.show();
-    Branch br(r);
-    br.imply_bounds(root_b);
-    // only consider right child here
-    auto ct = RLT_DSDP::create_from_branch(br, 1);
-    QP_DSDP p1(qp);
-    p1.cp.push_back(ct);
-    auto r1 = Result_DSDP(qp.n, qp.m, qp.d);
-
-    p1.create_problem();
-    auto init = std::string(argv[2]);
-    if (init.compare("F")) {
-        r1.construct_init_point(r, 0.99, p1.cp.size());
-        p1.assign_initial_point(r1, true);
-    }
-    p1.optimize();
-    p1.extract_solution();
-    check_solution(p1.r, qp, p1.cp);
-    p1.r.show();
+//
+//    p1.create_problem();
+//    auto init = std::string(argv[2]);
+//    if (init.compare("F")) {
+//        r1.construct_init_point(r, 0.99, p1.cp.size());
+//        p1.assign_initial_point(r1, true);
+//    }
+//    p1.optimize();
+//    p1.extract_solution();
+//    check_solution(p1.r, qp, p1.cp);
+//    p1.r.show();
 
     delete[] Q;
     delete[] q;

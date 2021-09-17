@@ -18,7 +18,7 @@ public:
 
     explicit Bound(int n);
 
-    Bound(Bound &another);
+//    Bound(Bound &another);
 };
 
 class Branch {
