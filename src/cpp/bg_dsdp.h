@@ -12,7 +12,6 @@
 #include "tree.h"
 
 
-
 class Result_DSDP : public Result {
 public:
     double r0;
@@ -63,19 +62,13 @@ public:
     // value for quadratic constraints
     double *_ah_data;
 
-    // objectives
-    // this primal value is simply extract the vector from homonegenized problem
-    //  I do not implement any primal heuristic here.
-    double primal = 1e6;
-    double bound = -1e6;
-
     explicit QP_DSDP(QP &qp);
 
     ~QP_DSDP();
 
     void setup();
 
-    void create_problem(bool solve = false, bool verbose = true, bool use_lp_cone = false);
+    void create_problem(bool solve = false, bool verbose = false, bool use_lp_cone = false);
 
     void assign_initial_point(Result_DSDP &r_another, bool dual_only) const;
 

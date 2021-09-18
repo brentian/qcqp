@@ -63,15 +63,19 @@ public:
 };
 
 
-class Tree {
+template<typename NodeType, typename ResultType> class Tree {
 public:
-//    std::stack<Node> queue;
-    std::map<long, Bound> bound_queue;
-    std::map<long, CutPool> cut_queue;
-    std::map<long, double> ub_queue;
+    std::map<long, NodeType> queue;
+    std::stack<ResultType> best_r;
+    std::map<long, Bound> bound_queue; // variable box bound
+    std::map<long, CutPool> cut_queue; // cut for each node
+    std::map<long, double> ub_queue;  // upper bound of the node (by parent value)
+    std::map<long, ResultType> result_queue; // result (only a few)
+    std::map<long, int> child_num_queue; // number of unsolved child nodes.
+    std::map<long, long> parent_cut_shape; // number of cuts for parent.
+
     long best_node_id = 0;
     long total_nodes = 0;
-//    virtual int run(QP &qp) = 0;
 };
 
 

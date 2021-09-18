@@ -230,8 +230,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   while not queue.empty():
     priority, item = queue.get()
     r = item.result
-    if(item.depth >=4):
-      continue
+    
     parent_sdp_val = item.parent_bound
     
     if parent_sdp_val < lb:

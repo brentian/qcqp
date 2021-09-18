@@ -26,6 +26,15 @@ public:
     eigen_const_matmap Ym;
     // residual: X - xx^T
     eigen_matrix Res;
+    // info
+    // objectives
+    // this primal value is simply extract the vector from homonegenized problem
+    //  I do not implement any primal heuristic here.
+    double primal = 1e6;
+    double bound = -1e6;
+    double primal_feas, dual_feas = 0;
+    int iterations = 0;
+
 
     Result(int n, int m, int d);
 
@@ -35,7 +44,7 @@ public:
 
     void save_to_Y(double *Y_);
 
-    void show();
+    int show(bool x_only = false);
 };
 
 

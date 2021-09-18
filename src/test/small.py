@@ -38,8 +38,8 @@ np.set_printoptions(
 
 import pyqp.bg_msk_msc
 
-from pyqp import bg_grb, bb, bg_msk, bg_msk_msc, bg_msk_chordal
-from pyqp import bb_msc, bb_msc2
+from pyqp import bg_grb, bg_msk, bg_msk_msc, bg_msk_chordal
+from pyqp import bb_msc, bb, bb_diag, bb_socp
 from pyqp.classes import QP, Bounds
 import argparse
 import json

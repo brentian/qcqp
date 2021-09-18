@@ -1,12 +1,8 @@
 import argparse
 
 import numpy as np
-import pandas as pd
-import sys
-from pyqp import bg_grb, bg_msk, bg_msk_chordal, bb_chord
-from pyqp import bb, bb_msc, \
-  bb_msc2, bb_diag, bb_socp
-from pyqp.classes import QPI, QP, Bounds
+
+from pyqp.classes import QPI, QP
 
 np.random.seed(1)
 parser = argparse.ArgumentParser("QCQP runner")

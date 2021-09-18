@@ -150,7 +150,10 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
 #if DSDP_SDP_DBG
     DSDPSetStandardMonitor(p, 1);
 #else
-    DSDPSetStandardMonitor(p, -1);
+    if (verbose) {
+        DSDPSetStandardMonitor(p, 1);
+    } else
+        DSDPSetStandardMonitor(p, -1);
 #endif
 
     info = DSDPSetup(p);
@@ -219,9 +222,11 @@ void QP_DSDP::extract_solution() {
     r.Res = (r.Xm.block(0, 0, n, n) - xm.matrix() * xm.matrix().adjoint()).cwiseAbs();
     // compute primal dual values
     // objectives
-    DSDPGetDObjective(p, &bound);
-    bound = -bound; // fix sense
-    primal = qp.inhomogeneous_obj_val(r.x);
+    DSDPGetDObjective(p, &r.bound);
+    r.bound = -r.bound; // fix sense
+    r.primal = qp.inhomogeneous_obj_val(r.x);
+    // solution dtls
+    DSDPGetIts(p, &r.iterations);
 
 #if DSDP_SDP_DBG
     std::cout << dsdp_status(pdfeasible) << std::endl;
@@ -270,7 +275,7 @@ QP_DSDP::~QP_DSDP() {
         try {
             DSDPDestroy(p);
         }
-        catch (const char* msg){
+        catch (const char *msg) {
             std::cout << msg << std::endl;
         }
         delete[] _tilde_q_data;
@@ -288,7 +293,6 @@ void QP_DSDP::assign_initial_point(Result_DSDP &r_another, bool dual_only) const
         DSDPSetY0(p, i + 1, r_another.y[i]);
     }
     eigen_arraymap ym(r_another.y, r_another.ydim);
-    std::cout << ym << std::endl;
 //    DSDPSetPenaltyParameter(p, 1e4);
 
     // check psd?

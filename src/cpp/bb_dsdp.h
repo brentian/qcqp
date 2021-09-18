@@ -51,12 +51,21 @@ public:
 
 };
 
-class Tree_DSDP : public Tree {
+class Params {
+public:
+    //        bool verbose=false;
+    bool warmstart = true;
+    double tolgap = 1e-4;
+    double tolfeas = 1e-4;
+    double lb = -1e6;
+    double ub = -1e6;
+};
+
+class Tree_DSDP : public Tree<Node_DSDP, Result_DSDP> {
 public:
     time_t timer;
-    std::map<long, Node_DSDP> queue;
-    std::stack<Result_DSDP> best_r;
-    int run(QP &qp);
+
+    int run(QP &qp, Params &param);
 
     template<typename KeyType, typename ValueType>
     std::pair<KeyType, ValueType> fetch_next();
@@ -69,5 +78,6 @@ std::pair<KeyType, ValueType> get_max(const std::map<KeyType, ValueType> &x) {
         return p1.second < p2.second;
     });
 }
+
 
 #endif //QCQP_BB_DSDP_H

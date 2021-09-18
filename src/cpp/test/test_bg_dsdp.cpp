@@ -44,13 +44,13 @@ int main(int argc, char *argv[]) {
     std::cout << "first solve\n";
     std::cout << INTERVAL_STR;
     QP_DSDP p(qp);
-    p.create_problem();
+    p.create_problem(false, true);
     p.optimize();
     p.extract_solution();
     auto r = p.get_solution();
 //    check_solution(r, qp);
     r.show();
-    Branch br(r);
+    Branch br;
     br.create_from_result(r);
     br.imply_bounds(root_b);
     // only consider right child here
@@ -59,9 +59,10 @@ int main(int argc, char *argv[]) {
     p1.cp.push_back(ct);
     auto r1 = Result_DSDP(qp.n, qp.m, qp.d);
 
-    p1.create_problem();
+    p1.create_problem(false, true);
     auto init = std::string(argv[2]);
-    if (init.compare("F")) {
+    bool use_ws = !init.compare("T");
+    if (use_ws) {
         r1.construct_init_point(r, 0.99, p1.cp.size());
         p1.assign_initial_point(r1, true);
     }

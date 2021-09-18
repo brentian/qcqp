@@ -18,6 +18,7 @@ int main(int argc, char *argv[]) {
     if (argc < 3) {
         return -1;
     }
+    auto bool_ws = !std::string(argv[2]).compare("T");
     json test = parse_json(argv[1]);
     std::string fp = std::string(argv[1]);
     std::cout << fp << std::endl;
@@ -37,9 +38,15 @@ int main(int argc, char *argv[]) {
     get_arr(test, "b", b);
     QP qp = QP(n, m, d, Q, q, A, a, b);
     Tree_DSDP tree;
-    tree.run(qp);
+    Params params;
+    if (!bool_ws) {
+        params.warmstart = false;
+    }
+    tree.run(qp, params);
+
+
     auto r = tree.best_r.top();
-    r.show();
+    r.show(true);
 //
 //    p1.create_problem();
 //    auto init = std::string(argv[2]);
