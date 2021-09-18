@@ -81,6 +81,7 @@ if __name__ == '__main__':
   evals = []
   params = bb_msc.BCParams()
   params.time_limit = 50
+  params.backend_name = 'msk',
   kwargs = dict(
     relax=True,
     sense="max",

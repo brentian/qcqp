@@ -5,7 +5,7 @@
 #ifndef QCQP_BRANCH_H
 #define QCQP_BRANCH_H
 
-#define QCQP_BRANCH_DBG 1
+
 
 #include "result.h"
 
@@ -18,7 +18,7 @@ public:
 
     explicit Bound(int n);
 
-    Bound(Bound &another);
+//    Bound(Bound &another);
 };
 
 class Branch {

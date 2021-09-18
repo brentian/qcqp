@@ -3,11 +3,11 @@
 //
 
 #include "branch.h"
-
-Bound::Bound(Bound &another) {
-    xlb = std::vector<double>(another.xlb);
-    xub = std::vector<double>(another.xub);
-}
+//
+//Bound::Bound(Bound &another) {
+//    xlb = std::vector<double>(another.xlb);
+//    xub = std::vector<double>(another.xub);
+//}
 
 Bound::Bound(int n) {
     xlb = std::vector<double>(n, 0.0);
@@ -32,9 +32,8 @@ void Branch::create_from_result(const Result &r) {
     xpivot_val = r.x[i];
     xminor_val = r.x[j];
 #if QCQP_BRANCH_DBG
-    cout << r.Res.format(EIGEN_IO_FORMAT) << endl;
-    cout << "residuals" << endl;
-    cout << row_sum.adjoint() << endl;
+    fprintf(stdout, "pivoting on i, j: (%d, %d)@ (%.2f, %.2f) ~ %.2f\n",
+            i, j, xpivot_val, xminor_val, r.Res(i, j));
 #endif
 }
 

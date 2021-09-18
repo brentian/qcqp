@@ -15,6 +15,6 @@ json parse_json(char *fp);
 
 json parse_json(const std::string &fp);
 
-void *get_arr(json &js, std::string key, double *data);
+void get_arr(json &js, std::string key, double *data);
 
 #endif //QCQP_IO_H

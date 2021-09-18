@@ -27,12 +27,16 @@ void Result::save_to_Y(double *Y_) {
 }
 
 
-void Result::show() {
+int Result::show(bool x_only) {
     using namespace std;
-    cout << "X (homo): " << endl;
-    cout << Xm.format(EIGEN_IO_FORMAT) << endl;
+
     cout << "x: " << endl;
     cout << eigen_const_arraymap(x, n).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
+    if (x_only) {
+        return 1;
+    }
+    cout << "X (homo): " << endl;
+    cout << Xm.format(EIGEN_IO_FORMAT) << endl;
 
     try {
         cout << "d: (slack for diag) " << endl;
@@ -47,5 +51,6 @@ void Result::show() {
     cout << eigen_const_arraymap(y, ydim).matrix().adjoint().format(EIGEN_IO_FORMAT) << endl;
     cout << "Y (homo): " << endl;
     cout << Ym.format(EIGEN_IO_FORMAT) << endl;
+    return 1;
 }
 

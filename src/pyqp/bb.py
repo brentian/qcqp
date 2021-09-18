@@ -70,8 +70,8 @@ class RLTCuttingPlane(CuttingPlane):
                         exprm(u_i, xj)), bg_msk.dom.greaterThan(-u_i * u_j)
     yield expr1, dom1
     yield expr2, dom2
-    yield expr3, dom3
-    yield expr4, dom4
+    # yield expr3, dom3
+    # yield expr4, dom4
 
 
 def add_rlt_cuts(branch, bounds):
@@ -202,8 +202,6 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   if backend_func is None:
     if backend_name == 'msk':
       backend_func = bg_msk.shor
-    elif backend_name == 'cvx':
-      backend_func = bg_cvx.shor_relaxation
     else:
       raise ValueError("not implemented")
   # root

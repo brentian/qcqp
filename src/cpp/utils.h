@@ -47,4 +47,10 @@ namespace QCQPStrUtil {
 #define INTERVAL_STR "#############################\n"
 #define EIGEN_IO_FORMAT QCQPStrUtil::_IO_FORMAT
 #endif //QCQP_STRING_UTILS
+
+//DEBUGGGING
+
+#define QCQP_CUT_DBG 0
+#define QCQP_BRANCH_DBG 1
+#define DSDP_SDP_DBG 0
 #endif //QCQP_UTILS_H

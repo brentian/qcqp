@@ -13,6 +13,8 @@
 #include "bg_dsdp.h"
 #include "bg_dsdp_cut.h"
 #include "bg_sdpa.h"
+// bb
+#include "bb_dsdp.h"
 
 
 void check_solution(Result &r, QP &qp);

@@ -60,7 +60,9 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
             _one_val, //const double val[],
             1 // int64 nnz
     );
-    if (verbose) SDPConeViewDataMatrix(sdpcone, 0, 1);
+#if DSDP_SDP_DBG
+    SDPConeViewDataMatrix(sdpcone, 0, 1);
+#endif
     DSDPSetDualObjective(p, 1, 1.0);
     // Y <= xx^T,
     // \tilde Y ∙ E_i + \diag(d) ∙ \diag(e_i)
@@ -145,15 +147,24 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
     //    info = DSDPSetPNormTolerance(dsdp, 1.0);
     //    info = DSDPSetPenaltyParameter(p, nvar);
     DSDPSetPenaltyParameter(p, 1e4);
+#if DSDP_SDP_DBG
     DSDPSetStandardMonitor(p, 1);
+#else
+    if (verbose) {
+        DSDPSetStandardMonitor(p, 1);
+    } else
+        DSDPSetStandardMonitor(p, -1);
+#endif
+
     info = DSDPSetup(p);
 }
 
 
 void QP_DSDP::extract_solution() {
     int info;
-    if (!solved) throw std::exception();
+    if (!bool_solved) throw std::exception();
     __unused int xsize;
+
 
     // tempo buffers
     // dynamic arrays for solution
@@ -209,6 +220,13 @@ void QP_DSDP::extract_solution() {
     eigen_const_arraymap xm(r.x, n);
 
     r.Res = (r.Xm.block(0, 0, n, n) - xm.matrix() * xm.matrix().adjoint()).cwiseAbs();
+    // compute primal dual values
+    // objectives
+    DSDPGetDObjective(p, &r.bound);
+    r.bound = -r.bound; // fix sense
+    r.primal = qp.inhomogeneous_obj_val(r.x);
+    // solution dtls
+    DSDPGetIts(p, &r.iterations);
 
 #if DSDP_SDP_DBG
     std::cout << dsdp_status(pdfeasible) << std::endl;
@@ -218,7 +236,7 @@ void QP_DSDP::extract_solution() {
     delete[] surplus;
 }
 
-QP_DSDP::QP_DSDP(QP &qp) : qp(qp), r(qp.n, qp.m, qp.d), n(qp.n), m(qp.m) {
+QP_DSDP::QP_DSDP(QP &qp) : Backend(qp), qp(qp), r(qp.n, qp.m, qp.d), n(qp.n), m(qp.m) {
     // number of variables (for original)
     // problem size
     ndim = n + 1; // homogeneous
@@ -243,18 +261,27 @@ void QP_DSDP::setup() {
     _ei_idx = new int[2 * n]{0};
     _ah_data = new double[n_lower_tr * m_with_cuts]{0.0};
 
+    bool_setup = true;
+
 }
 
 void QP_DSDP::optimize() {
     int info = DSDPSolve(p);
-    solved = true;
+    bool_solved = true;
 }
 
 QP_DSDP::~QP_DSDP() {
-    DSDPDestroy(p); // frees
-    delete[] _tilde_q_data;
-    delete[] _ei_idx;
-    delete[] _ah_data;
+    if (bool_setup) {
+        try {
+            DSDPDestroy(p);
+        }
+        catch (const char *msg) {
+            std::cout << msg << std::endl;
+        }
+        delete[] _tilde_q_data;
+        delete[] _ei_idx;
+        delete[] _ah_data;
+    }// frees
 }
 
 void QP_DSDP::assign_initial_point(Result_DSDP &r_another, bool dual_only) const {
@@ -266,7 +293,6 @@ void QP_DSDP::assign_initial_point(Result_DSDP &r_another, bool dual_only) const
         DSDPSetY0(p, i + 1, r_another.y[i]);
     }
     eigen_arraymap ym(r_another.y, r_another.ydim);
-    std::cout << ym << std::endl;
 //    DSDPSetPenaltyParameter(p, 1e4);
 
     // check psd?
@@ -310,3 +336,4 @@ Result_DSDP::Result_DSDP(int n, int m, int d) :
         Result(n, m, d) {
     r0 = 0;
 }
+

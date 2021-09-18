@@ -9,9 +9,8 @@
 #include "utils.h"
 #include "dsdp5.h"
 #include "cut.h"
+#include "tree.h"
 
-
-#define DSDP_SDP_DBG 1
 
 class Result_DSDP : public Result {
 public:
@@ -22,10 +21,9 @@ public:
     void construct_init_point(Result_DSDP &r, double lambda = 0.99, int pool_size = 0);
 };
 
-class QP_DSDP {
-private:
-    QP &qp;
+class QP_DSDP : public Backend {
 public:
+    QP &qp;
     Result_DSDP r;
     CutPool cp;
     // backend
@@ -34,7 +32,8 @@ public:
     BCone bcone;
 
     //
-    bool solved = false;
+    bool bool_solved = false;
+    bool bool_setup = false;
     const int n;
     const int m;
     // number of variables (for original)
@@ -69,7 +68,7 @@ public:
 
     void setup();
 
-    void create_problem(bool solve = false, bool verbose = true, bool use_lp_cone = false);
+    void create_problem(bool solve = false, bool verbose = false, bool use_lp_cone = false);
 
     void assign_initial_point(Result_DSDP &r_another, bool dual_only) const;
 
@@ -78,6 +77,9 @@ public:
     Result_DSDP get_solution() const;
 
     void optimize();
+
+
 };
+
 
 #endif //QCQP_BG_DSDP_H

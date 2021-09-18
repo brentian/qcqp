@@ -22,7 +22,7 @@ RLT::RLT(int n, int i, int j, double li, double ui, double lj, double uj) :
         vals = new double[2]{1, -0.5 * ui - 0.5 * lj};
     }
     b = -lj * ui;
-#if QCQP_CUT_DBG
+
     // @note, only in dbg mode,
     // compute matrix B then use check_solution to see if
     // it is correct.
@@ -38,6 +38,9 @@ RLT::RLT(int n, int i, int j, double li, double ui, double lj, double uj) :
     B += xem;
     delete[] xx;
     delete[] xm;
+#if QCQP_CUT_DBG
+    std::cout << B <<std::endl;
+    std::cout << b <<std::endl;
 #endif
 
 }

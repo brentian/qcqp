@@ -12,11 +12,13 @@
 #include "qcqp.h"
 #include "io.h"
 
+
 int main(int argc, char *argv[]) {
 
     if (argc < 3) {
         return -1;
     }
+    auto bool_ws = !std::string(argv[2]).compare("T");
     json test = parse_json(argv[1]);
     std::string fp = std::string(argv[1]);
     std::cout << fp << std::endl;
@@ -35,40 +37,25 @@ int main(int argc, char *argv[]) {
     get_arr(test, "a", a);
     get_arr(test, "b", b);
     QP qp = QP(n, m, d, Q, q, A, a, b);
-    Bound root_b(n);
-//    qp.show();
-
-
-    using namespace std;
-    std::cout << INTERVAL_STR;
-    std::cout << "first solve\n";
-    std::cout << INTERVAL_STR;
-    QP_DSDP p(qp);
-    p.create_problem(false, true);
-    p.optimize();
-    p.extract_solution();
-    auto r = p.get_solution();
-//    check_solution(r, qp);
-    r.show();
-    Branch br;
-    br.create_from_result(r);
-    br.imply_bounds(root_b);
-    // only consider right child here
-    auto ct = RLT_DSDP::create_from_branch(br, 1);
-    QP_DSDP p1(qp);
-    p1.cp.push_back(ct);
-    auto r1 = Result_DSDP(qp.n, qp.m, qp.d);
-
-    p1.create_problem(false, true);
-    auto init = std::string(argv[2]);
-    bool use_ws = !init.compare("T");
-    if (use_ws) {
-        r1.construct_init_point(r, 0.99, p1.cp.size());
-        p1.assign_initial_point(r1, true);
+    Tree_DSDP tree;
+    Params params;
+    if (!bool_ws) {
+        params.warmstart = false;
     }
-    p1.optimize();
-    p1.extract_solution();
-    p1.r.show();
+    tree.run(qp, params);
+
+
+    auto r = tree.best_r.top();
+    r.show(true);
+//
+//    p1.create_problem();
+//    auto init = std::string(argv[2]);
+//    if (init.compare("F")) {
+//        r1.construct_init_point(r, 0.99, p1.cp.size());
+//        p1.assign_initial_point(r1, true);
+//    }
+//    p1.optimize();
+//    p1.extract_solution();
 //    check_solution(p1.r, qp, p1.cp);
 //    p1.r.show();
 
