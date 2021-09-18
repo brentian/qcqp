@@ -39,6 +39,8 @@ RLT::RLT(int n, int i, int j, double li, double ui, double lj, double uj) :
     delete[] xx;
     delete[] xm;
 #if QCQP_CUT_DBG
+    std::cout << B <<std::endl;
+    std::cout << b <<std::endl;
 #endif
 
 }

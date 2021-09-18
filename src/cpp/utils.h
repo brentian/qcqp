@@ -51,6 +51,6 @@ namespace QCQPStrUtil {
 //DEBUGGGING
 
 #define QCQP_CUT_DBG 0
-#define QCQP_BRANCH_DBG 1
+#define QCQP_BRANCH_DBG 0
 #define DSDP_SDP_DBG 0
 #endif //QCQP_UTILS_H

@@ -23,9 +23,8 @@ public:
 };
 
 class QP_DSDP : public Backend {
-private:
-    QP &qp;
 public:
+    QP &qp;
     Result_DSDP r;
     CutPool cp;
     // backend

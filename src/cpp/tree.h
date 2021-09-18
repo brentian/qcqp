@@ -69,7 +69,9 @@ public:
     std::map<long, Bound> bound_queue;
     std::map<long, CutPool> cut_queue;
     std::map<long, double> ub_queue;
-    virtual int run(QP &qp) = 0;
+    long best_node_id = 0;
+    long total_nodes = 0;
+//    virtual int run(QP &qp) = 0;
 };
 
 

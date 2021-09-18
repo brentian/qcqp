@@ -69,7 +69,7 @@ np.random.seed(1)
 parser = argparse.ArgumentParser("QCQP runner")
 parser.add_argument("--fpath", type=str, help="path of the instance")
 parser.add_argument("--dump_instance", type=int, help="if save instance", default=1)
-parser.add_argument("--r", type=str, help=method_codes.__str__(), default="1,2,-1")
+parser.add_argument("--r", type=str, help=method_codes.__str__(), default="1,2,7")
 
 if __name__ == '__main__':
   
@@ -78,7 +78,7 @@ if __name__ == '__main__':
   fpath = args.fpath
   r = map(int, args.r.split(","))
   r_methods = {method_codes[k] for k in r}
-  verbose = True
+  verbose = False
   bool_use_shor = False
   evals = []
   params = bb_msc.BCParams()

@@ -70,8 +70,8 @@ class RLTCuttingPlane(CuttingPlane):
                         exprm(u_i, xj)), bg_msk.dom.greaterThan(-u_i * u_j)
     yield expr1, dom1
     yield expr2, dom2
-    yield expr3, dom3
-    yield expr4, dom4
+    # yield expr3, dom3
+    # yield expr4, dom4
 
 
 def add_rlt_cuts(branch, bounds):
@@ -230,7 +230,8 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   while not queue.empty():
     priority, item = queue.get()
     r = item.result
-    
+    if(item.depth >=4):
+      continue
     parent_sdp_val = item.parent_bound
     
     if parent_sdp_val < lb:

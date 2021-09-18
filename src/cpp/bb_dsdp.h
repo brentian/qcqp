@@ -17,7 +17,6 @@
 //template Node<QP_DSDP> Node_DSDP;
 class Node_DSDP : public Node {
 public:
-
     QP_DSDP p;
     bool bool_solved = false;
     bool bool_setup = false;
@@ -27,6 +26,7 @@ public:
               double parent_bound = 1e6,
               double bound = 0.0, double primal_val = 0.0
     );
+
 
     void create_problem(CutPool &cp) {
         time(&opt_start_time);
@@ -55,10 +55,8 @@ class Tree_DSDP : public Tree {
 public:
     time_t timer;
     std::map<long, Node_DSDP> queue;
-
-
+    std::stack<Result_DSDP> best_r;
     int run(QP &qp);
-
 
     template<typename KeyType, typename ValueType>
     std::pair<KeyType, ValueType> fetch_next();

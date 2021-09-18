@@ -38,7 +38,8 @@ int main(int argc, char *argv[]) {
     QP qp = QP(n, m, d, Q, q, A, a, b);
     Tree_DSDP tree;
     tree.run(qp);
-
+    auto r = tree.best_r.top();
+    r.show();
 //
 //    p1.create_problem();
 //    auto init = std::string(argv[2]);

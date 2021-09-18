@@ -267,7 +267,12 @@ void QP_DSDP::optimize() {
 
 QP_DSDP::~QP_DSDP() {
     if (bool_setup) {
-        DSDPDestroy(p);
+        try {
+            DSDPDestroy(p);
+        }
+        catch (const char* msg){
+            std::cout << msg << std::endl;
+        }
         delete[] _tilde_q_data;
         delete[] _ei_idx;
         delete[] _ah_data;
