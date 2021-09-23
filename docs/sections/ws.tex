@@ -202,11 +202,14 @@ Suppose we add new cuts to the problem, in the dual problem, we have a set of ex
     \end{aligned}
 \end{equation}
 
-A safe warm-start point, where \(\epsilon\) is a small number.
-\begin{itemize}
-    \item \(\mu := 0, \tilde{y} := \tilde y_0\),
-    \item \(r := \epsilon \)
-\end{itemize}
+The initial point requires the tuple \((z_0, \textcolor{red}{\tilde y_0}, Y_0, \textcolor{red}{\mu_0}, \textcolor{red}{r_0})\) satisfy the following condition,
+\begin{align}
+    z_0     & = - \tilde Q \bullet \tilde X_0                          \\
+    Y_0     & = - \tilde Q   - \mathcal A^T\tilde y_0    + I_{n+1} r_0 \\
+    \mu_0   & = 0                                                      \\
+    \nu_0 I & = Y_0  \tilde X_0                                        \\
+    \nu_0   & = (z_0 - b^Ty_0 + \Gamma r_0) / n \rho_n
+\end{align}
 
 The initial point requires \(\Gamma\) be reasonably big.
 
