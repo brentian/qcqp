@@ -257,7 +257,7 @@ def bb_box(
   print(json.dumps(params.__dict__(), indent=2))
   backend_func = kwargs.get('func')
   branch_name = kwargs.get('branch_name', MscBranch.vio)
-  backend_name = params.backend_name
+  backend_name = params.sdp_solver_backend
   logging_interval = params.logging_interval
   # choose backend
   if backend_func is None:

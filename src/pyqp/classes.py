@@ -69,8 +69,8 @@ class BCParams(Params):
   time_limit = 200
   logging_interval = 10
   relax = True # todo fix this
-  sdp_solver = 'MOSEK'
-  backend_name = 'msk'
+  sdp_solver_backend = 'msk'
+  sdp_rank_redunction_solver = 1
   fpath = ''
   
   def produce_args(self, parser: QCQPParser, method_universe):
@@ -81,7 +81,8 @@ class BCParams(Params):
     selected_methods = {method_universe[k] for k in r}
     verbose = args.verbose
     self.time_limit = args.time_limit
-    self.backend_name = args.bg
+    self.sdp_solver_backend = args.bg
+    self.sdp_rank_redunction_solver = args.bg_rd
     self.fpath = args.fpath
     kwargs = dict(
       relax=True,

@@ -188,12 +188,13 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
 def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   print(json.dumps(params.__dict__(), indent=2))
   backend_func = kwargs.get('func')
-  backend_name = params.backend_name
+  backend_name = params.sdp_solver_backend
   if backend_func is None:
     if backend_name == 'msk':
       backend_func = bg_msk.shor
     else:
       raise ValueError("not implemented")
+  print(f"primal func using {params.sdp_rank_redunction_solver}")
   # root
   root_bound = bounds
   
@@ -201,7 +202,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   k = 0
   start_time = time.time()
   print("solving root node")
-  root_r = backend_func(qp, root_bound, solver=params.sdp_solver, verbose=True, solve=True)
+  root_r = backend_func(qp, root_bound, solver=params.sdp_solver_backend, verbose=True, solve=True)
   best_r = root_r
   
   # global cuts
@@ -229,7 +230,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       continue
     
     if not r.solved:
-      r.solve()
+      r.solve(primal=params.sdp_rank_redunction_solver)
       r.solve_time = time.time() - start_time
     
     if r.relax_obj < lb:
@@ -268,7 +269,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     br = Branch()
     br.simple_vio_branch(x, y, res)
     left_item, right_item = generate_child_items(
-      total_nodes, item, br, sdp_solver=params.sdp_solver, verbose=verbose, backend_name=backend_name,
+      total_nodes, item, br, sdp_solver=params.sdp_solver_backend, verbose=verbose, backend_name=backend_name,
       backend_func=backend_func)
     total_nodes += 2
     # next_priority = - r.relax_obj.round(3)

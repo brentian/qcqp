@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 import time
-from .primal_rd import so_rank1_normal
+from .primal_rd import PRIMAL_METHOD_ID
 
 try:
   import mosek.fusion as mf
@@ -37,7 +37,7 @@ class MSKResult(Result):
     self.yb = 0
     self.solved = False
   
-  def solve(self, primal=1):
+  def solve(self, primal=0):
     self.problem.solve()
     self.xval = self.xvar.level().reshape(self.xvar.getShape())
     self.yval = self.yvar.level().reshape(self.yvar.getShape())
@@ -46,9 +46,15 @@ class MSKResult(Result):
     self.solve_time = self.problem.getSolverDoubleInfo("optimizerTime")
     self.total_time = time.time() - self.start_time
     # derive primal solution
-    so_rank1_normal(self)
+    if primal != 0:
+      func = PRIMAL_METHOD_ID[primal]
+      # produce primal xb yb
+      func(self)
+    else:
+      self.xb = self.xval
+      self.yb = self.yval
     self.true_obj = qp_obj_func(self.qp.Q, self.qp.q, self.xb)
-    
+
 
 def shor(
     qp: QP,
@@ -182,7 +188,7 @@ def dshor(
   model.constraint(
     expr.add(
       expr.add(
-        expr.sub(- Q,  Y),
+        expr.sub(- Q, Y),
         expr.mulElm(np.eye(n), V)
       ),
       sumA

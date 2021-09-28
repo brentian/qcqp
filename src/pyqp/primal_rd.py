@@ -19,10 +19,14 @@ def so_rank1_normal(r: Result):
   cov = np.eye(r.qp.n)
   yy = 0
   for idx in range(RANDOM_SAMPLE_SIZE):
-    xi = np.random.uniform(0, 3**0.5, r.qp.n) \
+    xi = np.random.normal(0, 1, r.qp.n) \
       .reshape((r.qp.n, r.qp.d))
     xd = v @ xi
     Yd = xd @ xd.T
+    if r.qp.check(xd):
+      pass
+    else:
+      continue
     obj = (Yd @ r.qp.Q).trace() + (xd.T @ r.qp.q).trace()
     if obj > obj_max:
       obj_max = obj
@@ -34,3 +38,8 @@ def so_rank1_normal(r: Result):
   r.yb = yb
   r.xb = xb
   return 1
+
+
+PRIMAL_METHOD_ID = {
+  1: so_rank1_normal
+}

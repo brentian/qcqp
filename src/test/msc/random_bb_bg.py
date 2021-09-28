@@ -37,7 +37,7 @@ if __name__ == '__main__':
     verbose = False
     evals = []
     params = BCParams()
-    params.backend_name = backend
+    params.sdp_solver_backend = backend
     for n in [20, 50, 80]:
         for m in [5, 10, 20]:
             for i in range(int(instances)):

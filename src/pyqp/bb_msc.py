@@ -242,7 +242,7 @@ def bb_box(
 ):
   print(json.dumps(params.__dict__(), indent=2))
   backend_func = kwargs.get('func')
-  backend_name = params.backend_name
+  backend_name = params.sdp_solver_backend
   if backend_func is None:
     if backend_name == 'msk':
       backend_func = pyqp.bg_msk_msc.msc

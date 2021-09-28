@@ -51,7 +51,7 @@ if __name__ == '__main__':
   
   # global args
   params = bb_msc.BCParams()
-  params.backend_name = 'msk'
+  params.sdp_solver_backend = 'msk'
   params.relax = relax
   params.time_limit = 30
   kwargs = dict(

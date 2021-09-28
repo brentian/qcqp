@@ -50,3 +50,4 @@ parser.add_argument("--pc", type=str, help="if randomly generated problem type",
 parser.add_argument("--time_limit", default=60, type=int, help="time limit of running.")
 parser.add_argument("--verbose", default=0, type=int, help="if verbose")
 parser.add_argument("--bg", default='msk', type=str, help="backend used")
+parser.add_argument("--bg_rd", default=0, type=int, help="backend used, rank reduction")

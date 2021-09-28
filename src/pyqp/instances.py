@@ -206,6 +206,17 @@ class QP(object):
     b = np.array(data['b'])
     sign = np.ones(m)
     return cls(Q, q, A, a, b, sign)
+  
+  def check(self, x):
+    if (0 <= x).all() and (x <= 1).all():
+      pass
+    else:
+      return False
+    for i in range(self.m):
+      _va = (x.T @ self.A[i] @ x).trace() + (x.T @ self.a[i]).trace()
+      if _va > self.b[i]:
+        return False
+    return True
 
 
 class QPInstanceUtils(object):
