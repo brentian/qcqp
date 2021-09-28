@@ -34,7 +34,7 @@ We mark \eqref{eq.con.diag} as diagonal constraint, and \eqref{eq.con.regular} a
 \end{equation}
 
 
-\begin{lemma}
+\begin{remark}
     (Unconstrained) Suppose \(m = 0\), our primal dual formulation reduces to,
     \begin{equation}
         \begin{aligned}
@@ -53,7 +53,7 @@ We mark \eqref{eq.con.diag} as diagonal constraint, and \eqref{eq.con.regular} a
                                              & \mu, v \ge 0
         \end{aligned}
     \end{equation}
-\end{lemma}
+\end{remark}
 
 
 % \subsection{Linear Cut}
@@ -90,10 +90,7 @@ We mark \eqref{eq.con.diag} as diagonal constraint, and \eqref{eq.con.regular} a
 %     \item Since \(x_i \le x_i^k\) is active, then \(x_i < 1, \mu_i = 0\)
 % \end{itemize}
 
-\subsection{SDP based warmstart}
-
-\paragraph{Standard form}
-We first reformulate into standard SDP, by adding a slack \(d\) to diagonal constraint \eqref{eq.con.diag}, and \(s\) to the other constraints.
+We now reformulate into standard conic program, by adding a slack \(d\) to diagonal constraint \eqref{eq.con.diag}, and \(s\) to the other constraints.
 
 
 For diagonal constraint,

@@ -54,7 +54,7 @@ class QP(object):
   # eigenvalue decomposition
   # and orthogonal basis
   ########################
-  def decompose(self, validate=False, decompose_method='eig-type1', **kwargs):
+  def decompose(self, validate=False, decompose_method='eig-type2', **kwargs):
     """
     decompose into positive and negative part
     Returns

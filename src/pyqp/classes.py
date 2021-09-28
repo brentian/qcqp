@@ -1,3 +1,5 @@
+from argparse import ArgumentParser
+
 try:
   import gurobipy as grb
 except:
@@ -45,6 +47,10 @@ class Result:
 keys = ['feas_eps', 'opt_eps', 'time_limit']
 
 
+class QCQPParser(ArgumentParser):
+  pass
+
+
 class Params(object):
   feas_eps = 1e-4
   opt_eps = 1e-4
@@ -52,6 +58,39 @@ class Params(object):
   
   def __dict__(self):
     return {k: self.__getattribute__(k) for k in keys}
+
+
+class BCParams(Params):
+  def __init__(self):
+    super().__init__()
+  
+  feas_eps = 1e-3
+  opt_eps = 5e-4
+  time_limit = 200
+  logging_interval = 10
+  relax = True # todo fix this
+  sdp_solver = 'MOSEK'
+  backend_name = 'msk'
+  fpath = ''
+  
+  def produce_args(self, parser: QCQPParser, method_universe):
+    parser.print_usage()
+    args = parser.parse_args()
+    
+    r = map(int, args.r.split(","))
+    selected_methods = {method_universe[k] for k in r}
+    verbose = args.verbose
+    self.time_limit = args.time_limit
+    self.backend_name = args.bg
+    self.fpath = args.fpath
+    kwargs = dict(
+      relax=True,
+      sense="max",
+      verbose=verbose,
+      params=self,
+      rlt=True
+    )
+    return kwargs, selected_methods
 
 
 def qp_obj_func(Q, q, xval: np.ndarray):

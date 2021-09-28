@@ -11,20 +11,10 @@ import numpy as np
 import time
 
 from . import bg_msk, bg_cvx
-from .classes import qp_obj_func, QP, Params, Result, Bounds, Branch, CuttingPlane
+from .classes import qp_obj_func, QP, BCParams, Result, Bounds, Branch, CuttingPlane
 
 
-class BCParams(Params):
-  def __init__(self):
-    super().__init__()
-  
-  feas_eps = 1e-3
-  opt_eps = 5e-4
-  time_limit = 200
-  logging_interval = 10
-  relax = True
-  sdp_solver = 'MOSEK'
-  backend_name = 'cvx'
+
 
 
 class RLTCuttingPlane(CuttingPlane):
@@ -240,7 +230,6 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     
     if not r.solved:
       r.solve()
-      r.true_obj = qp_obj_func(item.qp.Q, item.qp.q, r.xval)
       r.solve_time = time.time() - start_time
     
     if r.relax_obj < lb:
@@ -282,7 +271,8 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       total_nodes, item, br, sdp_solver=params.sdp_solver, verbose=verbose, backend_name=backend_name,
       backend_func=backend_func)
     total_nodes += 2
-    next_priority = - r.relax_obj.round(3)
+    # next_priority = - r.relax_obj.round(3)
+    next_priority = - r.true_obj
     queue.put((next_priority, right_item))
     queue.put((next_priority, left_item))
     #

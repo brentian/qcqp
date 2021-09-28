@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import time
+from .primal_rd import so_rank1_normal
 
 try:
   import mosek.fusion as mf
@@ -30,9 +31,13 @@ class MSKResult(Result):
     self.xvar = xvar
     self.yvar = yvar
     self.zvar = zvar
+    self.xval = 0
+    self.yval = 0
+    self.xb = 0
+    self.yb = 0
     self.solved = False
   
-  def solve(self):
+  def solve(self, primal=1):
     self.problem.solve()
     self.xval = self.xvar.level().reshape(self.xvar.getShape())
     self.yval = self.yvar.level().reshape(self.yvar.getShape())
@@ -40,7 +45,10 @@ class MSKResult(Result):
     self.solved = True
     self.solve_time = self.problem.getSolverDoubleInfo("optimizerTime")
     self.total_time = time.time() - self.start_time
-
+    # derive primal solution
+    so_rank1_normal(self)
+    self.true_obj = qp_obj_func(self.qp.Q, self.qp.q, self.xb)
+    
 
 def shor(
     qp: QP,
