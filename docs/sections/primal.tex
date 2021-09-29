@@ -8,9 +8,47 @@
     \setcounter{tocdepth}{3}
     \tableofcontents
 }
-\section{Primal}
+\section{Primal solution}
+
+\subsection{Rank Reduction}
+
+\subsection{Second order cone approach}
+For the original non-convex inhomogeneous QCQP, in the following form,
+
+\begin{align}
+    \mx & x^T Q x+q^T x                                    \\
+    \st & x^T Q_i x+q_i^T x \leqslant b_{i}, i= 1,\dots, m \\
+        & 0 \leqslant x \leqslant 1
+\end{align}
+
+Convexify Q constraints,
+\begin{equation}\label{eq:primal.Sigma}
+    \begin{aligned}
+         & x^T(Q_i+t_i I_n) x+q_i^T x \leqslant b_i+ t_i \cdot s^2,i= 1,\dots, m \\
+         & x^T x= s^2
+    \end{aligned}
+\end{equation}
+Let \(\Sigma = \{(x,s)\in \mathbb R^{n+1}\mid (x,s) \textrm{ satisfies \eqref{eq:primal.Sigma}} \}\). Note \(t_i, i=1,\dots, m\) is selected to make \(Q_i+t_i I_n\) p.s.d, which can be achieved easily. \(\Sigma\) is clearly nonconvex, nevertheless, our goal is to find an estimate of \(\|x\|\).
+
+We have,
 
 \begin{itemize}
-    \item  a
+    \item convex upper bound,
+          \begin{equation} \|x\| \le s \end{equation}
+    \item unit ball, \(\|u\| = 1\)
+          \begin{equation} \|x\| = \max_u u^T x \end{equation}
+    \item then the lower bound can be established by piecewise linear functions,
+          \begin{equation}
+              \|x\| = \max_j u^T_j x \ge s
+          \end{equation}
 \end{itemize}
+
+We sample \(\{u_j\}_1^N\)
+\begin{align}
+     & \max_j u^T_j y \ge s                 \\
+     & \|x \| \le s                         \\
+     & (x, s) \in \Sigma, (y, s) \in \Sigma
+\end{align}
+
+which is equivalent to \(N\) independent feasibility problem. We let \(\Sigma_j\) be the piece for \(u_j\)
 \end{document}

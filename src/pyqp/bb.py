@@ -230,7 +230,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       continue
     
     if not r.solved:
-      r.solve(primal=params.sdp_rank_redunction_solver)
+      r.solve(primal=params.sdp_rank_redunction_solver, feas_eps=params.feas_eps)
       r.solve_time = time.time() - start_time
     
     if r.relax_obj < lb:
@@ -244,11 +244,12 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       best_r = r
       lb = r.true_obj
     
-    gap = (ub - lb) / lb
+    gap = (ub - lb) / abs(lb)
     
     x = r.xval
     y = r.yval
-    res = np.abs(y - x @ x.T)
+    res = r.res
+    res_norm = r.res_norm
     
     print(
       f"time: {r.solve_time: .2f} #{item.node_id}, "
@@ -259,7 +260,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       print(f"terminate #{item.node_id} by gap or time_limit")
       break
     
-    if res.max() <= params.feas_eps:
+    if res_norm <= params.feas_eps:
       print(f"prune #{item.node_id} by feasible solution")
       feasible[item.node_id] = r
       continue

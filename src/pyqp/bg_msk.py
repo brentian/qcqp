@@ -35,9 +35,11 @@ class MSKResult(Result):
     self.yval = 0
     self.xb = 0
     self.yb = 0
+    self.res = 0
+    self.res_norm = 0
     self.solved = False
   
-  def solve(self, primal=0):
+  def solve(self, primal=0, feas_eps=1e-4):
     self.problem.solve()
     self.xval = self.xvar.level().reshape(self.xvar.getShape())
     self.yval = self.yvar.level().reshape(self.yvar.getShape())
@@ -45,8 +47,11 @@ class MSKResult(Result):
     self.solved = True
     self.solve_time = self.problem.getSolverDoubleInfo("optimizerTime")
     self.total_time = time.time() - self.start_time
+    self.res = np.abs(self.yval - self.xval @ self.xval.T)
+    self.res_norm = self.res.max()
     # derive primal solution
-    if primal != 0:
+    # if it is infeasible and primal method is assigned.
+    if self.res_norm > feas_eps and primal != 0:
       func = PRIMAL_METHOD_ID[primal]
       # produce primal xb yb
       func(self)
