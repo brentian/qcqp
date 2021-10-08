@@ -14,7 +14,7 @@ np.set_printoptions(
   precision=4
 )
 
-from pyqp import bg_grb, bg_msk, bg_msk_msc, bg_msk_chordal
+from pyqp import bg_grb, bg_msk, bg_msk_msc, bg_msk_chordal, bg_msk_homo
 from pyqp import bb_msc, bb, bb_diag, bb_socp
 from pyqp.classes import QP, QPI, Bounds, BCParams
 import argparse
@@ -28,6 +28,7 @@ METHODS = collections.OrderedDict([
   ("emsc", bg_msk_msc.msc_diag),
   ("ssdp", bg_msk_chordal.ssdp),
   ("bb", bb.bb_box),
+  ("shor_homo", bg_msk_homo.shor)
 ])
 
 METHOD_CODES = {

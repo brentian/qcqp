@@ -38,6 +38,7 @@ class QP(object):
       self.n, self.d = q.shape
       self.m, *_ = a.shape
     self.construct_chordal()
+    self.construct_homo()
   
   def __str__(self):
     # todo add a description
@@ -217,6 +218,16 @@ class QP(object):
       if _va > self.b[i]:
         return False
     return True
+  
+  def construct_homo(self):
+    self.Qh = np.bmat([[self.Q, self.q / 2], [self.q.T / 2, np.zeros((1, 1))]])
+    self.Ah = []
+    for i in range(self.m):
+      _Ah = np.bmat([
+        [self.A[i], self.a[i] / 2],
+        [self.a[i].T / 2, np.ones((1, 1)) * (-self.b[i])]
+      ])
+      self.Ah.append(_Ah)
 
 
 class QPInstanceUtils(object):

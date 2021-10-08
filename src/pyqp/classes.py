@@ -77,7 +77,7 @@ class BCParams(Params):
     parser.print_usage()
     args = parser.parse_args()
     
-    r = map(int, args.r.split(","))
+    r = sorted(map(int, args.r.split(",")))
     selected_methods = {method_universe[k] for k in r}
     verbose = args.verbose
     self.time_limit = args.time_limit

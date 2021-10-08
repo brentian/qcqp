@@ -11,6 +11,39 @@
 \section{Primal solution}
 
 \subsection{Rank Reduction}
+\subsubsection{Randomized}
+
+\begin{equation}
+    \hat{X}=(V^\star)^T\left[\sum_{j=1}^d \xi^j(\xi^j)^T\right] V^\star,
+    (\xi^j)_i \in N(0, 1), i = 1,\dots,n, j = 1, \dots, d
+\end{equation}
+
+This method guarantees the rank of \(d\), while meeting a few challenges,
+
+\begin{itemize}
+    \item Cannot guarantee feasibility after randomized for inhomogeneous quadratic constraints
+\end{itemize}
+
+\subsection{Homogenize}
+
+
+\begin{align*}
+     & x^TAx + a^Tx  - b \le 0      \\
+     & x^TAx + ta^Tx  - bt^2 \le 0  \\
+     & \begin{bmatrix} x \\ t \end{bmatrix}^T
+    \begin{bmatrix} A & a/2 \\ a^T/2 & -b \end{bmatrix}
+    \begin{bmatrix} x \\ t \end{bmatrix} \le 0 \\
+\end{align*}
+
+\begin{itemize}
+    \item if \(\tilde x=(x, t)\) is a solution, then it can be scaled to \((x/t, 1)\).
+    \item we solve by SDP relaxation \(\tilde X \succeq \tilde x\tilde x^T\), let \(\tilde X = VV^T\)
+          \begin{align*}
+               & A \bullet VV^T = \trace(V^TAV) \le 0 \\
+          \end{align*}
+    \item find \(\xi\) to make \(A \bullet V\xi_{j}\xi_{j}^TV^T = \trace{(V^TAV\xi_{j}\xi_{j}^T)} \le 0\)
+\end{itemize}
+
 
 \subsection{Second order cone approach}
 For the original non-convex inhomogeneous QCQP, in the following form,
