@@ -103,7 +103,7 @@ def msc(
   Z = [z]
   for idx in range(n):
     model.constraint(zcone.index([idx, 1, 1]), dom.equalsTo(1))
-
+  
   # Q.T x = Z
   model.constraint(
     expr.sub(
@@ -158,8 +158,9 @@ def msc(
       
       if rlt:
         if qp.decom_method == 'eig-type1':
-          rlt_expr = expr.sub(yi, expr.mulElm(zlb[i + 1] + zub[i + 1], zi))
-          model.constraint(rlt_expr, dom.lessThan(- zlb[i + 1] * zub[i + 1]))
+          rlt_expr_ex = expr.sub(expr.sum(expr.mulElm(yi, np.abs(1 / el))),
+                                 expr.dot(bounds.xlb + bounds.xub, x))
+          model.constraint(rlt_expr_ex, dom.lessThan(- (bounds.xlb * bounds.xub).sum()))
         elif qp.decom_method == 'eig-type2':
           # this means you can place on x directly.
           rlt_expr = expr.sub(expr.sum(yi), expr.dot(bounds.xlb + bounds.xub, x))
@@ -217,9 +218,7 @@ def msc(
 def msc_diag(
     qp: QP, bounds: MscBounds = None,
     sense="max", verbose=True, solve=True,
-    with_shor: Result = None,  # if not None then use Shor relaxation as upper bound
-    rlt=True,  # True add all rlt/secant cut: yi - (li + ui) zi + li * ui <= 0
-    lk=False,  # True then add lk constraint
+    norm=-1,
     *args,
     **kwargs
 ):
@@ -265,14 +264,12 @@ def msc_diag(
       x), dom.equalsTo(0))
   
   # RLT cuts
-  if rlt:
+  if norm <= 0:
     # this means you can place on x directly.
     rlt_expr = expr.sub(expr.sum(y), expr.dot(bounds.xlb + bounds.xub, x))
     model.constraint(rlt_expr, dom.lessThan(- (bounds.xlb * bounds.xub).sum()))
-  
-  if lk:
-    lk_expr = expr.sub(expr.sum(y), expr.sum(x))
-    model.constraint(lk_expr, dom.lessThan(0))
+  else:
+    model.constraint(expr.sum(y), dom.lessThan(norm))
   
   for i in range(m):
     apos, ipos = qp.Apos[i]
@@ -300,14 +297,12 @@ def msc_diag(
           expr.mul((apos + aneg), zi),
           x), dom.equalsTo(0))
       
-      if rlt:
+      if norm <= 0:
         # this means you can place on x directly.
         rlt_expr = expr.sub(expr.sum(yi), expr.dot(bounds.xlb + bounds.xub, x))
         model.constraint(rlt_expr, dom.lessThan(- (bounds.xlb * bounds.xub).sum()))
-      
-      if lk:
-        lk_expr = expr.sub(expr.sum(yi), expr.sum(y))
-        model.constraint(lk_expr, dom.equalsTo(0))
+      else:
+        model.constraint(expr.sum(yi), dom.lessThan(norm))
       
       quad_terms = expr.dot(el, yi)
       
@@ -325,14 +320,6 @@ def msc_diag(
   # objectives
   true_obj_expr = expr.add(expr.dot(q, x), expr.dot(qel, y))
   obj_expr = true_obj_expr
-  
-  # with shor results
-  if with_shor is not None:
-    # use shor as ub
-    shor_ub = with_shor.relax_obj.round(4)
-    model.constraint(
-      true_obj_expr, dom.lessThan(shor_ub)
-    )
   
   # obj_expr = true_obj_expr
   model.objective(mf.ObjectiveSense.Minimize
@@ -354,6 +341,7 @@ def msc_diag(
   r.solve(verbose=verbose, qp=qp)
   
   return r
+
 
 ##################################
 # USING SOCPs, should be improved
@@ -659,7 +647,7 @@ def eshor(
     sense="max",
     verbose=True,
     solve=True,
-    r_parent: MSKResult=None,
+    r_parent: MSKResult = None,
     **kwargs
 ):
   """
@@ -699,8 +687,7 @@ def eshor(
   
   V = qneg + qpos
   qel = qp.Qmul
-
-
+  
   Z = model.variable("Z", dom.inPSDCone(n + 1))
   Y = Z.slice([0, 0], [n, n])
   z = Z.slice([0, n], [n, n + 1])
@@ -719,7 +706,7 @@ def eshor(
       expr.mul(expr.mul(V, Y), V.T),
       M),
     dom.equalsTo(0))
-
+  
   # model.constraint(expr.sum(expr.sub(Y.diag(), x)), dom.lessThan(0))
   model.constraint(expr.sub(M.diag(), x), dom.lessThan(0))
   

@@ -120,7 +120,7 @@ class QP(object):
   
   def _decompose_matrix_eig(self, A):
     gamma, u = nl.eig(A)
-    ipos = (gamma > 0).astype(int)
+    ipos = (gamma >= 0).astype(int)
     ineg = (gamma < 0).astype(int)
     eig = np.diag(gamma)
     upos = u @ np.diag(ipos)
