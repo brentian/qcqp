@@ -14,7 +14,7 @@ import time
 import pyqp.bg_msk_msc
 from . import bg_msk, bg_cvx
 from .bb import BCParams, BBItem, Cuts, RLTCuttingPlane
-from .classes import MscBounds, Branch
+from .classes import MscBounds, Branch, Bounds
 from .classes import QP, qp_obj_func, Result
 
 
@@ -246,12 +246,13 @@ def generate_child_items(
 
 def bb_box(
     qp_init: QP,
+    bounds: Bounds,
     verbose=False,
     params=BCParams(),
     bool_use_shor=False,
     constr_d=False,
     rlt=True,
-    decompose_method="eig-type1",
+    decompose_method="eig-type2",
     **kwargs
 ):
   print(json.dumps(params.__dict__(), indent=2))
@@ -279,14 +280,8 @@ def bb_box(
   # root
   root_bound = MscBounds.construct(qp, imply_y=True)
   
-  if bool_use_shor:
-    print("Solving the Shor relaxation")
-    r_shor = bg_msk.shor(qp, solver='MOSEK', verbose=False)
-  else:
-    r_shor = None
-  
   print("Solving root node")
-  root_r = backend_func(qp, bounds=root_bound, solver=params.sdp_solver, verbose=True, solve=True, with_shor=r_shor,
+  root_r = backend_func(qp, bounds=root_bound, solver=params.sdp_solver_backend, verbose=True, solve=True,
                         constr_d=constr_d, rlt=rlt)
   
   best_r = root_r
@@ -380,11 +375,10 @@ def bb_box(
       
       _ = generate_child_items(
         total_nodes, item, br,
-        sdp_solver=params.sdp_solver,
+        sdp_solver=params.sdp_solver_backend,
         verbose=verbose,
         backend_name=backend_name,
         backend_func=backend_func,
-        with_shor=r_shor,
       )
       for next_item in _:
         total_nodes += 1

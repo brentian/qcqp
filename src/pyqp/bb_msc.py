@@ -261,14 +261,8 @@ def bb_box(
   # root
   root_bound = MscBounds.construct(qp, imply_y=True)
   
-  if bool_use_shor:
-    print("Solving the Shor relaxation")
-    r_shor = bg_msk.shor(qp, solver='MOSEK', verbose=False)
-  else:
-    r_shor = None
-  
   print("Solving root node")
-  root_r = backend_func(qp, bounds=root_bound, solver=params.sdp_solver, verbose=True, solve=True, with_shor=r_shor,
+  root_r = backend_func(qp, bounds=root_bound, solver=params.sdp_solver_backend, verbose=True, solve=True,
                         constr_d=constr_d, rlt=rlt)
   
   best_r = root_r

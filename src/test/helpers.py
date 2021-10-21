@@ -28,6 +28,7 @@ METHODS = collections.OrderedDict([
   ("emsc", bg_msk_msc.msc_diag),
   ("ssdp", bg_msk_chordal.ssdp),
   ("bb", bb.bb_box),
+  ("bb_msc", bb_diag.bb_box),
   ("shor_homo", bg_msk_homo.shor)
 ])
 
