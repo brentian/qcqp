@@ -75,7 +75,7 @@ class BCParams(Params):
   
   def produce_args(self, parser: QCQPParser, method_universe):
     parser.print_usage()
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     
     r = sorted(map(int, args.r.split(",")))
     selected_methods = {method_universe[k] for k in r}
