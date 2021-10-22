@@ -19,6 +19,6 @@ set(CMAKE_INSTALL_PREFIX "~/.local/")
 
 # add subdirectories
 add_subdirectory(pyqp)
-add_subdirectory(test)
+add_subdirectory(pyqptest)
 add_subdirectory(thirdparty)
 add_subdirectory(cpp)

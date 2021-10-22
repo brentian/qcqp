@@ -23,7 +23,7 @@ class MSKMscResult(MSKResult):
     self.qel = None
     self.q = None
   
-  def solve(self, verbose=True, qp=None):
+  def solve(self, verbose=False, qp=None):
     start_time = time.time()
     if verbose:
       self.problem.setLogHandler(sys.stdout)

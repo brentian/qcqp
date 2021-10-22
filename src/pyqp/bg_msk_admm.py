@@ -1,9 +1,10 @@
+from itertools import takewhile
 from .bg_msk_msc import *
 
 
 def msc_subproblem_x(  # follows the args
-    xi,
     s,
+    xi,
     kappa,
     mu,
     rho,
@@ -76,8 +77,9 @@ def msc_subproblem_x(  # follows the args
         model.constraint(zconei.index([idx, 1, 1]), dom.equalsTo(1))
 
       # A.T @ x == z
-      model.constraint(expr.sub(expr.mul((apos + aneg), zi), x),
-                       dom.equalsTo(0))
+      model.constraint(
+        expr.sub(expr.mul((apos + aneg), zi), x), dom.equalsTo(0)
+      )
 
       # this means you can place on x directly.
       rlt_expr = expr.sub(expr.sum(yi), expr.dot(bounds.xlb + bounds.xub, x))
@@ -92,7 +94,8 @@ def msc_subproblem_x(  # follows the args
       Z.append(None)
 
     quad_dom = dom.equalsTo(0) if sign[i] == 0 else (
-      dom.greaterThan(0) if sign[i] == -1 else dom.lessThan(0))
+      dom.greaterThan(0) if sign[i] == -1 else dom.lessThan(0)
+    )
 
     model.constraint(quad_expr, quad_dom)
 
@@ -106,15 +109,21 @@ def msc_subproblem_x(  # follows the args
 
   # ADMM solves the minimization problem so we reverse the max objective.
   true_obj_expr = expr.add(expr.dot(-q, x), expr.dot(-qel, y))
+
   # ALM terms
+  # the t - s gap
   expr_norm_gap = expr.sub(t, s)
   expr_norm_gap_sqr = model.variable("t_s", dom.greaterThan(0))
-  model.constraint(expr.vstack(1 / 2, expr_norm_gap_sqr, expr_norm_gap),
-                   dom.inRotatedQCone())
-  expr_norm_x_gap = expr.sub(expr.dot(xi, x), s)
+  model.constraint(
+    expr.vstack(1 / 2, expr_norm_gap_sqr, expr_norm_gap), dom.inRotatedQCone()
+  )
+  # the <𝜉, x> - gap
+  expr_norm_x_gap = expr.sub(expr.dot(xi, x), t)
   expr_norm_x_gap_sqr = model.variable("xi_x", dom.greaterThan(0))
-  model.constraint(expr.vstack(1 / 2, expr_norm_gap_sqr, expr_norm_x_gap),
-                   dom.inRotatedQCone())
+  model.constraint(
+    expr.vstack(1 / 2, expr_norm_x_gap_sqr, expr_norm_x_gap),
+    dom.inRotatedQCone()
+  )
 
   # ALM objective
   obj_expr = true_obj_expr
@@ -135,7 +144,7 @@ def msc_subproblem_x(  # follows the args
   r.qel = qel
   r.q = q
   r.problem = model
-  r.t = t
+  r.tvar = t
   if not solve:
     return r
 
@@ -150,8 +159,6 @@ class MSKResultXi():
 
 def msc_subproblem_xi(  # follows the args
     x,
-    y,
-    z,
     t,
     kappa,
     mu,
@@ -183,29 +190,35 @@ def msc_subproblem_xi(  # follows the args
   if bounds is None:
     bounds = MscBounds.construct(qp)
 
-  qpos, qipos = qp.Qpos
-  qneg, qineg = qp.Qneg
-
-  qel = qp.Qmul
+  # qpos, qipos = qp.Qpos
+  # qneg, qineg = qp.Qneg
+  # qel = qp.Qmul
 
   ###################
   # The above part is unchanged
   ###################
   # norm bounds on y^Te
-  xi = model.variable("xi", dom.inRange(bounds.xlb, bounds.xub))
-  s = model.variable("s", dom.inRange(0, n))
+  xi = model.variable("xi", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
+  s = model.variable("s", dom.greaterThan(0))
 
+  model.constraint(
+    expr.vstack(1 / 2, s, expr.flatten(xi)), dom.inRotatedQCone()
+  )
   # ADMM solves the minimization problem so we reverse the max objective.
   # ALM terms
+  # the t - s gap
   expr_norm_gap = expr.sub(t, s)
   expr_norm_gap_sqr = model.variable("t_s", dom.greaterThan(0))
-  model.constraint(expr.vstack(1 / 2, expr_norm_gap_sqr, expr_norm_gap),
-                   dom.inRotatedQCone())
-  expr_norm_x_gap = expr.sub(expr.dot(xi, x), s)
+  model.constraint(
+    expr.vstack(1 / 2, expr_norm_gap_sqr, expr_norm_gap), dom.inRotatedQCone()
+  )
+  # the <𝜉, x> - gap
+  expr_norm_x_gap = expr.sub(expr.dot(xi, x), t)
   expr_norm_x_gap_sqr = model.variable("xi_x", dom.greaterThan(0))
-  model.constraint(expr.vstack(1 / 2, expr_norm_gap_sqr, expr_norm_x_gap),
-                   dom.inRotatedQCone())
-
+  model.constraint(
+    expr.vstack(1 / 2, expr_norm_x_gap_sqr, expr_norm_x_gap),
+    dom.inRotatedQCone()
+  )
   # ALM objective
   obj_expr = 0
   obj_expr = expr.add(obj_expr, expr.mul(kappa, expr_norm_gap))
@@ -217,9 +230,9 @@ def msc_subproblem_xi(  # follows the args
 
   r = MSKResultXi()
   r.obj_expr = obj_expr
-  r.xivar = xi
   r.problem = model
-  r.s = s
+  r.xivar = xi
+  r.svar = s
   if not solve:
     return r
 
