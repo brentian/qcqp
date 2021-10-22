@@ -114,17 +114,27 @@ This motivates the following, let \(\|\xi\|^2 = \|x\|^2 = s\), and we know,
      & \xi^Tx \ge s - \epsilon, \forall \xi
 \end{align}
 \begin{align}
-    \model{MSC} \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0                          \\
-    \mathrm{s.t.} \quad                        & (y,z,x) \in \Omega                       \\
-                                               & y_i^Te \le s            & i=0, \cdots, m \\
-                                               & \xi^T\xi \le s          & i=0, \cdots, m \\
-                                               & \xi^Tx \ge s - \epsilon & i=0, \cdots, m \\
+    \model{MSC} \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0                     \\
+    \mathrm{s.t.} \quad                        & (y,z,x) \in \Omega                  \\
+                                               & y_i^Te \le t       & i=0, \cdots, m \\
+    (\kappa)                                   & t= s               & i=0, \cdots, m \\
+    (\mu)                                      & \xi^Tx = s         & i=0, \cdots, m \\
+                                               & \xi^T\xi \le s     & i=0, \cdots, m
 \end{align}
 
-This allows the ALM,
+This allows the ALM for bilinear constraint,
 
-\begin{align}
-    \mathscr L = y_0 ^T\lambda_0 +
-\end{align}
+\begin{align*}
+    \mathscr L\left(x,y,z,\xi,s,\kappa,\mu\right) & = - y_0 ^T\lambda_0 + \kappa(t-s) + \mu(\xi^Tx - s) + \frac{\rho}{2}(t-s)^2 + \frac{\rho}{2}(\xi^Tx - s)^2
+\end{align*}
+
+The ADMM iteration,
+
+\begin{align*}
+    (x,y,z,t)^{k+1} & = {\arg\min}_{(x,y,z)\in\Omega, t\ge 0} L\left(x,y,z,\xi^k,s^k,\kappa^k,\mu^k\right)       \\
+    (s, \xi)^{k+1}  & = {\arg\min}_{(s, \xi)\in\mathscr{Q}} L\left((x,y,z,t)^{k+1},\xi,s, \kappa^k, \mu^k\right) \\
+    \kappa^{k+1}    & = \kappa^k + \rho\left(t^{k+1}-s^{k+1}\right)                                              \\
+    \mu^{k+1}       & = \mu^k + \rho\left( \langle\xi^{k+1}, x^{k+1}\rangle - s^{k+1}\right)                     \\
+\end{align*}
 
 \end{document}
