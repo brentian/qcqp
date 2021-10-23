@@ -1,0 +1,140 @@
+\documentclass[../main]{subfiles}
+\title{Primal solution}
+\author{Chuwen Zhang}
+\date{\today}
+\begin{document}
+\maketitle
+{
+    \setcounter{tocdepth}{3}
+    \tableofcontents
+}
+\section{Primal solution}
+
+\subsection{Rank Reduction}
+\subsubsection{Randomized}
+
+\begin{equation}
+    \hat{X}=(V^\star)^T\left[\sum_{j=1}^d \xi^j(\xi^j)^T\right] V^\star,
+    (\xi^j)_i \in N(0, 1), i = 1,\dots,n, j = 1, \dots, d
+\end{equation}
+
+This method guarantees the rank of \(d\), while meeting a few challenges,
+
+\begin{itemize}
+    \item Cannot guarantee feasibility after randomized for inhomogeneous quadratic constraints
+\end{itemize}
+
+\subsection{Homogenize}
+
+
+\begin{align*}
+     & x^TAx + a^Tx  - b \le 0      \\
+     & x^TAx + ta^Tx  - bt^2 \le 0  \\
+     & \begin{bmatrix} x \\ t \end{bmatrix}^T
+    \begin{bmatrix} A & a/2 \\ a^T/2 & -b \end{bmatrix}
+    \begin{bmatrix} x \\ t \end{bmatrix} \le 0 \\
+\end{align*}
+
+\begin{itemize}
+    \item if \(\tilde x=(x, t)\) is a solution, then it can be scaled to \((x/t, 1)\).
+    \item we solve by SDP relaxation \(\tilde X \succeq \tilde x\tilde x^T\), let \(\tilde X = VV^T\)
+          \begin{align*}
+               & A \bullet VV^T = \trace(V^TAV) \le 0 \\
+          \end{align*}
+    \item find \(\xi\) to make \(A \bullet V\xi_{j}\xi_{j}^TV^T = \trace{(V^TAV\xi_{j}\xi_{j}^T)} \le 0\)
+\end{itemize}
+
+
+\subsection{Second order cone approach}
+For the original non-convex inhomogeneous QCQP, in the following form,
+
+\begin{align}
+    \mx & x^T Q x+q^T x                                    \\
+    \st & x^T Q_i x+q_i^T x \leqslant b_{i}, i= 1,\dots, m \\
+        & 0 \leqslant x \leqslant 1
+\end{align}
+
+Convexify Q constraints,
+\begin{equation}\label{eq:primal.Sigma}
+    \begin{aligned}
+         & x^T(Q_i+t_i I_n) x+q_i^T x \leqslant b_i+ t_i \cdot s^2,i= 1,\dots, m \\
+         & x^T x= s^2
+    \end{aligned}
+\end{equation}
+Let \(\Sigma = \{(x,s)\in \mathbb R^{n+1}\mid (x,s) \textrm{ satisfies \eqref{eq:primal.Sigma}} \}\). Note \(t_i, i=1,\dots, m\) is selected to make \(Q_i+t_i I_n\) p.s.d, which can be achieved easily. \(\Sigma\) is clearly nonconvex, nevertheless, our goal is to find an estimate of \(\|x\|\).
+
+We have,
+
+\begin{itemize}
+    \item convex upper bound,
+          \begin{equation} \|x\| \le s \end{equation}
+    \item unit ball, \(\|u\| = 1\)
+          \begin{equation} \|x\| = \max_u u^T x \end{equation}
+    \item then the lower bound can be established by piecewise linear functions,
+          \begin{equation}
+              \|x\| = \max_j u^T_j x \ge s
+          \end{equation}
+\end{itemize}
+
+We sample \(\{u_j\}_1^N\)
+\begin{align}
+     & \max_j u^T_j y \ge s                 \\
+     & \|x \| \le s                         \\
+     & (x, s) \in \Sigma, (y, s) \in \Sigma
+\end{align}
+
+which is equivalent to \(N\) independent feasibility problem. We let \(\Sigma_j\) be the piece for \(u_j\)
+
+
+\subsection{Connection to MSC}
+Consider MSC,
+\begin{equation}\label{eq.rel.msc}
+    \begin{aligned}
+        \model{MSC} \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0                                     \\
+        \mathrm{s.t.} \quad                        & V_i z_i = x                        & i=0,...,m      \\
+                                                   & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m      \\
+                                                   & y_i \ge z_i \circ z_i              & i=0,...,m      \\
+                                                   & y_i^Te \le x^Te                    & i=0, \cdots, m
+    \end{aligned}
+\end{equation}
+
+Let,
+\begin{equation}
+    \Omega = \left\{ (x,z,y) :  \begin{aligned}
+         & V_i z_i = x                        & i=0,...,m \\
+         & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m \\
+         & y_i \ge z_i \circ z_i              & i=0,...,m \\
+    \end{aligned}\right\}
+\end{equation}
+
+Since if \((y^*)^Te = (x^*)^Tx^*\), then \((x^*, y^*)\) is the solution, our problem is related to the above analysis, that is, the optimization problem with the ball constraint.
+This motivates the following, let \(\|\xi\|^2 = \|x\|^2 = s\), and we know,
+\begin{align}
+     & \|x\|^2 = \max_\xi \xi^T x           \\
+     & \xi^Tx \ge s - \epsilon, \forall \xi
+\end{align}
+\begin{align}
+    \model{MSC} \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0                     \\
+    \mathrm{s.t.} \quad                        & (y,z,x) \in \Omega                  \\
+                                               & y_i^Te \le t       & i=0, \cdots, m \\
+    (\kappa) \quad                             & t= s               & i=0, \cdots, m \\
+    (\mu)    \quad                             & \xi^Tx = t         & i=0, \cdots, m \\
+                                               & \xi^T\xi \le s     & i=0, \cdots, m
+\end{align}
+
+This allows the ALM for bilinear constraint,
+
+\begin{align*}
+    \mathscr L\left(x,y,z,\xi,s,\kappa,\mu\right) & = - y_0 ^T\lambda_0 + \kappa(t-s) + \mu(\xi^Tx - t) + \frac{\rho}{2}(t-s)^2 + \frac{\rho}{2}(\xi^Tx - s)^2
+\end{align*}
+
+The ADMM iteration,
+
+\begin{align*}
+    (x,y,z,t)^{k+1} & = {\arg\min}_{(x,y,z)\in\Omega, t\ge 0} L\left(x,y,z,\xi^k,s^k,\kappa^k,\mu^k\right)       \\
+    (s, \xi)^{k+1}  & = {\arg\min}_{(s, \xi)\in\mathscr{Q}} L\left((x,y,z,t)^{k+1},\xi,s, \kappa^k, \mu^k\right) \\
+    \kappa^{k+1}    & = \kappa^k + \rho\left(t^{k+1}-s^{k+1}\right)                                              \\
+    \mu^{k+1}       & = \mu^k + \rho\left( \langle\xi^{k+1}, x^{k+1}\rangle - s^{k+1}\right)                     \\
+\end{align*}
+
+\end{document}

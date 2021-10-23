@@ -1,5 +1,171 @@
-from itertools import takewhile
+from pyqp.classes import BCParams
 from .bg_msk_msc import *
+
+
+class MSKResultXi(MSKMscResult):
+  """Result keeper for ADMM subproblem
+  for (xi)
+  """
+
+  def __init__(self):
+    super().__init__()
+
+  def solve(self, verbose=False, qp=None):
+    start_time = time.time()
+    if verbose:
+      self.problem.setLogHandler(sys.stdout)
+    try:
+      self.problem.solve()
+      status = self.problem.getProblemStatus()
+    except Exception as e:
+      status = 'failed'
+    end_time = time.time()
+
+    if status == mf.ProblemStatus.PrimalAndDualFeasible:
+      self.sval = self.svar.level()[0]
+      self.xival = self.xivar.level().reshape(self.xivar.getShape())
+    else:  # infeasible
+      self.relax_obj = -1e6
+
+    self.solved = True
+    self.solve_time = round(end_time - start_time, 3)
+
+  def check(self, qp: QP):
+    pass
+
+
+class MSKResultX(MSKMscResult):
+  """Result keeper for ADMM subproblem
+  for (x,y,z)
+  """
+
+  def __init__(self):
+    super().__init__()
+
+  def solve(self, verbose=False, qp=None):
+    start_time = time.time()
+    if verbose:
+      self.problem.setLogHandler(sys.stdout)
+    try:
+      self.problem.solve()
+      status = self.problem.getProblemStatus()
+    except Exception as e:
+      status = 'failed'
+    end_time = time.time()
+    if status == mf.ProblemStatus.PrimalAndDualFeasible:
+      self.xval = self.xvar.level().reshape(self.xvar.getShape()).round(4)
+      self.zval = self.zvar.level().reshape(self.zvar.getShape()).round(4)
+      self.Zval = np.hstack(
+        [
+          xx.level().reshape(self.xvar.getShape()).round(4)
+          if xx is not None else np.zeros(self.xvar.getShape())
+          for xx in self.Zvar
+        ]
+      )
+      if self.yvar is not None:
+        self.yval = self.yvar.level().reshape(self.yvar.getShape()).round(4)
+      if self.Yvar is not None:
+        self.Yval = np.hstack(
+          [
+            xx.level().reshape(self.xvar.getShape()).round(4)
+            if xx is not None else np.zeros(self.xvar.getShape())
+            for xx in self.Yvar
+          ]
+        )
+
+      if self.Dvar is not None:
+        self.Dval = np.hstack(
+          [
+            xx.level().reshape((2, 1)).round(4) if xx is not None else np.zeros(
+              (2, 1)
+            ) for xx in self.Dvar
+          ]
+        )
+      self.tval = self.tvar.level()[0]
+      self.relax_obj = -self.problem.primalObjValue()
+      if qp is not None:
+        self.true_obj = qp_obj_func(qp.Q, qp.q, self.xval)
+    else:  # infeasible
+      self.relax_obj = -1e6
+
+    self.solved = True
+    self.solve_time = round(end_time - start_time, 3)
+
+    def check(self, qp: QP):
+      pass
+
+
+class ADMMParams(BCParams):
+  max_iteration = 1000
+  logging_interval = 10
+  time_limit = 60
+
+
+def msc_admm(
+  qp: QP,  # the QP instance, must be decomposed by method II
+  bounds: MscBounds = None,
+  sense="max",
+  verbose=False,
+  solve=True,
+  admmparams: ADMMParams = ADMMParams(),
+  *args,
+  **kwargs
+):
+  _unused = kwargs
+  Q, q, A, a, b, sign, *_ = qp.unpack()
+  if qp.Qpos is None:
+    raise ValueError("decompose QP instance first")
+  if qp.decom_method == 'eig-type1':
+    raise ValueError(f"cannot use {qp.decom_method}")
+  m, n, dim = qp.a.shape
+  ########################
+  # initialization
+  ########################
+  xval = np.ones((n, dim))
+  sval = (xval.T @ xval).trace()
+  rho = 1
+  kappa = 0
+  mu = 0
+  xival = xval
+  # test run
+
+  _iter = 0
+  start_time = time.time()
+  while _iter < admmparams.max_iteration:
+    _iter += 1
+    r = msc_subproblem_x(
+      sval, xival, kappa, mu, rho, qp, bounds, solve=False, verbose=verbose
+    )
+    r.solve()
+    xval = r.xval
+    tval = r.tval
+    r_xi = msc_subproblem_xi(
+      xval, tval, kappa, mu, rho, qp, bounds, solve=False, verbose=verbose
+    )
+    r_xi.solve()
+    sval = r_xi.sval
+    xival = r_xi.xival
+    residual_ts = tval - sval
+    residual_xix = (xival * xval).sum() - tval
+    curr_time = time.time()
+    adm_time = curr_time - start_time
+    if _iter % admmparams.logging_interval == 0:
+      print(
+        f"//{curr_time - start_time: .2f}, @{_iter} # alm: {r.problem.primalObjValue(): .4f} norm t - s: {residual_ts: .4e}, 𝜉x - t: {residual_xix: .4e}"
+      )
+    if max(abs(residual_ts), abs(residual_xix)) < 1e-4:
+      print(f"terminited by gap")
+      break
+    if adm_time >= admmparams.time_limit:
+      break
+    kappa += residual_ts * rho
+    mu += residual_xix * rho
+  r.result_xi = r_xi
+  r.nodes = _iter
+  r.solve_time = adm_time
+  r.true_obj = qp_obj_func(qp.Q, qp.q, xval)
+  r.bound = (r.yval.T @ qp.Qmul).trace() + (qp.q.T @ xval).trace()
+  return r
 
 
 def msc_subproblem_x(  # follows the args
@@ -134,7 +300,7 @@ def msc_subproblem_x(  # follows the args
 
   model.objective(mf.ObjectiveSense.Minimize, obj_expr)
 
-  r = MSKMscResult()
+  r = MSKResultX()
   r.obj_expr = true_obj_expr
   r.xvar = x
   r.yvar = y
@@ -152,9 +318,6 @@ def msc_subproblem_x(  # follows the args
 
   return r
 
-
-class MSKResultXi():
-  pass
 
 
 def msc_subproblem_xi(  # follows the args
