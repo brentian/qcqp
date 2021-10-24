@@ -191,7 +191,7 @@ def generate_child_items(
 
 def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr_d=False, rlt=True, **kwargs):
   print(json.dumps(params.__dict__(), indent=2))
-  backend_name = params.backend_name
+  backend_name = params.sdp_solver_backend
   if backend_name == 'msk':
     backend_func = pyqp.bg_msk_msc.msc
   elif backend_name == 'cvx':
@@ -327,7 +327,7 @@ def main(args):
   bool_use_shor = True
   evals = []
   params = bb_msc.BCParams()
-  params.backend_name = 'msk'
+  params.sdp_solver_backend = 'msk'
 
   # problem
   problem_id = f"{n}:{m}:{0}"

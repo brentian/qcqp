@@ -19,36 +19,42 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
-from pyqp.grb import qp_gurobi
-from ..qkp_soutif import *
-from pyqp.bb import *
+
+from .helpers import *
 
 if __name__ == '__main__':
-    pd.set_option("display.max_columns", None)
-    try:
-        fp, n = sys.argv[1:]
-    except Exception as e:
-        print("usage:\n"
-              "python tests/qkp_soutif.py filepath n (number of variables)")
-        raise e
-    verbose = False
-    params = BCParams()
-    # start
-    Q, q, A, a, b, sign, lb, ub = read_qkp_soutif(filepath=fp, n=int(n))
-    qp = QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
 
-    # benchmark by gurobi
-    r_grb_relax = qp_gurobi(Q, q, A, a, b, sign, lb, ub, relax=True, sense="max", verbose=True,
-                            params=params)
-    print(f"gurobi benchmark @{r_grb_relax.true_obj}")
-    print(f"gurobi benchmark x\n"
-          f"{r_grb_relax.xval}")
-    # b-b
-    r_bb = bb_box(qp, verbose=True, params=params)
+  params = BCParams()
+  admmparams = ADMMParams()
+  kwargs, r_methods = params.produce_args(parser, METHOD_CODES)
+  _ = admmparams.produce_args(parser, METHOD_CODES)
 
-    print(f"gurobi benchmark @{r_grb_relax.true_obj}")
-    print(f"gurobi benchmark x\n"
-          f"{r_grb_relax.xval.round(3)}")
-    print(f"branch-and-cut @{r_bb.true_obj}")
-    print(f"branch-and-cut x\n"
-          f"{r_bb.xval.round(3)}")
+  qp = QP.read(params.fpath)
+
+  n, m = qp.n, qp.m
+  # problem
+  problem_id = f"{n}:{m}:{0}"
+  # start
+  bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
+
+  evals = []
+  results = {}
+  # run methods
+  for k in r_methods:
+    func = METHODS[k]
+    qp1 = bb.QP(*qp.unpack())
+    qp1.decompose()
+    r = func(qp1, bd, params=params, admmparams=admmparams)
+    reval = r.eval(problem_id)
+    evals.append({**reval.__dict__, "method": k})
+    results[k] = r
+
+  for k, r in results.items():
+    print(f"{k} benchmark @{r.relax_obj}")
+    print(f"{k} benchmark x\n" f"{r.xval.round(3)}")
+    r.check(qp)
+
+  df_eval = pd.DataFrame.from_records(evals)
+  print(df_eval)
+  print(r.xval)
+  print(df_eval[['prob_num', 'solve_time', 'relax_obj', 'method']].to_latex())

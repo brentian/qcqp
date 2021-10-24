@@ -19,41 +19,36 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
-import pandas as pd
-import numpy as np
-import sys
-from pyqp import grb, bg_msk
-from pyqp import bb, bb_msc, \
-  bb_msc2, bb_diag, bb_socp
-from test import max_cut
-
-np.random.seed(1)
+from pyqp import grb, bb_msc, bb, bb_msc2, bb_diag
+from ..qkp_soutif import *
 
 if __name__ == '__main__':
   pd.set_option("display.max_columns", None)
   try:
-    n, relax, *_ = sys.argv[1:]
+    fp, n, relax = sys.argv[1:]
   except Exception as e:
     print("usage:\n"
-          "python tests/-.py n (number of variables) backend")
+          "python tests/qkp_soutif.py filepath n (number of variables)")
     raise e
   
+  params = bb.BCParams()
+  # params.opt_eps = 5e-3
   verbose = False
   bool_use_shor = False
   relax = int(relax)
-  evals = []
-  
+
   # problem
-  problem_id = f"max-cut:{n}:{0}"
-  
+  problem_id = f"qkp:{n}:{0}"
   # start
-  qp = max_cut.create_random_mc(int(n))
+  Q, q, A, a, b, sign, lb, ub = read_qkp_soutif(filepath=fp, n=int(n))
+  qp = QP(Q, q, A, a, b, sign, lb, ub, lb @ lb.T, ub @ ub.T)
   
   # global args
   params = bb_msc.BCParams()
-  params.backend_name = 'msk'
+  params.sdp_solver_backend = 'msk'
   params.relax = relax
   params.time_limit = 30
+  params.opt_eps = 1e-2
   kwargs = dict(
     relax=relax,
     sense="max",
@@ -73,7 +68,7 @@ if __name__ == '__main__':
   # personal
   pkwargs = {k: kwargs for k in methods}
   pkwargs_dtl = {
-    # "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2"},
+    # "bb_msc_eig": {**kwargs, "decompose_method": "eig-type2", "branch_name": "vio"},
     "bb_msc_diag": {**kwargs, "decompose_method": "eig-type2", "branch_name": "bound"},
     # "bb_msc_socp": {**kwargs, "func": bg_msk.msc_socp_relaxation}
   }
@@ -99,3 +94,5 @@ if __name__ == '__main__':
   
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)
+
+  print(df_eval.to_latex())

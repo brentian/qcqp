@@ -38,6 +38,7 @@ class QP(object):
       self.n, self.d = q.shape
       self.m, *_ = a.shape
     self.construct_chordal()
+    self.construct_homo()
   
   def __str__(self):
     # todo add a description
@@ -54,7 +55,7 @@ class QP(object):
   # eigenvalue decomposition
   # and orthogonal basis
   ########################
-  def decompose(self, validate=False, decompose_method='eig-type1', **kwargs):
+  def decompose(self, validate=False, decompose_method='eig-type2', **kwargs):
     """
     decompose into positive and negative part
     Returns
@@ -119,7 +120,7 @@ class QP(object):
   
   def _decompose_matrix_eig(self, A):
     gamma, u = nl.eig(A)
-    ipos = (gamma > 0).astype(int)
+    ipos = (gamma >= 0).astype(int)
     ineg = (gamma < 0).astype(int)
     eig = np.diag(gamma)
     upos = u @ np.diag(ipos)
@@ -206,6 +207,27 @@ class QP(object):
     b = np.array(data['b'])
     sign = np.ones(m)
     return cls(Q, q, A, a, b, sign)
+  
+  def check(self, x):
+    if (0 <= x).all() and (x <= 1).all():
+      pass
+    else:
+      return False
+    for i in range(self.m):
+      _va = (x.T @ self.A[i] @ x).trace() + (x.T @ self.a[i]).trace()
+      if _va > self.b[i]:
+        return False
+    return True
+  
+  def construct_homo(self):
+    self.Qh = np.bmat([[self.Q, self.q / 2], [self.q.T / 2, np.zeros((1, 1))]])
+    self.Ah = []
+    for i in range(self.m):
+      _Ah = np.bmat([
+        [self.A[i], self.a[i] / 2],
+        [self.a[i].T / 2, np.ones((1, 1)) * (-self.b[i])]
+      ])
+      self.Ah.append(_Ah)
 
 
 class QPInstanceUtils(object):

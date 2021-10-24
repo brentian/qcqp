@@ -1,4 +1,5 @@
 \input{headers/header.mp}
+\input{headers/cmd}
 \title{Global QCQP Solver}
 \author{Chuwen Zhang}
 \date{\today}
@@ -14,17 +15,6 @@
 \usepackage[table]{xcolor}
 \usepackage[font=small,labelfont=bf]{caption}
 
-%%%%%%%%%%%%%%%%
-% start my commands
-%%%%%%%%%%%%%%%%
-\newcommand{\trace}{\mathbf{trace}}
-\newcommand{\diag}{\mathbf{diag}}
-\newcommand{\model}[1]{(\textbf{#1})}
-\newcommand{\mx}[1]{\mathrm{Maximize:\;}}
-\newcommand{\mn}[1]{\mathrm{Minimize:\;}}
-%%%%%%%%%%%%%%%%
-% finish my commands
-%%%%%%%%%%%%%%%%
 
 
 \begin{document}
@@ -42,6 +32,8 @@
 \subfile{sections/chord.tex}
 \subfile{sections/ws.tex}
 \subfile{sections/appendix.tex}
+\subfile{sections/primal.tex}
+\subfile{sections/admm.tex}
 
 \bibliography{headers/qcqp}
 \bibliographystyle{headers/spmpsci}

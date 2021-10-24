@@ -141,12 +141,8 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
 #endif
     // set parameters
     int info;
-    //    info = DSDPSetGapTolerance(dsdp, 0.001);
-    //    info = DSDPSetPotentialParameter(dsdp, 5);
-    //    info = DSDPReuseMatrix(dsdp, 0);
-    //    info = DSDPSetPNormTolerance(dsdp, 1.0);
-    //    info = DSDPSetPenaltyParameter(p, nvar);
-    DSDPSetPenaltyParameter(p, 1e4);
+    DSDPSetPenaltyParameter(p, r.Gamma);
+    DSDPSetZBar(p, r.zbar);
 #if DSDP_SDP_DBG
     DSDPSetStandardMonitor(p, 1);
 #else
@@ -285,15 +281,17 @@ QP_DSDP::~QP_DSDP() {
 }
 
 void QP_DSDP::assign_initial_point(Result_DSDP &r_another, bool dual_only) const {
-    DSDPSetR0(p, r_another.r0);
     if (nvar != r_another.ydim) {
         throw std::exception();
     }
     for (int i = 0; i < r_another.ydim; i++) {
         DSDPSetY0(p, i + 1, r_another.y[i]);
     }
-    eigen_arraymap ym(r_another.y, r_another.ydim);
-//    DSDPSetPenaltyParameter(p, 1e4);
+    DSDPSetR0(p, r_another.r0);
+    DSDPSetZBar(p, r_another.zbar + 1e3);
+    DSDPSetPenaltyParameter(p, r_another.Gamma);
+//    eigen_arraymap ym(r_another.y, r_another.ydim);
+
 
     // check psd?
 //    eigen_matrix ymat = eigen_matrix ::Zero(ndim, ndim);
@@ -327,9 +325,7 @@ void Result_DSDP::construct_init_point(Result_DSDP &r, double lambda, int pool_s
     for (int i = 0; i < r.ydim; i++) {
         y[i] = r.y[i];
     }
-//    for (int i = r.ydim; i < ydim; i++){
-//        y[i] = -0.1;
-//    }
+    zbar = - r.bound;
 }
 
 Result_DSDP::Result_DSDP(int n, int m, int d) :

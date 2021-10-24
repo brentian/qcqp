@@ -11,20 +11,10 @@ import numpy as np
 import time
 
 from . import bg_msk, bg_cvx
-from .classes import qp_obj_func, QP, Params, Result, Bounds, Branch, CuttingPlane
+from .classes import qp_obj_func, QP, BCParams, Result, Bounds, Branch, CuttingPlane
 
 
-class BCParams(Params):
-  def __init__(self):
-    super().__init__()
-  
-  feas_eps = 1e-3
-  opt_eps = 5e-4
-  time_limit = 200
-  logging_interval = 10
-  relax = True
-  sdp_solver = 'MOSEK'
-  backend_name = 'cvx'
+
 
 
 class RLTCuttingPlane(CuttingPlane):
@@ -198,12 +188,13 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
 def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   print(json.dumps(params.__dict__(), indent=2))
   backend_func = kwargs.get('func')
-  backend_name = params.backend_name
+  backend_name = params.sdp_solver_backend
   if backend_func is None:
     if backend_name == 'msk':
       backend_func = bg_msk.shor
     else:
       raise ValueError("not implemented")
+  print(f"primal func using {params.sdp_rank_redunction_solver}")
   # root
   root_bound = bounds
   
@@ -211,7 +202,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   k = 0
   start_time = time.time()
   print("solving root node")
-  root_r = backend_func(qp, root_bound, solver=params.sdp_solver, verbose=True, solve=True)
+  root_r = backend_func(qp, root_bound, solver=params.sdp_solver_backend, verbose=True, solve=True)
   best_r = root_r
   
   # global cuts
@@ -239,8 +230,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       continue
     
     if not r.solved:
-      r.solve()
-      r.true_obj = qp_obj_func(item.qp.Q, item.qp.q, r.xval)
+      r.solve(primal=params.sdp_rank_redunction_solver, feas_eps=params.feas_eps)
       r.solve_time = time.time() - start_time
     
     if r.relax_obj < lb:
@@ -254,11 +244,12 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       best_r = r
       lb = r.true_obj
     
-    gap = (ub - lb) / lb
+    gap = (ub - lb) / abs(lb)
     
     x = r.xval
     y = r.yval
-    res = np.abs(y - x @ x.T)
+    res = r.res
+    res_norm = r.res_norm
     
     print(
       f"time: {r.solve_time: .2f} #{item.node_id}, "
@@ -269,7 +260,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       print(f"terminate #{item.node_id} by gap or time_limit")
       break
     
-    if res.max() <= params.feas_eps:
+    if res_norm <= params.feas_eps:
       print(f"prune #{item.node_id} by feasible solution")
       feasible[item.node_id] = r
       continue
@@ -279,10 +270,11 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     br = Branch()
     br.simple_vio_branch(x, y, res)
     left_item, right_item = generate_child_items(
-      total_nodes, item, br, sdp_solver=params.sdp_solver, verbose=verbose, backend_name=backend_name,
+      total_nodes, item, br, sdp_solver=params.sdp_solver_backend, verbose=verbose, backend_name=backend_name,
       backend_func=backend_func)
     total_nodes += 2
-    next_priority = - r.relax_obj.round(3)
+    # next_priority = - r.relax_obj.round(3)
+    next_priority = - r.true_obj
     queue.put((next_priority, right_item))
     queue.put((next_priority, left_item))
     #

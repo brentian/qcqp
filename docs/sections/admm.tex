@@ -1,0 +1,74 @@
+\documentclass[../main]{subfiles}
+\title{ADMM}
+\author{Chuwen Zhang}
+\date{\today}
+\begin{document}
+\maketitle
+{
+    \setcounter{tocdepth}{3}
+    \tableofcontents
+}
+\section{ADMM based MSC}
+
+\subsection{Connection to MSC}
+For QCQP,
+\begin{equation}\label{eq:inhoqcqp}
+    \begin{aligned}
+        \model{QCQP} \quad \mathrm{Maximize}\quad & x^TQx +q^T x                                     \\
+        \mathrm{s.t.}  \quad                      & x^{T} A_i x  + a_i^Tx   \; (\le, =, \ge)  \; b_i \\
+                                                  & 0 \le x\le  1
+    \end{aligned}
+\end{equation}
+
+Consider MSC relaxation with spectral decomposition,
+\(A_i = V_i \diag (\lambda_i) V_i^T\)
+\begin{equation}\label{eq.rel.msc}
+    \begin{aligned}
+        \model{MSC} \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0                                     \\
+        \mathrm{s.t.} \quad                        & V_i z_i = x                        & i=0,...,m      \\
+                                                   & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m      \\
+                                                   & y_i \ge z_i \circ z_i              & i=0,...,m      \\
+                                                   & y_i^Te \le x^Te                    & i=0, \cdots, m
+    \end{aligned}
+\end{equation}
+
+If we ignore last constraint bounding \(y_i\), let
+\begin{equation}
+    \Omega = \left\{ (x,z,y) :  \begin{aligned}
+         & V_i z_i = x                        & i=0,...,m \\
+         & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m \\
+         & y_i \ge z_i \circ z_i              & i=0,...,m \\
+    \end{aligned}\right\}
+\end{equation}
+
+Since if \((y^*)^Te = (x^*)^Tx^*\), then \((x^*, y^*)\) is the solution, our problem is related to the above analysis, that is, the optimization problem with the ball constraint.
+This motivates the following, let \(\|\xi\|^2 = \|x\|^2 = s\), and we know,
+\begin{equation}
+    \|x\|^2 = \max_{\|\xi\| \le \sqrt s} \xi^T x \\
+\end{equation}
+\(\forall \xi, \exists \epsilon(\xi) \ge 0\) such that \(\xi^Tx \ge s - \epsilon(\xi)\),
+\begin{align}
+    \model{MSC} \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0                     \\
+    \mathrm{s.t.} \quad                        & (y,z,x) \in \Omega                  \\
+                                               & y_i^Te \le t       & i=0, \cdots, m \\
+    (\kappa) \quad                             & t= s               & i=0, \cdots, m \\
+    (\mu)    \quad                             & \xi^Tx = t                          \\
+                                               & \xi^T\xi \le s
+\end{align}
+
+This allows the augmented Lagrangian function for bilinear constraint,
+
+\begin{align*}
+    \mathscr L\left(x,y,z,\xi,s,\kappa,\mu\right) & = - y_0 ^T\lambda_0 + \kappa(t-s) + \mu(\xi^Tx - t) + \frac{\rho}{2}(t-s)^2 + \frac{\rho}{2}(\xi^Tx - s)^2
+\end{align*}
+
+The ADMM iteration,
+
+\begin{align*}
+    (x,y,z,t)^{k+1} & = {\arg\min}_{(x,y,z)\in\Omega, t\ge 0} L\left(x,y,z,\xi^k,s^k,\kappa^k,\mu^k\right)       \\
+    (s, \xi)^{k+1}  & = {\arg\min}_{(s, \xi)\in\mathscr{Q}} L\left((x,y,z,t)^{k+1},\xi,s, \kappa^k, \mu^k\right) \\
+    \kappa^{k+1}    & = \kappa^k + \rho\left(t^{k+1}-s^{k+1}\right)                                              \\
+    \mu^{k+1}       & = \mu^k + \rho\left( \langle\xi^{k+1}, x^{k+1}\rangle - s^{k+1}\right)                     \\
+\end{align*}
+
+\end{document}

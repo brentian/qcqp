@@ -21,7 +21,7 @@
 #  SOFTWARE.
 import pandas as pd
 import sys
-from pyqp.bb import *
+from pyqp.bb_msc import *
 from pyqp.grb import *
 
 np.random.seed(1)
@@ -32,12 +32,12 @@ if __name__ == '__main__':
         instances, backend, *_ = sys.argv[1:]
     except Exception as e:
         print("usage:\n"
-              "python - NUM_OF_INSTANCE_PER_PROBLEM_SIZE BACKEND")
+              "python tests/random_bb.py n (number of variables) m (num of constraints)")
         raise e
     verbose = False
     evals = []
     params = BCParams()
-    params.backend_name = backend
+    params.sdp_solver_backend = backend
     for n in [20, 50, 80]:
         for m in [5, 10, 20]:
             for i in range(int(instances)):

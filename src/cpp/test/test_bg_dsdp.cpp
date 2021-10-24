@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     p.extract_solution();
     auto r = p.get_solution();
 //    check_solution(r, qp);
-    r.show();
+//    r.show();
     Branch br;
     br.create_from_result(r);
     br.imply_bounds(root_b);
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     }
     p1.optimize();
     p1.extract_solution();
-    p1.r.show();
+//    p1.r.show();
 //    check_solution(p1.r, qp, p1.cp);
 //    p1.r.show();
 

@@ -15,6 +15,8 @@
 class Result_DSDP : public Result {
 public:
     double r0;
+    double zbar=1e3;
+    double Gamma=1e6;
 
     Result_DSDP(int n, int m, int d);
 
