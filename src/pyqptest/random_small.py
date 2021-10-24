@@ -19,7 +19,7 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
-from pyqp.bg_msk_admm import ADMMParams
+
 from pyqptest.helpers import *
 
 np.random.seed(1)
@@ -66,7 +66,12 @@ if __name__ == '__main__':
 
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)
-  print(df_eval[['prob_num', 'solve_time', 'relax_obj', 'method']].to_latex())
+  print(
+    df_eval[[
+      'prob_num', 'solve_time', 'best_bound', 'best_obj', 'relax_obj', 'nodes',
+      'method'
+    ]].to_latex()
+  )
 
   if args.dump_instance:
     pass

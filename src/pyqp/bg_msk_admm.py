@@ -147,13 +147,15 @@ def msc_admm(
     xival = r_xi.xival
     residual_ts = tval - sval
     residual_xix = (xival * xval).sum() - tval
+    r.bound = (r.yval.T @ qp.Qmul).trace() + (qp.q.T @ xval).trace()
+    gap = (r.bound - r.relax_obj) / (r.bound + 1e-2)
     curr_time = time.time()
     adm_time = curr_time - start_time
     if _iter % admmparams.logging_interval == 0:
       print(
-        f"//{curr_time - start_time: .2f}, @{_iter} # alm: {r.problem.primalObjValue(): .4f} norm t - s: {residual_ts: .4e}, 𝜉x - t: {residual_xix: .4e}"
+        f"//{curr_time - start_time: .2f}, @{_iter} # alm: {r.relax_obj: .4f} gap: {gap:.3%} norm t - s: {residual_ts: .4e}, 𝜉x - t: {residual_xix: .4e}"
       )
-    if max(abs(residual_ts), abs(residual_xix)) < 1e-4:
+    if (gap < 1e-4) or (max(abs(residual_ts), abs(residual_xix)) < 1e-4):
       print(f"terminited by gap")
       break
     if adm_time >= admmparams.time_limit:

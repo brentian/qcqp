@@ -25,3 +25,4 @@ It's obvious to see,
 $$\bar \chi (G)$$
 Theorem
 
+$$\mathscr L\left(x,y,z,\xi,s,\kappa,\mu\right)  = - y_0 ^T\lambda_0 + \kappa(t-s) + \mu(\xi^Tx - t) + \frac{\rho}{2}(t-s)^2 + \frac{\rho}{2}(\xi^Tx - s)^2$$

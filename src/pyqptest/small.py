@@ -23,18 +23,20 @@
 from .helpers import *
 
 if __name__ == '__main__':
-  
+
   params = BCParams()
+  admmparams = ADMMParams()
   kwargs, r_methods = params.produce_args(parser, METHOD_CODES)
-  
+  _ = admmparams.produce_args(parser, METHOD_CODES)
+
   qp = QP.read(params.fpath)
-  
+
   n, m = qp.n, qp.m
   # problem
   problem_id = f"{n}:{m}:{0}"
   # start
   bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
-  
+
   evals = []
   results = {}
   # run methods
@@ -42,17 +44,16 @@ if __name__ == '__main__':
     func = METHODS[k]
     qp1 = bb.QP(*qp.unpack())
     qp1.decompose()
-    r = func(qp1, bd, params=params)
+    r = func(qp1, bd, params=params, admmparams=admmparams)
     reval = r.eval(problem_id)
     evals.append({**reval.__dict__, "method": k})
     results[k] = r
-  
+
   for k, r in results.items():
     print(f"{k} benchmark @{r.relax_obj}")
-    print(f"{k} benchmark x\n"
-          f"{r.xval.round(3)}")
+    print(f"{k} benchmark x\n" f"{r.xval.round(3)}")
     r.check(qp)
-  
+
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)
   print(r.xval)

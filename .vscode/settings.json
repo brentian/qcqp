@@ -3,5 +3,38 @@
     "editor.detectIndentation": true,
     "editor.insertSpaces": true,
     "python.formatting.provider": "yapf",
-    "editor.fontFamily": "'Roboto Mono'"
+    "editor.fontFamily": "'Roboto Mono'",
+    "latex-workshop.latex.tools": [
+        {
+            "name": "xetexmk",
+            "command": "latexmk",
+            "args": [
+                "-cd",
+                "-synctex=1",
+                // "-f",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-xelatex",
+                "-outdir=%OUTDIR%",
+                "%DOC%"
+            ],
+            "env": {}
+        },
+        {
+            "name": "bibtex",
+            "command": "bibtex",
+            "args": [
+                "%DOCFILE%"
+            ],
+            "env": {}
+        },
+    ],
+    "latex-workshop.latex.recipes": [
+        {
+            "name": "latexmk",
+            "tools": [
+                "xetexmk"
+            ]
+        },
+    ],
 }
