@@ -11,7 +11,17 @@
 \begin{document}
 \fontsize{9pt}{11}\selectfont
 \frame{\titlepage}
+\begin{frame}{QCQP}
+  Recall QCQP:
 
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & x^TQx + q^T x                                   \\
+      \mathrm{s.t.}  \quad   & x^{T} A_i x  + a_i^Tx   \; (\le, =, \ge) \; b_i \\
+                             & 0\le x\le e
+    \end{aligned}
+  \end{equation}
+\end{frame}
 \begin{frame}{MSC}
   Consider MSC relaxation with spectral decomposition, \(Q =V_0 \diag (\lambda_0) V_0^T, A_i = V_i \diag (\lambda_i) V_i^T\)
   \begin{equation}\label{eq.rel.msc}
@@ -81,18 +91,22 @@
 \begin{frame}{Simple test on ADMM}
   \begin{tabular}{llrrrrrl}
     \toprule
-    {} & $n$:$m$:id & $t$    & best\_bound & best\_obj & relax\_obj & nodes & method    \\
+    {} & $n$:$m$:id & $t$     & best\_bound & best\_obj & relax\_obj & nodes & method    \\
     \midrule
-    0  & 5:5:0      & 0.03   & 5.56        & 5.56      & 5.56       & 29.0  & grb       \\
-    1  & 5:5:0      & 8.44   & 5.56        & 5.56      & 5.56       & 171.0 & admm\_msc \\
-    0  & 50:20:0    & 200.00 & 189.34      & 87.69     & 189.34     & 839.0 & grb       \\
-    1  & 50:20:0    & 200.04 & 123.06      & 122.99    & 123.00     & 248.0 & admm\_msc \\
-    0  & 50:50:0    & 200.00 & 197.20      & 68.50     & 197.20     & 395.0 & grb       \\
-    1  & 50:50:0    & 200.39 & 159.97      & 157.23    & 157.36     & 86.0  & admm\_msc \\
-    0  & 100:20:0   & 400.00 & 777.92      & 90.51     & 777.92     & 65.0  & grb       \\
-    1  & 100:20:0   & 402.83 & 385.68      & 383.19    & 383.28     & 130.0 & admm\_msc \\
-    0  & 100:50:0   & 400.01 & 817.60      & 115.00    & 817.60     & 12.0  & grb       \\
-    1  & 100:50:0   & 406.29 & 367.47      & 358.75    & 359.59     & 61.0  & admm\_msc \\
+    0  & 5:5:0      & 0.03    & 5.56        & 5.56      & 5.56       & 29.0  & grb       \\
+    1  & 5:5:0      & 8.44    & 5.56        & 5.56      & 5.56       & 171.0 & admm\_msc \\
+    0  & 50:20:0    & 200.00  & 189.34      & 87.69     & 189.34     & 839.0 & grb       \\
+    1  & 50:20:0    & 200.04  & 123.06      & 122.99    & 123.00     & 248.0 & admm\_msc \\
+    0  & 50:50:0    & 200.00  & 197.20      & 68.50     & 197.20     & 395.0 & grb       \\
+    1  & 50:50:0    & 200.39  & 159.97      & 157.23    & 157.36     & 86.0  & admm\_msc \\
+    0  & 100:20:0   & 400.00  & 777.92      & 90.51     & 777.92     & 65.0  & grb       \\
+    1  & 100:20:0   & 402.83  & 385.68      & 383.19    & 383.28     & 130.0 & admm\_msc \\
+    0  & 100:50:0   & 400.01  & 817.60      & 115.00    & 817.60     & 12.0  & grb       \\
+    1  & 100:50:0   & 406.29  & 367.47      & 358.75    & 359.59     & 61.0  & admm\_msc \\
+    0  & 200:5:0    & 1000.00 & 3205.11     & 111.11    & 3205.11    & 2.0   & grb       \\
+    1  & 200:5:0    & 1002.45 & 519.80      & 519.37    & 519.38     & 375.0 & admm\_msc \\
+    0  & 200:20:0   & 1000.01 & 4050.97     & 135.87    & 4050.97    & 1.0   & grb       \\
+    1  & 200:20:0   & 1006.92 & 528.21      & 519.58    & 519.88     & 74.0  & admm\_msc \\
     \bottomrule
   \end{tabular}
 \end{frame}

@@ -132,7 +132,6 @@ def msc_admm(
   _iter = 0
   start_time = time.time()
   while _iter < admmparams.max_iteration:
-    _iter += 1
     r = msc_subproblem_x(
       sval, xival, kappa, mu, rho, qp, bounds, solve=False, verbose=verbose
     )
@@ -148,7 +147,7 @@ def msc_admm(
     residual_ts = tval - sval
     residual_xix = (xival * xval).sum() - tval
     r.bound = (r.yval.T @ qp.Qmul).trace() + (qp.q.T @ xval).trace()
-    gap = (r.bound - r.relax_obj) / (r.bound + 1e-2)
+    gap = abs((r.bound - r.relax_obj) / (r.bound + 1e-2))
     curr_time = time.time()
     adm_time = curr_time - start_time
     if _iter % admmparams.logging_interval == 0:
@@ -162,6 +161,7 @@ def msc_admm(
       break
     kappa += residual_ts * rho
     mu += residual_xix * rho
+    _iter += 1
   r.result_xi = r_xi
   r.nodes = _iter
   r.solve_time = adm_time
