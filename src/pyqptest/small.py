@@ -33,9 +33,9 @@ if __name__ == '__main__':
 
   n, m = qp.n, qp.m
   # problem
-  problem_id = f"{n}:{m}:{0}"
+  problem_id = qp.name if qp.name else f"{n}:{m}:{0}"
   # start
-  bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
+  bd = Bounds(xlb=qp.vl, xub=qp.vu)
 
   evals = []
   results = {}
@@ -57,4 +57,9 @@ if __name__ == '__main__':
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)
   print(r.xval)
-  print(df_eval[['prob_num', 'solve_time', 'relax_obj', 'method']].to_latex())
+  print(
+    df_eval[[
+      'prob_num', 'solve_time', 'best_bound', 'best_obj', 'relax_obj', 'nodes',
+      'method'
+    ]].to_latex()
+  )

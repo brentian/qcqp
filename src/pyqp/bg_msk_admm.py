@@ -1,6 +1,6 @@
 from pyqp.classes import BCParams
 from .bg_msk_msc import *
-
+import time
 
 class MSKResultXi(MSKMscResult):
   """Result keeper for ADMM subproblem
@@ -112,7 +112,6 @@ def msc_admm(
   **kwargs
 ):
   _unused = kwargs
-  Q, q, A, a, b, sign, *_ = qp.unpack()
   if qp.Qpos is None:
     raise ValueError("decompose QP instance first")
   if qp.decom_method == 'eig-type1':
@@ -223,11 +222,11 @@ def msc_subproblem_x(  # follows the args
   # RLT cuts
   rlt_expr = expr.sub(expr.sum(y), expr.dot(bounds.xlb + bounds.xub, x))
   model.constraint(rlt_expr, dom.lessThan(-(bounds.xlb * bounds.xub).sum()))
-
+  
   for i in range(m):
     apos, ipos = qp.Apos[i]
     aneg, ineg = qp.Aneg[i]
-    quad_expr = expr.sub(expr.dot(a[i], x), b[i])
+    quad_expr = expr.dot(a[i], x)
 
     if ipos.shape[0] + ineg.shape[0] > 0:
 
@@ -248,32 +247,30 @@ def msc_subproblem_x(  # follows the args
       model.constraint(
         expr.sub(expr.mul((apos + aneg), zi), x), dom.equalsTo(0)
       )
-
-      # this means you can place on x directly.
-      rlt_expr = expr.sub(expr.sum(yi), expr.dot(bounds.xlb + bounds.xub, x))
-      model.constraint(rlt_expr, dom.lessThan(-(bounds.xlb * bounds.xub).sum()))
-
       quad_terms = expr.dot(el, yi)
-
       quad_expr = expr.add(quad_expr, quad_terms)
 
     else:
       Y.append(None)
       Z.append(None)
-
-    quad_dom = dom.equalsTo(0) if sign[i] == 0 else (
-      dom.greaterThan(0) if sign[i] == -1 else dom.lessThan(0)
-    )
-
+    if qp.sign is not None:
+      # unilateral case
+      quad_dom = dom.equalsTo(0) if sign[i] == 0 else (
+        dom.greaterThan(0) if sign[i] == -1 else dom.lessThan(-b[i])
+      )
+    else:
+      # bilateral case
+      quad_dom = dom.inRange(qp.al[i], qp.au[i])
     model.constraint(quad_expr, quad_dom)
-
+  
   ###################
   # The above part is unchanged
   ###################
   # norm bounds on y^Te
-  t = model.variable("t", dom.inRange(0, n))
+  t = model.variable("t", dom.inRange(0, 1e8))
   for idx, yi in enumerate(Y):
-    model.constraint(expr.sub(expr.sum(yi), t), dom.lessThan(0))
+    if yi is not None:
+      model.constraint(expr.sub(expr.sum(yi), t), dom.lessThan(0))
 
   # ADMM solves the minimization problem so we reverse the max objective.
   true_obj_expr = expr.add(expr.dot(-q, x), expr.dot(-qel, y))
@@ -340,24 +337,12 @@ def msc_subproblem_xi(  # follows the args
   -------
   """
   _unused = kwargs
-  Q, q, A, a, b, sign, *_ = qp.unpack()
-  if qp.Qpos is None:
-    raise ValueError("decompose QP instance first")
-  if qp.decom_method == 'eig-type1':
-    raise ValueError(f"cannot use {qp.decom_method}")
-  m, n, dim = a.shape
-  xshape = (n, dim)
+  
+  xshape = (qp.n, qp.d)
   model = mf.Model('many_small_cone_msk')
 
   if verbose:
     model.setLogHandler(sys.stdout)
-
-  if bounds is None:
-    bounds = MscBounds.construct(qp)
-
-  # qpos, qipos = qp.Qpos
-  # qneg, qineg = qp.Qneg
-  # qel = qp.Qmul
 
   ###################
   # The above part is unchanged

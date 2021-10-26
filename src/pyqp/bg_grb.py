@@ -36,7 +36,7 @@ def qp_gurobi(qp: QP,
   time_limit = params.time_limit
   import gurobipy as grb
   st_time = time.time()
-  Q, q, A, a, b, sign = qp.unpack()
+  Q, q, A, a, b, sign, al, au = qp.unpack()
   lb, ub, ylb, yub = bounds.unpack()
   m, n, d = a.shape
   model = grb.Model()
@@ -51,24 +51,36 @@ def qp_gurobi(qp: QP,
   
   obj_expr = grb.quicksum(Q[i][j] * x[i] * x[j] for i, j in itertools.product(indices, indices)) \
              + grb.quicksum(q[i][0] * x[i] for i in indices)
-  for constr_num in range(m):
-    if sign[constr_num] == 0:
+  if sign is not None:
+    # unilateral constraints
+    for constr_num in range(m):
+      if sign[constr_num] == 0:
+        model.addConstr(
+          grb.quicksum(x[j] * a[constr_num][j][0] for j in indices)
+          + grb.quicksum(A[constr_num][i][j] * x[i] * x[j] for i, j in itertools.product(indices, indices))
+          == b[constr_num])
+      
+      elif sign[constr_num] == -1:
+        model.addConstr(
+          grb.quicksum(x[j] * a[constr_num][j][0] for j in indices)
+          + grb.quicksum(A[constr_num][i][j] * x[i] * x[j] for i, j in itertools.product(indices, indices))
+          >= b[constr_num])
+      
+      else:
+        model.addConstr(
+          grb.quicksum(x[j] * a[constr_num][j][0] for j in indices)
+          + grb.quicksum(A[constr_num][i][j] * x[i] * x[j] for i, j in itertools.product(indices, indices))
+          <= b[constr_num])
+  else:
+    for constr_num in range(m):
       model.addConstr(
         grb.quicksum(x[j] * a[constr_num][j][0] for j in indices)
         + grb.quicksum(A[constr_num][i][j] * x[i] * x[j] for i, j in itertools.product(indices, indices))
-        == b[constr_num])
-    
-    elif sign[constr_num] == -1:
+        <= au[constr_num])
       model.addConstr(
         grb.quicksum(x[j] * a[constr_num][j][0] for j in indices)
         + grb.quicksum(A[constr_num][i][j] * x[i] * x[j] for i, j in itertools.product(indices, indices))
-        >= b[constr_num])
-    
-    else:
-      model.addConstr(
-        grb.quicksum(x[j] * a[constr_num][j][0] for j in indices)
-        + grb.quicksum(A[constr_num][i][j] * x[i] * x[j] for i, j in itertools.product(indices, indices))
-        <= b[constr_num])
+        >= al[constr_num])
   
   model.setParam(grb.GRB.Param.NonConvex, 2)
   model.setParam(grb.GRB.Param.TimeLimit, time_limit)
