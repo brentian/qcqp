@@ -42,7 +42,7 @@ if __name__ == '__main__':
   # run methods
   for k in r_methods:
     func = METHODS[k]
-    qp1 = bb.QP(*qp.unpack())
+    qp1 = QP(*qp.unpack())
     qp1.decompose()
     r = func(qp1, bd, params=params, admmparams=admmparams)
     reval = r.eval(problem_id)

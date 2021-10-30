@@ -2,6 +2,14 @@ from pyqp.classes import BCParams
 from .bg_msk_msc import *
 import time
 
+
+class ADMMParams(BCParams):
+  max_iteration = 10000
+  logging_interval = 1
+  time_limit = 60
+  obj_gap = 1e-8
+  res_gap = 1e-8
+  
 class MSKResultXi(MSKMscResult):
   """Result keeper for ADMM subproblem
   for (xi)
@@ -26,7 +34,10 @@ class MSKResultXi(MSKMscResult):
       self.xival = self.xivar.level().reshape(self.xivar.getShape())
     else:  # infeasible
       self.relax_obj = -1e6
-
+      print(status)
+      if status == mf.ProblemStatus.Unknown:
+        self.problem.writeTask("/tmp/dump.task.gz")
+        self.problem.writeTask("/tmp/dump.mps")
     self.solved = True
     self.solve_time = round(end_time - start_time, 3)
 
@@ -87,18 +98,15 @@ class MSKResultX(MSKMscResult):
         self.true_obj = qp_obj_func(qp.Q, qp.q, self.xval)
     else:  # infeasible
       self.relax_obj = -1e6
+      print(status)
+      if status == mf.ProblemStatus.Unknown:
+        self.problem.writeTask("/tmp/dump.task.gz")
 
     self.solved = True
     self.solve_time = round(end_time - start_time, 3)
 
     def check(self, qp: QP):
       pass
-
-
-class ADMMParams(BCParams):
-  max_iteration = 1000
-  logging_interval = 10
-  time_limit = 60
 
 
 def msc_admm(
@@ -153,7 +161,7 @@ def msc_admm(
       print(
         f"//{curr_time - start_time: .2f}, @{_iter} # alm: {r.relax_obj: .4f} gap: {gap:.3%} norm t - s: {residual_ts: .4e}, 𝜉x - t: {residual_xix: .4e}"
       )
-    if (gap < 1e-4) or (max(abs(residual_ts), abs(residual_xix)) < 1e-4):
+    if (gap < admmparams.obj_gap) or (max(abs(residual_ts), abs(residual_xix)) < admmparams.res_gap):
       print(f"terminited by gap")
       break
     if adm_time >= admmparams.time_limit:
@@ -217,11 +225,7 @@ def msc_subproblem_x(  # follows the args
     model.constraint(zcone.index([idx, 1, 1]), dom.equalsTo(1))
 
   # Q.T x = Z
-  model.constraint(expr.sub(expr.mul((qneg + qpos), z), x), dom.equalsTo(0))
-
-  # RLT cuts
-  rlt_expr = expr.sub(expr.sum(y), expr.dot(bounds.xlb + bounds.xub, x))
-  model.constraint(rlt_expr, dom.lessThan(-(bounds.xlb * bounds.xub).sum()))
+  model.constraint(expr.sub(expr.mul((qneg + qpos).T, x), z), dom.equalsTo(0))
   
   for i in range(m):
     apos, ipos = qp.Apos[i]
@@ -245,7 +249,7 @@ def msc_subproblem_x(  # follows the args
 
       # A.T @ x == z
       model.constraint(
-        expr.sub(expr.mul((apos + aneg), zi), x), dom.equalsTo(0)
+        expr.sub(expr.mul((apos + aneg).T, x), zi), dom.equalsTo(0)
       )
       quad_terms = expr.dot(el, yi)
       quad_expr = expr.add(quad_expr, quad_terms)
@@ -256,21 +260,24 @@ def msc_subproblem_x(  # follows the args
     if qp.sign is not None:
       # unilateral case
       quad_dom = dom.equalsTo(0) if sign[i] == 0 else (
-        dom.greaterThan(0) if sign[i] == -1 else dom.lessThan(-b[i])
+        dom.greaterThan(0) if sign[i] == -1 else dom.lessThan(b[i])
       )
     else:
       # bilateral case
       quad_dom = dom.inRange(qp.al[i], qp.au[i])
+      # quad_dom = dom.lessThan(qp.au[i])
     model.constraint(quad_expr, quad_dom)
   
   ###################
   # The above part is unchanged
   ###################
   # norm bounds on y^Te
-  t = model.variable("t", dom.inRange(0, 1e8))
+  t = model.variable("t", dom.inRange(0, s))
   for idx, yi in enumerate(Y):
     if yi is not None:
       model.constraint(expr.sub(expr.sum(yi), t), dom.lessThan(0))
+    else:
+      print("ssss")
 
   # ADMM solves the minimization problem so we reverse the max objective.
   true_obj_expr = expr.add(expr.dot(-q, x), expr.dot(-qel, y))

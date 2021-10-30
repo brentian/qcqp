@@ -89,7 +89,7 @@ def shor(qp: QP,
   """
   _unused = kwargs
   st_time = time.time()
-  Q, q, A, a, b, sign = qp.unpack()
+  Q, q, A, a, b, sign, *_ = qp.unpack()
   lb, ub, ylb, yub = bounds.unpack()
   m, n, d = a.shape
   xshape = (n, d)

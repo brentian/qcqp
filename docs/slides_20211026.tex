@@ -22,24 +22,26 @@
     \end{aligned}
   \end{equation}
 \end{frame}
-\begin{frame}{MSC}
-  Consider MSC relaxation with spectral decomposition, \(Q =V_0 \diag (\lambda_0) V_0^T, A_i = V_i \diag (\lambda_i) V_i^T\)
-  \begin{equation}\label{eq.rel.msc}
-    \begin{aligned}
-      \model{MSC} \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0                                                       \\
-      \mathrm{s.t.} \quad                        & \textcolor{red}{ V_i^Tx = z_i}, \xout{V_i z_i = x  } & i=0,...,m      \\
-                                                 & y_i ^T\lambda_i  + a_i^Tx  \le b_i                   & i=1,...,m      \\
-                                                 & y_i \ge z_i \circ z_i                                & i=0,...,m      \\
-                                                 & y_i^Te \le x^Te                                      & i=0, \cdots, m
-    \end{aligned}
+\begin{frame}{Problems to MSC}
+  Recall in our quadratic constraints, \(A_i = V_i \diag (\lambda_i) V_i^T\), and in MSC we use,\begin{equation}
+    z_i = V_i^Tx, y_i \ge z_i \circ z_i
   \end{equation}
-  Let \(\Omega\) defines the set of second-order cones for \((x, \bm y, \bm z)\)
-  \begin{equation}
-    \Omega = \left\{ (x,z,y) :  \begin{aligned}
-       & V_i^Tx = z_i                       & i=0,...,m \\
-       & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m \\
-       & y_i \ge z_i \circ z_i              & i=0,...,m \\
-    \end{aligned}\right\}
+  \begin{itemize}
+    \item For MSC, \(z_i = V_i^Tx\), if \(V_i\) is not full rank, \(\|z_i\| \le \|x\|\)
+    \item So that \(y_i^Te \ge \|z_i\|^2\), the truth is \(y_i^Te = \|z_i\|^2 (\textsf{ideally}) \le \|x\|\)
+    \item Even if \(V_i, \forall i = 1, ..., m\),
+          \begin{equation}
+            y_i = z_i \circ z_i y_i^Te = \|x\|^2
+          \end{equation}
+  \end{itemize}
+\end{frame}
+\begin{frame}{Convexification}
+  Convexify Q constraints,
+  \begin{equation}\label{eq:primal.Sigma}
+    \begin{aligned}
+       & x^T(Q_i+t_i I_n) x+q_i^T x \leqslant b_i+ t_i \cdot s,i= 1,\dots, m \\
+       & x^T x= s^2
+    \end{aligned}
   \end{equation}
 \end{frame}
 \begin{frame}{MSC on the surface of norm balls}
@@ -59,12 +61,12 @@
   \end{equation}
   So we add slack variable \(s, t, \xi\) and bilinear constraint.
   \begin{align}
-    \model{MSC} \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0                     \\
-    \mathrm{s.t.} \quad                        & (y,z,x) \in \Omega                  \\
-                                               & y_i^Te \le t       & i=0, \cdots, m \\
-    (\kappa) \quad                             & t= s               & i=0, \cdots, m \\
-    (\mu)    \quad                             & \xi^Tx = t                          \\
-                                               & \xi^T\xi \le s
+    \model{MSC} \quad \mx\quad & y_0 ^T\lambda_0                     \\
+    \st \quad                  & (y,z,x) \in \Omega                  \\
+                               & y_i^Te \le t       & i=0, \cdots, m \\
+    (\kappa) \quad             & t= s               & i=0, \cdots, m \\
+    (\mu)    \quad             & \xi^Tx = t                          \\
+                               & \xi^T\xi \le s
   \end{align}
   If \(s, t, \xi, y, z, x\) is the solution, then \( y, z, x\) is the optimal solution for MSC.
 \end{frame}
@@ -111,6 +113,40 @@
     1  & QPLIB\_1055 & 200.58  & 33.05       & 33.04     & 33.04      & 231.0 & admm\_msc \\
     \bottomrule
   \end{tabular}
+\end{frame}
+
+\begin{frame}
+  However, ADMM should produce a KKT point instead of a global optimum, maybe we can test this on very specific problems,
+  for example, the SNL.
+\end{frame}
+\begin{frame}{B-C using NMSC}
+  Introducing \(n\) auxiliary variables representing the bilinear terms, i.e., and we define the McCormick inequalities,
+  \begin{align}
+                         & \xi^Tx = \rho^Te, \rho_i = (\xi \cdot x)_i \\
+    (\mathcal B_i) \quad & \rho \geq l_\xi x+l_x \xi - l_x l_\xi      \\
+                         & \rho_i \geq u_\xi x+u_x \xi-u_{x} u_\xi    \\
+                         & \rho_i \leq u_\xi x+l_x \xi-l_x u_\xi      \\
+                         & \rho_i \leq u_x\xi +l_\xi x-u_x l_\xi
+  \end{align}
+  \begin{align}
+    \model{MSC} \quad \mx\quad & y_0 ^T\lambda_0                               \\
+    \st \quad                  & (y,z,x) \in \Omega                            \\
+                               & y_i^Te \le s, \quad i=0, \cdots, m            \\
+                               & \xi^T\xi \le s                                \\
+                               & \rho^Te = s                                   \\
+                               & \rho_j \in \mathcal B_j, \quad j=0, \cdots, n
+  \end{align}
+\end{frame}
+\begin{frame}{B-C using NMSC}
+  Then we can obviously design a B-C framework based on the above.
+  \begin{itemize}
+    \item[?] Since \(\rho^Te = s\) then it means the attainment of norm ``circles'', i.e., \(\|\xi\| = \|x\|\)
+    \item[?] Choice of branching on \(x\), find most violation? \(\rho_i - \xi_i x_i\)
+    \item see \linebreak
+          1. Gupte, A., Ahmed, S., Cheon, M.S., Dey, S.: Solving mixed integer bilinear problems using MILP formulations. SIAM Journal on Optimization. 23, 721–744 (2013) \linebreak
+          2. Fischetti, M., Monaci, M.: A branch-and-cut algorithm for mixed-integer bilinear programming. European Journal of Operational Research. 282, 506–514 (2020)
+
+  \end{itemize}
 \end{frame}
 \begin{frame}
   \scriptsize

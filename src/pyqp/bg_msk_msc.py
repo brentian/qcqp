@@ -1,3 +1,8 @@
+"""
+Using second-order cones, small or large
+"""
+
+
 import numpy as np
 import sys
 import time
@@ -8,7 +13,7 @@ from .instances import QP
 
 
 class MSKMscResult(MSKResult):
-
+  
   def __init__(self):
     super().__init__()
     self.zvar = None
@@ -23,7 +28,7 @@ class MSKMscResult(MSKResult):
     self.obj_expr = None
     self.qel = None
     self.q = None
-
+  
   def solve(self, verbose=False, qp=None):
     start_time = time.time()
     if verbose:
@@ -54,7 +59,7 @@ class MSKMscResult(MSKResult):
             for xx in self.Yvar
           ]
         )
-
+      
       if self.Dvar is not None:
         self.Dval = np.hstack(
           [

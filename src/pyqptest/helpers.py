@@ -10,8 +10,8 @@ import pandas as pd
 pd.set_option("display.max_columns", None)
 np.set_printoptions(linewidth=200, precision=4)
 
-from pyqp import bg_grb, bg_msk, bg_msk_msc, bg_msk_chordal, bg_msk_homo, bg_msk_admm
-from pyqp import bb_msc, bb, bb_diag, bb_socp
+from pyqp import bg_grb, bg_msk, bg_msk_msc, bg_msk_admm
+from pyqp import bb, bb_diag, bb_nmsc
 from pyqp.classes import QP, QPI, Bounds, BCParams
 from pyqp.bg_msk_admm import ADMMParams
 import argparse
@@ -19,11 +19,15 @@ import json
 
 METHODS = collections.OrderedDict(
   [
-    ("grb", bg_grb.qp_gurobi), ("shor", bg_msk.shor), ("dshor", bg_msk.dshor),
-    ("msc", bg_msk_msc.msc), ("emsc", bg_msk_msc.msc_diag),
-    ("ssdp", bg_msk_chordal.ssdp), ("bb", bb.bb_box),
-    ("bb_msc", bb_diag.bb_box), ("shor_homo", bg_msk_homo.shor),
-    ("admm_msc", bg_msk_admm.msc_admm)
+    ("grb", bg_grb.qp_gurobi),
+    ("shor", bg_msk.shor),  # relaxation: shor
+    ("dshor", bg_msk.dshor), # relaxation: shor-dual
+    ("msc", bg_msk_msc.msc),
+    ("emsc", bg_msk_msc.msc_diag),
+    ("bb", bb.bb_box),
+    ("bb_msc", bb_diag.bb_box),
+    ("admm_nmsc", bg_msk_admm.msc_admm), # local method using admm
+    ("bb_nmsc", bb_nmsc.bb_box)
   ]
 )
 

@@ -89,6 +89,7 @@ class QP(object):
     decom_arr.append([ipos, ineg])
 
     for i in range(self.m):
+      
       (ap, ip), (an, inn), mul, gamma = func(self.A[i])
       self.Apos[i] = (ap, ip)
       self.Aneg[i] = (an, inn)
@@ -124,7 +125,7 @@ class QP(object):
     return (upos, ipos), (uneg, ineg), mul, gamma.reshape((self.n, 1))
 
   def _decompose_matrix_eig(self, A):
-    gamma, u = nl.eig(A)
+    gamma, u = nl.eigh(A)
     ipos = (gamma >= 0).astype(int)
     ineg = (gamma < 0).astype(int)
     eig = np.diag(gamma)
