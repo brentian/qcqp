@@ -239,3 +239,8 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   best_r.nodes = total_nodes
   best_r.solve_time = time.time() - start_time
   return best_r
+
+def bb_box_nsocp(
+    qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs
+):
+  return bb_box(qp, bounds, verbose, params, func=bg_msk_norm.socp ,**kwargs)

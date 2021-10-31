@@ -35,9 +35,20 @@ Some source code to look at:
     \item
 \end{itemize}
 
-\subsection{Root}
+\paragraph{Branch for \(v= x^2\)}
 
-The root of the problem can selected from different SDPs as we discussed before. It is a question to answer whether we should use the SDP with the tightest bound.
+Using secant cut \(y = (u + l)x - ul\),
+
+\begin{proposition}
+    Branching at \(\alpha = \frac{u + l}{2}\) both minimized the area of both children and the maximum violations.
+\end{proposition}
+\begin{proof}
+    calculate sum of area by simple calculus.
+    \begin{equation}
+        A(\alpha) = \frac{1}{6}(u^3- l^3) + \frac{1}{2}\left[(u-l)\alpha^2 - (u^2-l^2)\alpha\right]
+    \end{equation}
+    The minimizer can be calculated. \hfill\qed
+\end{proof}
 
 
 \end{document}

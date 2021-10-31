@@ -29,7 +29,8 @@ METHODS = collections.OrderedDict(
     ("admm_nmsc", bg_msk_admm.msc_admm), # local method using admm
     ("bb_nmsc", bb_nmsc.bb_box),
     # socp
-    ("nsocp", bg_msk_norm.socp)
+    ("nsocp", bg_msk_norm.socp),
+    ("bb_nsocp", bb_nmsc.bb_box_nsocp)
   ]
 )
 

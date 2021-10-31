@@ -292,7 +292,7 @@ def socp(
     raise ValueError(f"cannot use {qp.decom_method}")
   m, n, dim = a.shape
   xshape = (n, dim)
-  model = mf.Model('many_small_cone_msk')
+  model = mf.Model('socp-with-norm')
   
   if verbose:
     model.setLogHandler(sys.stdout)
@@ -328,7 +328,7 @@ def socp(
       dom.inRotatedQCone()
     )
     obj_expr = expr.sub(obj_expr, y.index(0))
-    obj_expr = expr.add(obj_expr, expr.mul(qp.l[-1], s))
+    obj_expr = expr.sub(obj_expr, expr.mul(qp.l[-1], s))
   
   # RLT for ρ = (ξ ◦ x)
   model.constraint(
