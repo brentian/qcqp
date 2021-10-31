@@ -10,7 +10,7 @@ import pandas as pd
 pd.set_option("display.max_columns", None)
 np.set_printoptions(linewidth=200, precision=4)
 
-from pyqp import bg_grb, bg_msk, bg_msk_msc, bg_msk_admm
+from pyqp import bg_grb, bg_msk, bg_msk_msc, bg_msk_admm, bg_msk_norm
 from pyqp import bb, bb_diag, bb_nmsc
 from pyqp.classes import QP, QPI, Bounds, BCParams
 from pyqp.bg_msk_admm import ADMMParams
@@ -27,7 +27,9 @@ METHODS = collections.OrderedDict(
     ("bb", bb.bb_box),
     ("bb_msc", bb_diag.bb_box),
     ("admm_nmsc", bg_msk_admm.msc_admm), # local method using admm
-    ("bb_nmsc", bb_nmsc.bb_box)
+    ("bb_nmsc", bb_nmsc.bb_box),
+    # socp
+    ("nsocp", bg_msk_norm.socp)
   ]
 )
 

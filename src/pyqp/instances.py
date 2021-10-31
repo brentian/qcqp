@@ -71,6 +71,8 @@ class QP(object):
     self.Aneg = {}
     self.Amul = {}
     self.Aeig = {}
+    self.R = {}
+    self.l = {}
     if decompose_method == 'eig-type1':
       func = self._decompose_matrix
     elif decompose_method == 'eig-type2':
@@ -78,39 +80,61 @@ class QP(object):
     else:
       raise ValueError("not such decomposition method")
     self.decom_method = decompose_method
-    (upos, ipos), (uneg, ineg), mul, gamma = func(self.Q)
-    self.Qpos, self.Qneg = (upos, ipos), (uneg, ineg)
-    self.Qmul = mul
-    self.Qeig = gamma
     decom_arr = []
     decom_map = np.zeros((self.m + 1, 2, self.n))
-    decom_map[0, 0, ipos] = 1
-    decom_map[0, 1, ineg] = 1
-    decom_arr.append([ipos, ineg])
+    if self.Q is not None:
+      (upos, ipos), (uneg, ineg), mul, gamma = func(self.Q)
+      self.Qpos, self.Qneg = (upos, ipos), (uneg, ineg)
+      self.Qmul = mul
+      self.Qeig = gamma
+      decom_map[0, 0, ipos] = 1
+      decom_map[0, 1, ineg] = 1
+      decom_arr.append([ipos, ineg])
 
     for i in range(self.m):
-      
-      (ap, ip), (an, inn), mul, gamma = func(self.A[i])
-      self.Apos[i] = (ap, ip)
-      self.Aneg[i] = (an, inn)
-      self.Amul[i] = mul
-      self.Aeig[i] = gamma
-      decom_map[i + 1, 0, ip] = 1
-      decom_map[i + 1, 1, inn] = 1
-      decom_arr.append([ip, inn])
-      if validate:
-        d = np.abs(ap @ ap.T - an @ an.T - self.A[i])
-        assert d.max() < 1e-3
+      Ai = self.A[i]
+      if Ai is not None:
+        (ap, ip), (an, inn), mul, gamma = func(Ai)
+        self.Apos[i] = (ap, ip)
+        self.Aneg[i] = (an, inn)
+        self.Amul[i] = mul
+        self.Aeig[i] = gamma
+        decom_map[i + 1, 0, ip] = 1
+        decom_map[i + 1, 1, inn] = 1
+        decom_arr.append([ip, inn])
+        if validate:
+          d = np.abs(ap @ ap.T - an @ an.T - self.A[i])
+          assert d.max() < 1e-3
+      else:
+        self.Apos[i] = None
+        self.Aneg[i] = None
+        self.Amul[i] = None
+        self.Aeig[i] = None
     self.decom_map = decom_map
     self.decom_arr = decom_arr
-
+    # construct convex cones
+    for i in range(self.m):
+      Ai = self.A[i]
+      if Ai is not None:
+        self.l[i], self.R[i] = self._scaled_cholesky(Ai)
+    if self.Q is not None:
+      l, R = self._scaled_cholesky( - self.Q)
+      self.l[-1] = -l
+      self.R[-1] = -R
+  
+  def _scaled_cholesky(self, A):
+    gamma, u = nl.eigh(A)
+    l = 0 if min(gamma) > 0 else - min(gamma) + 1e-2
+    R = nl.cholesky(A + l * np.eye(self.n))
+    return l, R
+    
   def _decompose_matrix(self, A):
     """
     A cholesky like decomposition.
     :param A:
     :return:
     """
-    gamma, u = nl.eig(A)
+    gamma, u = nl.eigh(A)
     ipos = (gamma > 0).astype(int)
     ineg = (gamma < 0).astype(int)
     eig = np.diag(gamma)
@@ -126,7 +150,7 @@ class QP(object):
 
   def _decompose_matrix_eig(self, A):
     gamma, u = nl.eigh(A)
-    ipos = (gamma >= 0).astype(int)
+    ipos = (gamma > 0).astype(int)
     ineg = (gamma < 0).astype(int)
     eig = np.diag(gamma)
     upos = u @ np.diag(ipos)
