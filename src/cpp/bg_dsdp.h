@@ -70,7 +70,7 @@ public:
 
     void setup();
 
-    void create_problem(bool solve = false, bool verbose = false, bool use_lp_cone = false);
+    void create_problem(bool solve = false, bool verbose = false, bool use_lp_cone = false, bool bool_diag=true);
 
     void assign_initial_point(Result_DSDP &r_another, bool dual_only) const;
 

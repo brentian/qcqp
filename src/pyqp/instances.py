@@ -291,7 +291,7 @@ class QP(object):
     return True
 
   def construct_homo(self):
-    self.Qh = np.bmat([[self.Q, self.q / 2], [self.q.T / 2, np.zeros((1, 1))]])
+    self.Qh = np.bmat([[self.Q, self.q / 2], [self.q.T / 2, np.zeros((1, 1))]]).__array__()
     self.Ah = []
     for i in range(self.m):
       _Ah = np.bmat(
@@ -300,7 +300,7 @@ class QP(object):
           [self.a[i].T / 2, np.ones((1, 1)) * (-self.b[i])]
         ]
       )
-      self.Ah.append(_Ah)
+      self.Ah.append(_Ah.__array__())
 
 
 class QPInstanceUtils(object):
@@ -347,7 +347,7 @@ class QPInstanceUtils(object):
     # A = np.zeros(A.shape)
     q = np.random.randint(0, 5, (n, 1))
     a = np.random.randint(0, 5, (m, n, 1))
-    b = np.ones(m) * 3 * n
+    b = np.ones(m) * n
     sign = np.ones(shape=m)
     Q = (np.random.random(Q.shape) <= rho) * (Q + Q.T)
     A = (np.random.random(A.shape) <= rho) @ (A + A.transpose(0, 2, 1))
