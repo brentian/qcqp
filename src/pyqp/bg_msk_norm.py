@@ -77,6 +77,8 @@ class MSKSocpResult(MSKResult):
     self.Dval = None
     self.svar = None
     self.sval = None
+    self.tvar = None
+    self.tval = None
     self.rhovar = None
     self.rhoval = None
     self.solved = False
@@ -97,6 +99,8 @@ class MSKSocpResult(MSKResult):
     if status == mf.ProblemStatus.PrimalAndDualFeasible:
       # extract sval and xi
       self.sval = self.svar.level()[0]
+      if self.tvar is not None:
+        self.tval = self.tvar.level()[0]
       self.rhoval = self.rhovar.level().reshape(self.rhovar.getShape())
       # other SOCP results
       self.xval = self.xvar.level().reshape(self.xvar.getShape()).round(4)

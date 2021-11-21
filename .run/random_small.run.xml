@@ -12,7 +12,7 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <option name="SCRIPT_NAME" value="pyqptest.random_small" />
-    <option name="PARAMETERS" value="--n 6 --m 0 --r 1,11" />
+    <option name="PARAMETERS" value="--n 3 --m 0 --r 1,5,10,12" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="true" />

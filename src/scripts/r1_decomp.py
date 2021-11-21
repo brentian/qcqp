@@ -1,3 +1,18 @@
+"""
+@author: Chuwen,
+@date: 11'11'2021
+rank-one decomposition procedure provided by Sturm, Zhang'03
+Sturm, J.F., Zhang, S.: On cones of nonnegative quadratic functions. Mathematics of Operations research. 28, 246–267 (2003)
+
+  This paper describes the rank-one procedure such that for PSD matrix X,
+  if A * X = p, then exists rank-one decomposition,
+
+  X = \sum_i^r x_jx_j^T, such that \forall j, <x_j, A * x_j> = p/r
+  
+  Then one can show a SDR + rank-one decomp solves the QCQP with one Q constraint
+  EXACTLY.
+"""
+
 import numpy as np
 
 from pyqptest.helpers import *
@@ -142,5 +157,8 @@ if __name__ == '__main__':
   # primal
   x = y / y[-1]
   
+  print(y1)
+  print(yj)
+  print(alpha)
   print((x.T@qp.Qh @x).trace())
   print((X@qp.Qh).trace())
