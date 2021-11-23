@@ -1,0 +1,119 @@
+\include{headers/header.slides}
+\include{headers/cmd}
+\usepackage{subfig}
+\usepackage[style=authoryear]{biblatex}
+\usepackage{bm}
+
+\date{\today}
+\addbibresource{headers/qcqp.bib}
+
+
+\begin{document}
+\fontsize{9pt}{11}\selectfont
+\frame{\titlepage}
+\begin{frame}{QCQP}
+  Recall QCQP:
+
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & x^TQx + q^T x                                   \\
+      \mathrm{s.t.}  \quad   & x^{T} A_i x  + a_i^Tx   \; (\le, =, \ge) \; b_i \\
+                             & 0\le x\le e
+    \end{aligned}
+  \end{equation}
+\end{frame}
+\begin{frame}{MSC}
+  Consider MSC relaxation with spectral decomposition, \(Q =V_0 \diag (\lambda_0) V_0^T, A_i = V_i \diag (\lambda_i) V_i^T\)
+  \begin{equation}\label{eq.rel.msc}
+    \begin{aligned}
+      \model{MSC} \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0                                                       \\
+      \mathrm{s.t.} \quad                        & \textcolor{red}{ V_i^Tx = z_i}, \xout{V_i z_i = x  } & i=0,...,m      \\
+                                                 & y_i ^T\lambda_i  + a_i^Tx  \le b_i                   & i=1,...,m      \\
+                                                 & y_i \ge z_i \circ z_i                                & i=0,...,m      \\
+                                                 & y_i^Te \le x^Te                                      & i=0, \cdots, m
+    \end{aligned}
+  \end{equation}
+  Let \(\Omega\) defines the set of second-order cones for \((x, \bm y, \bm z)\)
+  \begin{equation}
+    \Omega = \left\{ (x,z,y) :  \begin{aligned}
+       & V_i^Tx = z_i                       & i=0,...,m \\
+       & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m \\
+       & y_i \ge z_i \circ z_i              & i=0,...,m \\
+    \end{aligned}\right\}
+  \end{equation}
+\end{frame}
+\begin{frame}{MSC on the surface of norm balls}
+  Optimal conditions for MSC,
+  \begin{itemize}
+    \item if \((y^*)^Te = \|x^*\|^2\), then \((x^*, y^*)\) is the solution
+    \item we notice \(y_i^Te \ge \|z_i\|^2 = \|x\|^2 \) is guaranteed.
+    \item we want to have,
+          \[y_i^Te \le \|x\|^2\]
+          which is clearly nonconvex
+  \end{itemize}
+\end{frame}
+\begin{frame}{Norm-constrained MSC (NMSC)}
+  Notice,
+  \begin{equation}
+    \|x\|^2 = \max_{\|\xi\| \le \sqrt s} \xi^T x
+  \end{equation}
+  So we add slack variable \(s, t, \xi\) and bilinear constraint.
+  \begin{align}
+    \model{MSC} \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0                     \\
+    \mathrm{s.t.} \quad                        & (y,z,x) \in \Omega                  \\
+                                               & y_i^Te \le t       & i=0, \cdots, m \\
+    (\kappa) \quad                             & t= s               & i=0, \cdots, m \\
+    (\mu)    \quad                             & \xi^Tx = t                          \\
+                                               & \xi^T\xi \le s
+  \end{align}
+  If \(s, t, \xi, y, z, x\) is the solution, then \( y, z, x\) is the optimal solution for MSC.
+\end{frame}
+\begin{frame}{NMSC: the ADMM approach}
+  This allows the augmented Lagrangian function,
+
+  \begin{align*}
+    \mathscr L\left(x,y,z,\xi,s,\kappa,\mu\right) & = - y_0 ^T\lambda_0 + \kappa(t-s) + \mu(\xi^Tx - t) + \frac{\rho}{2}(t-s)^2 + \frac{\rho}{2}(\xi^Tx - s)^2
+  \end{align*}
+
+  The ADMM iteration,
+
+  \begin{align*}
+    (x,y,z,t)^{k+1} & = {\arg\min}_{(x,y,z)\in\Omega, t\ge 0} L\left(x,y,z,\xi^k,s^k,\kappa^k,\mu^k\right)       \\
+    (s, \xi)^{k+1}  & = {\arg\min}_{(s, \xi)\in\mathscr{Q}} L\left((x,y,z,t)^{k+1},\xi,s, \kappa^k, \mu^k\right) \\
+    \kappa^{k+1}    & = \kappa^k + \rho\left(t^{k+1}-s^{k+1}\right)                                              \\
+    \mu^{k+1}       & = \mu^k + \rho\left( \langle\xi^{k+1}, x^{k+1}\rangle - s^{k+1}\right)
+  \end{align*}
+  where \(\mathscr{Q(\cdot)}\) forms a simple SOCP for \(s, \xi\),
+  \begin{equation}
+    \mathscr{Q}(x) =\left\{(s,\xi): \|\xi\|^2 \le s\right\}
+  \end{equation}
+\end{frame}
+\begin{frame}{Simple test on ADMM}
+  \begin{tabular}{llrrrrrl}
+    \toprule
+    {} & $n$:$m$:id  & $t$     & best\_bound & best\_obj & relax\_obj & nodes & method    \\
+    \midrule
+    0  & 5:5:0       & 0.03    & 5.56        & 5.56      & 5.56       & 29.0  & grb       \\
+    1  & 5:5:0       & 8.44    & 5.56        & 5.56      & 5.56       & 171.0 & admm\_msc \\
+    0  & 50:20:0     & 200.00  & 189.34      & 87.69     & 189.34     & 839.0 & grb       \\
+    1  & 50:20:0     & 200.04  & 123.06      & 122.99    & 123.00     & 248.0 & admm\_msc \\
+    0  & 50:50:0     & 200.00  & 197.20      & 68.50     & 197.20     & 395.0 & grb       \\
+    1  & 50:50:0     & 200.39  & 159.97      & 157.23    & 157.36     & 86.0  & admm\_msc \\
+    0  & 100:20:0    & 400.00  & 777.92      & 90.51     & 777.92     & 65.0  & grb       \\
+    1  & 100:20:0    & 402.83  & 385.68      & 383.19    & 383.28     & 130.0 & admm\_msc \\
+    0  & 100:50:0    & 400.01  & 817.60      & 115.00    & 817.60     & 12.0  & grb       \\
+    1  & 100:50:0    & 406.29  & 367.47      & 358.75    & 359.59     & 61.0  & admm\_msc \\
+    0  & 200:5:0     & 1000.00 & 3205.11     & 111.11    & 3205.11    & 2.0   & grb       \\
+    1  & 200:5:0     & 1002.45 & 519.80      & 519.37    & 519.38     & 375.0 & admm\_msc \\
+    0  & 200:20:0    & 1000.01 & 4050.97     & 135.87    & 4050.97    & 1.0   & grb       \\
+    1  & 200:20:0    & 1006.92 & 528.21      & 519.58    & 519.88     & 74.0  & admm\_msc \\
+    0  & QPLIB\_1055 & 200.00  & 33.28       & 33.03     & 33.28      & 911.0 & grb       \\
+    1  & QPLIB\_1055 & 200.58  & 33.05       & 33.04     & 33.04      & 231.0 & admm\_msc \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+\begin{frame}
+  \scriptsize
+  \printbibliography
+\end{frame}
+\end{document}

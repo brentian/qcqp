@@ -1,0 +1,105 @@
+\include{headers/header.slides}
+\usepackage{subfig}
+\usepackage[style=authoryear]{biblatex}
+\usepackage{bm}
+\title{Global QCQP Solver}
+\author{Chuwen}
+\date{\today}
+\addbibresource{headers/qcqp.bib}
+
+
+\begin{document}
+\fontsize{9pt}{11}\selectfont
+\frame{\titlepage}
+
+
+
+\begin{frame}{QCQP}
+
+  Suppose we readily have a sparse pattern \(G(V, E)\) (and extension \(E\subseteq F\)) for \(Q\)
+
+  We denote aggregated pattern if \(G(V, E)\) stands for all data matrices.
+
+  \(F = \bigcup_r C_r\), where \(C_r\) the maximal cliques can be computed efficiently for chordal graph \(F\).
+
+  SD constraint \(Y \succeq 0\) is equivalent to,
+
+  \[Y_{(i, i) \in C_r} \succeq 0, \quad \forall r\]
+
+  Can be expressed as follows,
+
+  \begin{equation}
+    \begin{aligned}
+       & E_r \in \mathbf R^{|C_r|\times n}     \\
+       & (E_r)_{i,j}=\begin{cases}
+        1,  \text { if } C_r(i)=j \\
+        0,  \text { otherwise }
+      \end{cases} \\
+       & Y_r\equiv E_r Y E_r^T \succeq 0       \\
+    \end{aligned}
+  \end{equation}
+\end{frame}
+
+\begin{frame}{Sparse-SDP: SSDP}
+  In QCQP, we have the SD constraint:
+  \[Y - xx^T \succeq 0\]
+  then any subprinciple matrix is also semidefinite,
+  \begin{equation}
+    \begin{aligned}
+       & E_r (Y - x x^T) E_r^T \succeq 0
+    \end{aligned}
+  \end{equation}
+
+  So we have the QCQP with \(r\) smaller SDP constraints.
+  \begin{equation}\label{eq:sdp.blocks}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & Q \bullet Y + q^Tx                               \\
+      \mathrm{s.t.} \quad    & \begin{bmatrix}E_r Y E_r^T & E_rx \\ (E_rx)^T & 1\end{bmatrix}   \succeq 0, \forall r \\
+    \end{aligned}
+  \end{equation}
+
+  This formulation incorporates a lot of linear constraints for \(C_r \cap C_{r'}\)
+\end{frame}
+\begin{frame}
+  Consider the case for 2-blocks (2 cliques), let \(D_1 = C_1 \bigcap C_2\)
+
+  \begin{equation}
+    Y =  \sum_{r=1}^2 E_r^TY_r Er - E(D_1)^TY_{D_1}E(D_1)
+  \end{equation}
+
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & Q \bullet Y + q^Tx                               \\
+      \mathrm{s.t.} \quad    & \begin{bmatrix}E_r Y E_r^T & E_rx \\ (E_rx)^T & 1\end{bmatrix}   \succeq 0, \forall r \\
+    \end{aligned}
+  \end{equation}
+
+  We see the above is equivalent to \eqref{eq:sdp.blocks}, if there is no intersections for blocks, i.e., \(D_1 = \emptyset\),
+  it can be further simplified by letting \(Q_r = E_r Q E_r^T\)
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & \sum_{r=1}^L Q_r \bullet Y_r                     \\
+      \mathrm{s.t.} \quad    & \begin{bmatrix}Y_r & E_rx \\ (E_rx)^T & 1\end{bmatrix}   \succeq 0, \forall r \\
+                             & \mathrm{diag}(Y_r) \le E_r x
+    \end{aligned}
+  \end{equation}
+
+  The same for any similarity transformations
+\end{frame}
+% \begin{frame}{Warm-start}
+%   \begin{equation}
+%     \begin{aligned}
+%       \min_{\lambda, \mu, y, Y}\quad & \lambda^Tb + \mu^Te + 1                    \\
+%       \mathrm{s.t.} \quad            & Y = Q + \sum_i \lambda_i A_i               \\
+%                                      & q + \sum_i \lambda_i a_i + \mu - 2 y \le 0 \\
+%                                      & Y \succeq yy^T                             \\
+%                                      & \lambda, \mu \ge 0
+%     \end{aligned}
+%   \end{equation}
+% \end{frame}
+\begin{frame}
+  \scriptsize
+  \printbibliography
+\end{frame}
+
+\end{document}

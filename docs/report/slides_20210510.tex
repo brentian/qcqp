@@ -1,0 +1,116 @@
+\include{headers/header.slides}
+\usepackage{subfig}
+\usepackage[style=verbose]{biblatex}
+\usepackage{bm}
+\title{Global QCQP Solver}
+\author{Chuwen}
+\date{\today}
+\addbibresource{headers/qcqp.bib}
+
+
+\begin{document}
+\fontsize{8pt}{11.2}\selectfont
+\frame{\titlepage}
+
+
+
+\begin{frame}
+  \frametitle{SDP relaxations: Many-small-cone}
+  Recall QCQP:
+
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & x^TQx + q^T x                                   \\
+      \mathrm{s.t.}  \quad   & x^{T} A_i x  + a_i^Tx   \; (\le, =, \ge) \; b_i \\
+                             & 0\le x\le e
+    \end{aligned}
+  \end{equation}
+
+  We apply ``Many-Small-Cone'' (MSC) relaxation.
+\end{frame}
+
+\begin{frame}{Many-Small-Cone: MSC}
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad              & (y^+)^Te - (y^-)^Te + q^Tx                                        \\
+      \mathrm{s.t.} \quad                 & \begin{bmatrix}y^+_i & z^+_i \\ z^+_i & 1 \end{bmatrix} \succeq 0,
+      \begin{bmatrix}y^-_i & z^-_i \\ z^-_i & 1 \end{bmatrix} \succeq 0 & \forall i                                                         \\
+                                          & (U^+)^Tx = z^+, (U^-)^Tx = z^-                                    \\
+                                          & \begin{bmatrix}Y^+_{j, i} & Z^+_{j, i}\\ Z^+_{j, i} & 1 \end{bmatrix} \succeq 0,
+      \begin{bmatrix} Y^-_{j, i} & Z^-_{j, i} \\ Z^-_{j, i} & 1 \end{bmatrix} \succeq 0 & \forall j, \forall i                                              \\
+                                          & (U^+_j)^Tx = Z^+_j, (U^-_j)^Tx = Z^-_j                & \forall j \\
+                                          & (Y^+_j)^Te - (Y^-_j)^Te + a_j^Tx (\le, =, \ge) \; b_j & \forall j \\
+    \end{aligned}
+  \end{equation}
+
+  where \(Q =  U^+ (U^+)^T - U^- (U^-)^T, A_j = U^+_j (U^+_j)^T - U^-_j (U^-_j)^T, j = 1,...,m\)
+\end{frame}
+
+\begin{frame}{MSC: A Stronger Formulation}
+  Suppose we have the following constraint:
+  \[(Y^+_j)^Te - (Y^-_j)^Te + a_j^Tx \le b_j\]
+
+  The optimal solution \(x^\star\) may not be feasible the case where \(Y^-_j \gg (z^-_j)^2\),
+  so we find a bound for \(Y^-_j\) from above.
+
+  % Similar bounds can be placed for \((Y^-_j')^T e\) for some \(j'\) such that \(\ge\) 
+
+  We take \(z^+, y^+\) for example, assuming \(0\le x\le e\)
+  \begin{itemize}
+    \item Since \(z^+_j = (Q^+_j)^T x\), \(Q^+_j\) is the \(j\)-th column of \(Q^+\)
+    \item A naive bound can be established: (using \(0 \le x \le e\))
+          \[\begin{aligned}
+               & l^+_j = \sum_{i\in\{i: (Q^+_j)_i < 0\}} (Q^+_j)_i \\
+               & u^+_j = \sum_{i\in\{i: (Q^+_j)_i > 0\}} (Q^+_j)_i \\
+               & l^+_j < 0 \le z^+_j \le  u^+_j                    \\
+               & y^+_j \le \max \{(l^+_j)^2, (u^+_j)^2\}
+            \end{aligned}
+          \]
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}{MSC: A Stronger Formulation (Cont.)}
+
+  Also notice:
+  \[ (y^+)^T e = x^TQ^+(Q^+)^Tx = \left[Q^+(Q^+)^T\right]\bullet xx^T
+  \]
+
+  Take \(P = Q^+(Q^+)^T\),
+
+  \[(y^+)^T e \le \sum_{\{(i,j): P_{i,j} > 0 \}} P_{ij} \]
+\end{frame}
+
+
+\begin{frame}{MSC: Branch-and-Cut}
+  As usual we branch on current solution at iteration \(k\), compute maximum ``infeasibility'',
+  \[ \|y_k - z_k^2\|\]
+  for \(y_k\) in \((y^+, y^-, Y^+, Y^-)_k\) and \(z_k\) in corresponding values.
+  \begin{itemize}
+    \item Secant, RLT cuts after branching
+          \[y_k \le (u_k + l_k) z_k - l_k \cdot u_k\]
+
+  \end{itemize}
+\end{frame}
+
+
+
+\begin{frame}{MSC: Possible Improvements}
+  \begin{itemize}
+    \item Alternative decomposition, see \cite{zheng_nonconvex_2011}
+    \item Combination of larger cones and small cones. We start at some larger cone (for better initial bound):
+
+          Let \(d^+ \ge (z^+)^T z^+\), we have:
+          \[\begin{aligned}
+              \begin{bmatrix}d^+ & (z^+)^T\\ z^+ & I_n \end{bmatrix} \succeq 0
+            \end{aligned}\]
+
+          We solve the above once for all, record optimal solution \( (d^+)^\star\)  then use the branch-and-cut iterations with MSC formulation plus the following cut:
+
+          \[(y^+)^Te \le (d^+)^\star\]
+  \end{itemize}
+
+
+\end{frame}
+
+\end{document}

@@ -1,0 +1,158 @@
+\include{headers/header.slides}
+\usepackage{subfig}
+\usepackage[style=verbose]{biblatex}
+\usepackage{bm}
+\title{Global QCQP Solver}
+\author{Chuwen}
+\date{\today}
+\addbibresource{headers/qcqp.bib}
+
+
+\begin{document}
+\fontsize{8pt}{11.2}\selectfont
+\frame{\titlepage}
+
+
+
+\begin{frame}
+  \frametitle{SDP relaxations: Many-small-cone}
+  Recall QCQP:
+
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & x^TQx + q^T x                                   \\
+      \mathrm{s.t.}  \quad   & x^{T} A_i x  + a_i^Tx   \; (\le, =, \ge) \; b_i \\
+                             & 0\le x\le e
+    \end{aligned}
+  \end{equation}
+
+  We apply ``Many-Small-Cone'' (MSC) relaxation.
+\end{frame}
+
+\begin{frame}{Many-Small-Cone: MSC}
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad              & (y^+)^Te - (y^-)^Te + q^Tx                                        \\
+      \mathrm{s.t.} \quad                 & \begin{bmatrix}y^+_i & z^+_i \\ z^+_i & 1 \end{bmatrix} \succeq 0,
+      \begin{bmatrix}y^-_i & z^-_i \\ z^-_i & 1 \end{bmatrix} \succeq 0 & \forall i                                                         \\
+                                          & (U^+)^Tx = z^+, (U^-)^Tx = z^-                                    \\
+                                          & \begin{bmatrix}Y^+_{j, i} & Z^+_{j, i}\\ Z^+_{j, i} & 1 \end{bmatrix} \succeq 0,
+      \begin{bmatrix} Y^-_{j, i} & Z^-_{j, i} \\ Z^-_{j, i} & 1 \end{bmatrix} \succeq 0 & \forall j, \forall i                                              \\
+                                          & (U^+_j)^Tx = Z^+_j, (U^-_j)^Tx = Z^-_j                & \forall j \\
+                                          & (Y^+_j)^Te - (Y^-_j)^Te + a_j^Tx (\le, =, \ge) \; b_j & \forall j \\
+    \end{aligned}
+  \end{equation}
+
+  where \(Q =  U^+ (U^+)^T - U^- (U^-)^T, A_j = U^+_j (U^+_j)^T - U^-_j (U^-_j)^T, j = 1,...,m\)
+\end{frame}
+
+\begin{frame}{MSC: A Stronger Formulation with Bounds}
+
+  We take \(z^+, y^+\) for example, assuming \(0\le x\le e\)
+  \begin{itemize}
+    \item Since \(z^+_j = (Q^+_j)^T x\), \(Q^+_j\) is the \(j\)-th column of \(Q^+\)
+    \item A naive bound can be established: (using \(0 \le x \le e\))
+          \[\begin{aligned}
+               & l^+_j = \sum_{i\in\{i: (Q^+_j)_i < 0\}} (Q^+_j)_i \\
+               & u^+_j = \sum_{i\in\{i: (Q^+_j)_i > 0\}} (Q^+_j)_i \\
+               & l^+_j < 0 \le z^+_j \le  u^+_j                    \\
+               & y^+_j \le \max \{(l^+_j)^2, (u^+_j)^2\}
+            \end{aligned}
+          \]
+    \item Bound for \((y^+)^T e\),
+          \[(y^+)^T e \le \sum_{\{(i,j): P_{i,j} > 0 \}} P_{ij} \]
+    \item And secant cuts for each and every \(z, y\) pairs.
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}{MSC: Connection to Large Cone}
+  \begin{itemize}
+    \item Suppose \(Y_s, x_s\) are solution by Shor relaxation (and thus an upper bound and lower bound if \(x_s\) feasible).
+          \[e^Ty^+ - e^Ty^- +  q^Tx \le Q\bullet Y_s  + q^T x_s\]
+    \item We notice, with auxillary \(d^+\) with a larger cone (\(n \times n\)),
+          \[\begin{bmatrix}d^+ & (z^+)^T\\ z^+ & I_n \end{bmatrix} \succeq 0\]
+          One can expect: \(d^+ = e^T(y^+)\ge (z^+)^Tz^+\)
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}{MSC: Primal feasible solutions}
+  We notice if \(e^TY^+_j = (Z^+_j)^TZ^+_j,  e^TY^-_j = (Z^-_j)^TZ^-_j\) holds,
+  then \(x\) is feasible to \(j\)-th constraint:
+
+  \[(Y^+_j)^Te - (Y^-_j)^Te + a_j^Tx - b_j \le 0\]
+
+  \begin{itemize}
+    \item Penalty method, let penalty term be,
+          \[P(\lambda^+, \lambda^-, \delta^+, \delta^-)
+            = \lambda^+ e^Ty^+ + \lambda^-e^Ty^-
+            + \sum_j \delta^+_j e^TY^+_j + \sum_j \delta^-_j e^TY^-_j\]
+          and solve:
+          \[\mathrm{Maximize: } \quad f(x) - P(\lambda^+, \lambda^-, \delta^+, \delta^-) \]
+          \textcolor{red}{unstable}
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}{MSC: Branch}
+  Branch:
+  As usual we branch on current solution at iteration \(k\), compute maximum ``infeasibility'',
+  \[ \|y - z^2\|\]
+  \begin{itemize}
+    \item branch on \(z\):
+          \[ \left(z \le z^k \right)  \vee \left(z \ge z^k \right)  \]
+          % \item (*New) use the following branching since \(y \le z^2\) (cones already ensure the opposite):
+          %       \[z \ge \sqrt{y}  \vee  z \le -\sqrt{y}
+          %       \]
+    \item branch on \(y\; \& z\):
+          \[ \left(y \le y^k  \right)  \vee \left (y \ge y^k \right)  \]
+          since we expect \(l \le y \le z^2\), (with \(y \ge z^2\) already satisfied by cones)
+          where \(l\) is the lower bound of the corresponding child problem.
+
+          It implies,
+          \[
+            \left(z \ge \sqrt{l} \right) \vee \left( z \le -\sqrt{l} \right)
+          \]
+
+          and thus it produces 4 child problems in the branching procedure.
+          create too many children, need more sophisticated procedure.
+    \item some greedy combinations. \textcolor{red}{didn't help much}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{MSC: Cut}
+  Cut:
+
+  \begin{itemize}
+    \item  (Secant, RLT) For \(y\) in \((y^+, y^-, Y^+, Y^-)\) and \(z\) in corresponding values.
+          Secant, RLT cuts after BB,
+          \[y\le (u + l) \cdot z - l \cdot u\]
+          % \item (*New) use the following branching since \(y \le z^2\) (cones already ensure the opposite):
+          %       \[z \ge \sqrt{y}  \vee  z \le -\sqrt{y}
+          %       \]
+    \item other? ...
+  \end{itemize}
+\end{frame}
+
+
+
+\begin{frame}{Test: Max-Cut}
+
+  \[\begin{aligned}
+      w^\star = \mathrm{Maximize: } \quad & \frac{1}{4} \sum_{i,j} w_{ij}(1-x_i\cdot x_j) \\
+      \mathrm{s.t. }       \quad          & x_i \in \{-1, 1\}
+    \end{aligned}
+  \]
+
+  Let \(x_i = 2y_i-1, y_i \in [0, 1]\)
+  \[\begin{aligned}
+      w^\star  = \mathrm{Maximize: } \quad & \frac{1}{4} \sum_{i,j} w_{ij}(2y_i + 2y_j - 4y_iy_j) \\
+                                           & =        \frac{1}{2} (W+W^T)y - y^TWy                \\
+      \mathrm{s.t. }       \quad           & y_i \in \{0, 1\}
+    \end{aligned}
+  \]
+
+\end{frame}
+
+\end{document}

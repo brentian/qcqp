@@ -1,0 +1,80 @@
+\include{headers/header.slides}
+\include{headers/cmd}
+\usepackage{subfig}
+\usepackage[style=authoryear]{biblatex}
+\usepackage{bm}
+
+\date{\today}
+\addbibresource{headers/qcqp.bib}
+
+\subtitle{Strengthen SOCP relaxation}
+\begin{document}
+\fontsize{9pt}{11}\selectfont
+\frame{\titlepage}
+\begin{frame}{QCQP}
+  Recall QCQP:
+
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{Maximize}\quad & x^TQx + q^T x                                   \\
+      \mathrm{s.t.}  \quad   & x^{T} A_i x  + a_i^Tx   \; (\le, =, \ge) \; b_i \\
+                             & 0\le x\le e
+    \end{aligned}
+  \end{equation}
+
+  \begin{itemize}
+    \item \(Q, A_i\) maybe indefinite
+  \end{itemize}
+\end{frame}
+\begin{frame}{Related Literature}
+  \textbf{S-free sets}\(P = \{x: x \in R - int(S), S \text{ convex}\}\)
+  \begin{itemize}
+    \item[\xmark] Gonzalo Muñoz, '20, '21, IPCO, Maximal quadratic free sets by LP (extreme rays)
+    \item Bienstock, '14, SIOPT, Cutting planes for optimization over convex function over nonconvex sets. \textbf{also lifting}
+  \end{itemize}
+  \textbf{SOCPr and aggregation (SOCP-representable)}
+  For convex inequalities \(\{f_i \le 0\}\), consider aggregation \(\{\sum_i\lambda_i f_i \le 0 \}\)
+  \begin{itemize}
+    \item Burer '17, Modaresi, Vielma' 17 two quadratic functions
+    \item Dey' 20, quadratic and polytope. app. for bilinear: Dey et al' 19, New SOCP relaxation and branching rule for bipartite bilinear programs
+    \item Dey et al' 21, 3 quadratic intersection.
+  \end{itemize}
+  \textbf{Linear disjunction}
+\end{frame}
+\begin{frame}{Burer '17}
+  For intersection with a paraboloid and quadratic function (indefinite)
+  \begin{align*}
+    \mathcal Y         = \quad  & \left\{y=\left(\begin{array}{c}
+        \tilde{y} \\
+        y_{n}
+      \end{array}\right) \in R ^{n}: \begin{array}{c}
+      \tilde{y}^{T} \tilde{y} \leq y_{n} \\
+      \tilde{y}^{T} \tilde{Q} \tilde{y}+2 g^{T} y+f \leq 0
+    \end{array}\right\}                      \\
+    \textrm{Homogenize: } \quad & x = [\tilde y, y_n, x_{n+1}]                                                                                       \\
+                                & A_{0}:=\begin{bmatrix}
+      I     & 0            & 0            \\
+      0^{T} & 0            & -\frac{1}{2} \\
+      0^{T} & -\frac{1}{2} & 0
+    \end{bmatrix}, \quad A_{1}:=\begin{bmatrix}
+      \tilde{Q}     & 0     & \tilde{g} \\
+      0^{T}         & 0     & g_{n}     \\
+      \tilde{g}^{T} & g_{n} & f
+    \end{bmatrix}, \quad H^{1}:=\left\{x: x_{n+1}=1\right\} \\
+    \textrm{Def} \quad          & A_{t}:=\begin{bmatrix}
+      (1-t) I+t \tilde{Q} & 0                                      & t \tilde{g}                            \\
+      0^{T}               & 0                                      & (1-t)\left(-\frac{1}{2}\right)+t g_{n} \\
+      t \tilde{g}^{T}     & (1-t)\left(-\frac{1}{2}\right)+t g_{n} & t f
+    \end{bmatrix}                                                                                   \\
+                                & t = 1 /(1-\lambda), \lambda = \min(\lambda(Q)) < 0                                                                 \\
+    \mathcal Y_t = \quad        & \left\{y : \tilde{y}^{T} \tilde{y} \leq y_{n}, x^TA_t x \le 0 \right\}                                             \\
+    \Rightarrow \quad           & \mathcal Y_t = \textrm{cl.convex.hull}( \mathcal Y)
+  \end{align*}
+\end{frame}
+\begin{frame}{Cutting planes for QCQP}
+  \begin{itemize}
+    \item use SOCPr to improve QCQP relaxations
+    \item consider cases for box constraint (so as to incorporate Branch and Cut)
+  \end{itemize}
+\end{frame}
+\end{document}
