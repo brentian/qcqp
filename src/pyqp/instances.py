@@ -135,7 +135,7 @@ class QP(object):
     :return:
     """
     gamma, u = nl.eigh(A)
-    ipos = (gamma > 0).astype(int)
+    ipos = (gamma >= 0).astype(int)
     ineg = (gamma < 0).astype(int)
     eig = np.diag(gamma)
     upos = u @ np.sqrt(np.diag(ipos) @ eig)

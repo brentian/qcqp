@@ -19,10 +19,10 @@ import json
 
 METHODS = collections.OrderedDict(
   [
-    ("grb", bg_grb.qp_gurobi),
+    ("grb", bg_grb.qp_gurobi), # exact benchmark by gurobi nonconvex qcqp
     ("shor", bg_msk.shor),  # relaxation: shor
     ("dshor", bg_msk.dshor), # relaxation: shor-dual
-    ("msc", bg_msk_msc.msc),
+    ("msc", bg_msk_msc.msc), # many small cone approach
     ("emsc", bg_msk_msc.msc_diag),
     ("bb", bb.bb_box),
     ("bb_msc", bb_diag.bb_box),
@@ -40,6 +40,13 @@ METHOD_CODES = {idx + 1: m for idx, m in enumerate(METHODS)}
 
 METHOD_HELP_MSGS = {k: bg_msk.dshor.__doc__ for k, v in METHODS.items()}
 
+QP_SPECIAL_PARAMS = {
+  "asocp": {"decompose_method": "eig-type1"}
+}
+
+###################
+# the argument parser
+###################
 parser = argparse.ArgumentParser("QCQP runner")
 parser.add_argument(
   "--dump_instance", type=int, help="if save instance", default=1

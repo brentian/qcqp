@@ -53,7 +53,7 @@ if __name__ == '__main__':
   for k in r_methods:
     func = METHODS[k]
     qp1 = QP(*qp.unpack())
-    qp1.decompose()
+    qp1.decompose(**QP_SPECIAL_PARAMS.get(k, {}))
     r = func(qp1, bd, params=params, admmparams=admmparams)
     reval = r.eval(problem_id)
     evals.append({**reval.__dict__, "method": k})

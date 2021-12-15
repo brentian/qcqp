@@ -1,5 +1,9 @@
 """
-aggregation on SOCP and box
+The script for SOCP based relaxation
+
+- use n-dimensional SOC, SOCr instead of SDP
+- construct ellipsoid covering the box.
+
 """
 
 import numpy as np
@@ -75,7 +79,6 @@ def socp(
     **kwargs
 ):
   """
-  The many-small-cone approach
   Returns
   -------
   """
@@ -83,7 +86,7 @@ def socp(
   Q, q, A, a, b, sign, *_ = qp.unpack()
   if qp.Qpos is None:
     raise ValueError("decompose QP instance first")
-  if qp.decom_method == 'eig-type1':
+  if qp.decom_method == 'eig-type2':
     raise ValueError(f"cannot use {qp.decom_method}")
   m, n, dim = a.shape
   xshape = (n, dim)
@@ -94,44 +97,40 @@ def socp(
   
   if bounds is None:
     bounds = MscBounds.construct(qp)
+
+  Rn = qp.Qneg[0]
+  Rp = qp.Qpos[0]
+  Qp = Rp @ Rp.T
+  
   l, u = bounds.xlb.flatten(), bounds.xub.flatten()
   z = model.variable('z')
-  x = model.variable("x", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
-  # create a induced 2nd order box
+  x = model.variable("x", [*xshape]) # dom.inRange(bounds.xlb, bounds.xub))
+  # create an induced 2nd order box
   cone_box = model.variable("cone_box", n + 2, dom.inRotatedQCone())
   s = cone_box.index(1)
   v = cone_box.slice(2, n + 2)
   model.constraint(cone_box.index(0), dom.equalsTo(0.5))
   # create the xLx - xL(l+u) + lLu <= 0
   np.random.seed(1)
-  L = np.diag(np.random.uniform(1, 5, n))
-  L = L / L.sum()
+  
   model.constraint(
     expr.sub(
       v,
-      expr.mul(np.sqrt(L), x)
+      expr.mul(Rp.T, x)
     ), dom.equalsTo(0))
   model.constraint(
     expr.add(
-      [s, expr.dot(- (u + l).T @ L, x)]
+      [s, expr.dot(- (u + l).T @ R, x)]
     ),
     dom.lessThan(- l.T @ L @ u)
   )
   
   # R.T x = Z
-  obj_expr = z
+  
   if Q is not None:
-    ########################
-    # compute kappa
-    ########################
-    e, V = np.linalg.eigh(Q)
-    # todo, find kappa
-    kappa = (e / np.diag(L)).max()
     
-    A1 = kappa * L - Q
-    R1 = np.linalg.cholesky(A1)
-    a1 = q + kappa * (L @ (u + l)).reshape(*xshape)
-    b1 = kappa * (l.T @ L @ u)
+    a1 = qp.q + (Qp @ (u + l)).reshape(xshape)
+    b1 = l.T @ Qp @ u
     ############################
     cone_0 = model.variable("cone_0", n + 2, dom.inRotatedQCone())
     model.constraint(cone_0.index(0), dom.equalsTo(0.5))
@@ -141,7 +140,7 @@ def socp(
     model.constraint(
       expr.sub(
         y,
-        expr.mul(R1.T, x)
+        expr.mul(Rn.T, x)
       ),
       dom.equalsTo(0)
     )
@@ -153,7 +152,7 @@ def socp(
     )
   
   for i in range(m):
-    
+    # todo, not finished
     quad_expr = expr.dot(a[i], x)
     Ai = qp.A[i]
     if Ai is not None:
@@ -178,8 +177,7 @@ def socp(
     model.constraint(quad_expr, quad_dom)
   
   # objectives
-  obj_expr = expr.add(obj_expr, expr.dot(q, x))
-  
+  obj_expr = z
   # obj_expr = true_obj_expr
   model.objective(
     mf.ObjectiveSense.Minimize
