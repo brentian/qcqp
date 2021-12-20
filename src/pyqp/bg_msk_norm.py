@@ -339,6 +339,13 @@ def socp(
     expr.sub(rho, expr.mulElm(bounds.xub + bounds.xlb, x)),
     dom.lessThan(-bounds.xlb * bounds.xub)
   )
+  #####################
+  # as a whole instead of separate
+  #####################
+  # model.constraint(
+  #   expr.sum(expr.sub(rho, expr.mulElm(bounds.xub + bounds.xlb, x))),
+  #   dom.lessThan((-bounds.xlb * bounds.xub).sum())
+  # )
   
   for i in range(m):
     

@@ -42,9 +42,13 @@ if __name__ == '__main__':
   # run methods
   for k in r_methods:
     func = METHODS[k]
-    qp1 = QP(*qp.unpack())
-    qp1.decompose()
-    r = func(qp1, bd, params=params, admmparams=admmparams)
+    qp1 = copy.deepcopy(QP)
+    if qp.Qpos is None:
+      qp1.decompose(**QP_SPECIAL_PARAMS.get(k, {}))
+    try:
+      r = func(qp1, bd, params=params, admmparams=admmparams)
+    except Exception as e:
+      print(f"method {k} failed")
     reval = r.eval(problem_id)
     evals.append({**reval.__dict__, "method": k})
     results[k] = r

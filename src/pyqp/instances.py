@@ -102,9 +102,7 @@ class QP(object):
         decom_map[i + 1, 0, ip] = 1
         decom_map[i + 1, 1, inn] = 1
         decom_arr.append([ip, inn])
-        if validate:
-          d = np.abs(ap @ ap.T - an @ an.T - self.A[i])
-          assert d.max() < 1e-3
+        
       else:
         self.Apos[i] = None
         self.Aneg[i] = None
@@ -212,7 +210,7 @@ class QP(object):
     import json
     import os
     import time
-    stamp = time.time()
+    stamp = int(time.time())
 
     fname = os.path.join(wdir, f"{self.n}_{self.m}.{stamp}.json")
     data = {}

@@ -81,7 +81,7 @@ class BCParams(Params):
   relax = True  # todo fix this
   sdp_solver_backend = 'msk'
   sdp_rank_redunction_solver = 1
-  fpath = ''
+  fpath = None
   
   def produce_args(self, parser: QCQPParser, method_universe):
     args, _ = parser.parse_known_args()

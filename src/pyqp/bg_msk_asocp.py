@@ -97,45 +97,30 @@ def socp(
   
   if bounds is None:
     bounds = MscBounds.construct(qp)
-
+  
   Rn = qp.Qneg[0]
   Rp = qp.Qpos[0]
+  # Qp = Rp @ Rp.T
+  # Qp_min = Qp.min()
+  # kappa = (- Qp_min + 1e-2) * (Qp_min < 0)
+  # Rp[:, idxp] = np.sqrt(kappa)
+  # Rn[:, idxn] = np.sqrt(kappa)
   Qp = Rp @ Rp.T
+  Qn = Rn @ Rn.T
+  
+  assert np.abs(Qp - Qn - Q).min() < 1e-3
   
   l, u = bounds.xlb.flatten(), bounds.xub.flatten()
+  rho = model.variable('rho')
   z = model.variable('z')
-  x = model.variable("x", [*xshape]) # dom.inRange(bounds.xlb, bounds.xub))
-  # create an induced 2nd order box
-  cone_box = model.variable("cone_box", n + 2, dom.inRotatedQCone())
-  s = cone_box.index(1)
-  v = cone_box.slice(2, n + 2)
-  model.constraint(cone_box.index(0), dom.equalsTo(0.5))
-  # create the xLx - xL(l+u) + lLu <= 0
-  np.random.seed(1)
-  
-  model.constraint(
-    expr.sub(
-      v,
-      expr.mul(Rp.T, x)
-    ), dom.equalsTo(0))
-  model.constraint(
-    expr.add(
-      [s, expr.dot(- (u + l).T @ R, x)]
-    ),
-    dom.lessThan(- l.T @ L @ u)
-  )
-  
-  # R.T x = Z
+  x = model.variable("x", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
   
   if Q is not None:
-    
-    a1 = qp.q + (Qp @ (u + l)).reshape(xshape)
-    b1 = l.T @ Qp @ u
     ############################
     cone_0 = model.variable("cone_0", n + 2, dom.inRotatedQCone())
-    model.constraint(cone_0.index(0), dom.equalsTo(0.5))
     p = cone_0.index(1)
     y = cone_0.slice(2, n + 2)
+    model.constraint(cone_0.index(0), dom.equalsTo(0.5))
     # objective
     model.constraint(
       expr.sub(
@@ -146,10 +131,69 @@ def socp(
     )
     model.constraint(
       expr.add(
-        [p, expr.dot(- a1, x), z]
+        [p, expr.dot(- q, x), z, expr.mul(-1, rho)]
       ),
-      dom.lessThan(- b1)
+      dom.lessThan(0)
     )
+    ############################
+    # convexification
+    # 1. use |x|^2 to convexify
+    # 2. use Q- to conv Q+
+    ############################
+    # use Q+
+    # create the xLx - xL(l+u) + lLu <= 0
+    # 1.
+    cone_box = model.variable("cone_box1", n + 2, dom.inRotatedQCone())
+    s = cone_box.index(1)
+    v = cone_box.slice(2, n + 2)
+    lmax = np.linalg.eigvalsh(Qp).max() + 1e-2
+    Rpp = np.linalg.cholesky(lmax * np.eye(Qp.shape[0]) - Qp)
+    model.constraint(
+      expr.add(
+        [s, expr.dot(- lmax * (l + u), x), rho]
+      ),
+      dom.lessThan(- lmax * l.T @ u)
+    )
+    model.constraint(cone_box.index(0), dom.equalsTo(0.5))
+    model.constraint(
+      expr.sub(
+        v,
+        expr.mul(Rpp.T, x)
+      ),
+      dom.equalsTo(0)
+    )
+    # 2.
+    # cone_box = model.variable("cone_box2", n + 2, dom.inRotatedQCone())
+    # s = cone_box.index(1)
+    # v = cone_box.slice(2, n + 2)
+    # Vn = np.linalg.inv(Rn)
+    # lmax = np.linalg.eigvalsh(Vn @ Qp @ Vn.T).max() + 1e-2
+    # Rpp = np.linalg.cholesky(lmax * Qn - Qp)
+    # model.constraint(
+    #   expr.add(
+    #     [s, expr.dot(- lmax * q, x),
+    #      expr.mul(lmax, z), expr.mul(-lmax + 1, rho)]
+    #   ),
+    #   dom.lessThan(0)
+    # )
+    # model.constraint(cone_box.index(0), dom.equalsTo(0.5))
+    # model.constraint(
+    #   expr.sub(
+    #     v,
+    #     expr.mul(Rpp.T, x)
+    #   ),
+    #   dom.equalsTo(0)
+    # )
+    
+    
+    ###########################
+    # generalized RLT
+    # model.constraint(
+    #   expr.add(
+    #     [rho, expr.dot(- Qn @ (u + l), x)]
+    #   ),
+    #   dom.lessThan(- l.T @ Qn @ u)
+    # )
   
   for i in range(m):
     # todo, not finished

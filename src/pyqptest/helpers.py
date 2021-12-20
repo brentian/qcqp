@@ -1,4 +1,7 @@
 import collections
+import argparse
+import json
+import copy
 
 import numpy as np
 import pandas as pd
@@ -14,19 +17,17 @@ from pyqp import bg_grb, bg_msk, bg_msk_msc, bg_msk_admm, bg_msk_norm, bg_msk_as
 from pyqp import bb, bb_diag, bb_nmsc
 from pyqp.classes import QP, QPI, Bounds, BCParams
 from pyqp.bg_msk_admm import ADMMParams
-import argparse
-import json
 
 METHODS = collections.OrderedDict(
   [
-    ("grb", bg_grb.qp_gurobi), # exact benchmark by gurobi nonconvex qcqp
+    ("grb", bg_grb.qp_gurobi),  # exact benchmark by gurobi nonconvex qcqp
     ("shor", bg_msk.shor),  # relaxation: shor
-    ("dshor", bg_msk.dshor), # relaxation: shor-dual
-    ("msc", bg_msk_msc.msc), # many small cone approach
+    ("dshor", bg_msk.dshor),  # relaxation: shor-dual
+    ("msc", bg_msk_msc.msc_diag),  # many small cone approach
     ("emsc", bg_msk_msc.msc_diag),
     ("bb", bb.bb_box),
     ("bb_msc", bb_diag.bb_box),
-    ("admm_nmsc", bg_msk_admm.msc_admm), # local method using admm
+    ("admm_nmsc", bg_msk_admm.msc_admm),  # local method using admm
     ("bb_nmsc", bb_nmsc.bb_box),
     # socp
     ("nsocp", bg_msk_norm.socp),
@@ -41,7 +42,15 @@ METHOD_CODES = {idx + 1: m for idx, m in enumerate(METHODS)}
 METHOD_HELP_MSGS = {k: bg_msk.dshor.__doc__ for k, v in METHODS.items()}
 
 QP_SPECIAL_PARAMS = {
-  "asocp": {"decompose_method": "eig-type1"}
+  "msc":  {"decompose_method": "eig-type1", "force_decomp": True},
+  "emsc":  {"decompose_method": "eig-type2", "force_decomp": True},
+  "asocp": {"decompose_method": "eig-type1", "force_decomp": False}
+}
+
+QP_RANDOM_INSTANCE_TYPE = {
+  0: 'normal',
+  1: 'cvx',
+  2: 'dnn',  # difference of doubly psd matrices
 }
 
 ###################
@@ -52,7 +61,7 @@ parser.add_argument(
   "--dump_instance", type=int, help="if save instance", default=1
 )
 parser.add_argument(
-  "--r", type=str, help=METHOD_CODES.__str__(), default="1,2,7"
+  "--r", type=str, help=f"solution method desc. \n {METHOD_CODES}", default="1,2,7"
 )
 parser.add_argument("--fpath", type=str, help="path of the instance")
 parser.add_argument("--n", type=int, help="dim of x", default=5)
@@ -60,7 +69,7 @@ parser.add_argument(
   "--m", type=int, help="if randomly generated num of constraints", default=5
 )
 parser.add_argument(
-  "--pc", type=str, help="if randomly generated problem type", default=5
+  "--problem_type", type=int, help=f"if randomly generated, what is the problem type?\n{QP_RANDOM_INSTANCE_TYPE}", default=0
 )
 parser.add_argument(
   "--time_limit", default=60, type=int, help="time limit of running."
