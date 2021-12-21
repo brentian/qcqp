@@ -1,4 +1,4 @@
-\documentclass[aspectratio=1610, 10pt]{beamer}
+\documentclass[aspectratio=1612, 10pt]{beamer}
 \usepackage[english]{babel}
 \usepackage{amsmath, amsthm, subfiles, bm, hyperref, graphicx}
 % my cmd
@@ -177,7 +177,8 @@
             (\dagger)\; \rho - z & \ge \left(2Q_-\bar x - q\right)^T(x-\bar x) + \bar x^TQ_-\bar x - q^Tx, \forall \bar x \\
             \textbf{Lifting: } \dagger                                                                                    \\
             \rho - z             & \ge \bar{x}^{T} Q_- \bar{x} - q^{T} \bar{x}
-            +\left(
+            \\
+                                 & +\left(
             \begin{bmatrix} 2Q_-\bar x - q \\ 0 \end{bmatrix} - \alpha
             \begin{bmatrix} 2Q_+ \bar{x} \\ -1 \end{bmatrix}
             \right)^{T}\begin{bmatrix}
@@ -185,52 +186,73 @@
               \bar\rho-\bar{x}^{T} Q_+ \bar{x}
             \end{bmatrix}                                                                         \\
           \end{align*}
-          Theorem 4.13, \cite{bienstock_cutting-planes_2014}. \(\alpha^\star = 1/\lambda_{\max} (Q_+)\), then lifting inequality is the tightest.
 
-          This can be seen as supporting hyperplanes for the convex hull of \(\dagger, \ddagger\). \red{If we already convexify and deploy the SOCP to it, the cutting planes will be useless.}
   \end{enumerate}
 
-  \textbf{In conclusion}, the different schemes are actually equivalent, in different views of 1. convex hull by aggregation, 2. cutting plane to reverse convex set.
+  \framebreak
+
+  Theorem, \cite{bienstock_cutting-planes_2014}. \(\alpha^\star = 1/\lambda_{\max} (Q_+)\), then lifting inequality is the tightest.
+
+  This can be seen as supporting hyperplanes for the convex hull of \(\dagger, \ddagger\). \red{If we already convexify and deploy the SOCP to it, the cutting planes will be useless.}
+
+  \textbf{In conclusion},
+  the different schemes are actually equivalent, in different views of 1. convex hull by aggregation, 2. cutting plane to reverse convex set.
   \framebreak
 
 \end{frame}
 
 \begin{frame}[allowframebreaks]{Convexification with the Box Constraint}
-  For a box \(x \in [l, u]\), any RLT inequality can be constructed by a doubly nonnegative matrix \(B, B \succeq 0, B \ge 0\), such that,
+  For a box \(x \in [l, u]\), we use \(n\)-dimensional RLT cut constructed by a doubly nonnegative matrix \(B, B \succeq 0, B \ge 0\), such that,
   \begin{equation*}
     (x-l)^TB(x-u) \le 0
   \end{equation*}
   \begin{enumerate}
-    \item to convexify \(\rightarrow\) solve \(\alpha\)
+    \item to convexify a \(A \rightarrow\) by \(B\) solve \(\alpha\)
           \begin{align*}
                                   & x^TAx + a^Tx + b\le 0                 \\
             \Leftrightarrow \quad & \{\alpha >0: \alpha B + A \succeq 0\}
           \end{align*}
-    \item if \(B= I_n\), it is equivalent to scaling, other choices \(B= Q_-\) do not have much improvements
-    \item in MSC, we do not need extra RLTs, since we have \((x_i - l_i)(x_i - u_i) \le 0\) for each \(i\)
+
+          interpretation: S-lemma.
+
+          \framebreak
+
+    \item if \(B= I_n\), it is equivalent to scaling, solve \(\lambda_{\max}(A)\)  (\red{best in most test case})
+    \item if do D.C., adopt a DNN decomposition,
+          \begin{equation}
+            B = Q_+ - Q_-,\;, \st, Q_+ \succeq 0, Q_- \succeq 0, Q_- \ge 0
+          \end{equation}
+          do not have much improvements.
+    \item in MSC, we do not need \(n\)-d RLTs, since we have \((x_i - l_i)(x_i - u_i) \le 0\) for every \(i\), this includes all \(n\)-d cuts.
   \end{enumerate}
+
+  Up to now, we explore convex. techniques for SOCP, Incorporate a matrix \(X\) may be necessary
 \end{frame}
 
-\begin{frame}{Questions}
+\begin{frame}[allowframebreaks]{Questions \& Future Work}
 
-  \begin{itemize}
-    \item \textbf{RLT} can we do \((x_i - l_i)(x_j - u_j) \le 0\)
+  How to implement these cuts?
+  \begin{enumerate}
+    \item RLT on off-diagonal entries, \((x_i - l_i)(x_j - u_j) \le 0\)
+    \item Strengthen by \cite{ye_new_2003} ?
+          \begin{align*}
+                        & a^Tx \le b, \|x\| \le \sqrt\delta,                     \\
+            \Rightarrow & \|(b - a^Tx)x\| = \|bx - Xa\| \le \sqrt\delta (b-a^Tx)
+          \end{align*}
+    \item Incorporate nonlinear intersection cut, \cite{modaresi_convex_2017}
+  \end{enumerate}
+
+  \begin{enumerate}
+    \framebreak
+
     \item for a general optimization model,
           \begin{align*}
                                 & f(x), \;  \st  x \in S, S \text{ compact}                      \\
             \Rightarrow ? \quad & \mx z, \; \st (x, z) \in \conv (S \cap \{(x, z): z \le f(x)\})
           \end{align*}
-    \item strengthen by \cite{ye_new_2003} ?
-          \begin{align*}
-                        & a^Tx \le b, \|x\| \le \sqrt\delta,                     \\
-            \Rightarrow & \|(b - a^Tx)x\| = \|bx - Xa\| \le \sqrt\delta (b-a^Tx)
-          \end{align*}
-  \end{itemize}
-\end{frame}
-\begin{frame}{Future Work}
-  \begin{enumerate}
+
     \item Refine recent findings into Branch-and-Cut
-    \item Incorporate nonlinear intersection cut
+
     \item Local method to find a feasible solution
   \end{enumerate}
 \end{frame}
