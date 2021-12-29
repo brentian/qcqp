@@ -4,6 +4,7 @@ The script for SOCP based relaxation
 - use n-dimensional SOC, SOCr instead of SDP
 - construct ellipsoid covering the box.
 
+
 """
 
 import numpy as np

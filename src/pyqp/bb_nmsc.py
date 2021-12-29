@@ -16,24 +16,60 @@ import time
 from . import bg_msk, bg_cvx, bg_msk_norm
 from .classes import qp_obj_func, QP, BCParams, Result, Bounds, Branch, CuttingPlane
 
+
+class SDPSmallCone(CuttingPlane):
+  def __init__(self, data):
+    self.data = data
+  
+  def serialize_to_msk(self, *args, **kwargs):
+    pass
+  
+  @staticmethod
+  def apply(branch, bounds):
+    # todo, find a way to implement this
+    # or to show it is not valid.
+    raise ValueError("not finished!")
+    i = branch.xpivot
+    j = branch.xminor
+    u_i, l_i = bounds.xub[i, 0], bounds.xlb[i, 0]
+    u_j, l_j = bounds.xub[j, 0], bounds.xlb[j, 0]
+    return SDPSmallCone((i, j, u_i, l_i, u_j, l_j))
+
+
 cutting_method = {
-  # 'rlt': add_rlt_cuts
+  # 'rlt': add_rlt_cuts not needed in this case
+  # "sdpcone": SDPSmallCone.apply
 }
 
 
 class NMSCBranch(Branch):
   PRECISION = 6
   
-  def __init__(self):
+  def __init__(self, res):
     self.xpivot = None
     self.xpivot_val = None
     self.rhopivot_val = None
+    self.res = res
   
   def simple_vio_branch(self, x, rho, res, bounds):
+    """
+    simply create a disjunctive,
+      x <= x* or x >= x*
+    """
     x_index = res.argmax()
     self.xpivot = x_index
-    # self.xpivot_val = x[x_index, 0].round(self.PRECISION)
-    self.xpivot_val = bounds.xlb[x_index, 0] / 2 + bounds.xub[x_index, 0] /2
+    self.xpivot_val = x[x_index, 0].round(self.PRECISION)
+    self.rhopivot_val = rho[x_index, 0].round(self.PRECISION)
+  
+  def simple_bls_branch(self, x, rho, res, bounds):
+    """
+    simply create a disjunctive, by ``balancing''
+      x <= (l+u)/2 or x >= (l+u)/2
+    may be unable to cut off x*
+    """
+    x_index = res.argmax()
+    self.xpivot = x_index
+    self.xpivot_val = bounds.xlb[x_index, 0] / 2 + bounds.xub[x_index, 0] / 2
     self.rhopivot_val = rho[x_index, 0].round(self.PRECISION)
 
 
@@ -145,7 +181,8 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       backend_func = bg_msk_norm.msc_diag
     else:
       raise ValueError("not implemented")
-  print(f"primal func using {params.sdp_rank_redunction_solver}")
+  print(f"backend using {backend_func.__name__}")
+  
   # root
   root_bound = bounds
   
@@ -220,8 +257,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       continue
     
     ## branching
-    
-    br = NMSCBranch()
+    br = NMSCBranch(res)
     br.simple_vio_branch(x, rho, res, item.bound)
     left_item, right_item = generate_child_items(
       total_nodes, item, br, sdp_solver=params.sdp_solver_backend, verbose=verbose, backend_name=backend_name,
@@ -240,7 +276,8 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   best_r.solve_time = time.time() - start_time
   return best_r
 
+
 def bb_box_nsocp(
     qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs
 ):
-  return bb_box(qp, bounds, verbose, params, func=bg_msk_norm.socp ,**kwargs)
+  return bb_box(qp, bounds, verbose, params, func=bg_msk_norm.socp, **kwargs)

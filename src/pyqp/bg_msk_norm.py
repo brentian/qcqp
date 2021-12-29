@@ -308,31 +308,47 @@ def socp(
   qneg, qineg = qp.Qneg
   
   qel = qp.Qmul
-  s_ub = np.maximum(bounds.xlb ** 2, bounds.xub ** 2).sum()
+  # the objective
+  z = model.variable("z")
+  # [1/2, rho, x] in Q
   qcones = model.variable("xr", dom.inRotatedQCone(3, n))
   ones = qcones.slice([0, 0], [1, n])
   rho = qcones.slice([1, 0], [2, n]).reshape(n, 1)
   x = qcones.slice([2, 0], [3, n]).reshape(n, 1)
   model.constraint(ones, dom.equalsTo(0.5))
   model.constraint(x, dom.inRange(bounds.xlb, bounds.xub))
-  # norm
-  s = model.variable("s", dom.inRange(0, s_ub))
-  # y = x^TRR^Tx, Q = l - RR^T
+  # s = x^Tx
+  s = model.variable("s")
+  # y = x^TRR^Tx
   y = model.variable("y", [m + 1])
-  #
+  # s = rho^Te
   model.constraint(
     expr.sub(expr.sum(rho), s), dom.equalsTo(0)
   )
   
   # R.T x = Z
-  obj_expr = 0
   if Q is not None:
     model.constraint(
       expr.vstack(0.5, y.index(0), expr.flatten(expr.mul(qp.R[-1].T, x))),
       dom.inRotatedQCone()
     )
-    obj_expr = expr.sub(obj_expr, y.index(0))
-    obj_expr = expr.sub(obj_expr, expr.mul(qp.l[-1], s))
+    model.constraint(
+      expr.add([
+        expr.mul(qp.l[-1], s),
+        expr.mul(-1, z),
+        expr.dot(q, x),
+        expr.mul(-1, y.index(0))
+      ]),
+      dom.greaterThan(0)
+    )
+  else:
+    model.constraint(
+      expr.add([
+        z,
+        expr.dot(-q, x)
+      ]),
+      dom.lessThan(0)
+    )
   
   # RLT for ρ = (ξ ◦ x)
   model.constraint(
@@ -373,16 +389,15 @@ def socp(
     model.constraint(quad_expr, quad_dom)
   
   # objectives
-  obj_expr = expr.add(obj_expr, expr.dot(q, x))
   
   # obj_expr = true_obj_expr
   model.objective(
     mf.ObjectiveSense.Minimize
-    if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr
+    if sense == 'min' else mf.ObjectiveSense.Maximize, z
   )
   
   r = MSKSocpResult()
-  r.obj_expr = obj_expr
+  r.obj_expr = z
   r.xvar = x
   r.yvar = y
   r.svar = s

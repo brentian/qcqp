@@ -114,16 +114,17 @@ class QP(object):
     for i in range(self.m):
       Ai = self.A[i]
       if Ai is not None:
-        self.l[i], self.R[i] = self._scaled_cholesky(Ai)
+        self.l[i], self.R[i] = self._scaled_cholesky(self.n, Ai)
     if self.Q is not None:
-      l, R = self._scaled_cholesky( - self.Q)
-      self.l[-1] = -l
-      self.R[-1] = -R
+      l, R = self._scaled_cholesky(self.n, - self.Q)
+      self.l[-1] = l
+      self.R[-1] = R
   
-  def _scaled_cholesky(self, A):
+  @staticmethod
+  def _scaled_cholesky(n, A):
     gamma, u = nl.eigh(A)
     l = 0 if min(gamma) > 0 else - min(gamma) + 1e-2
-    R = nl.cholesky(A + l * np.eye(self.n))
+    R = nl.cholesky(A + l * np.eye(n))
     return l, R
     
   def _decompose_matrix(self, A):

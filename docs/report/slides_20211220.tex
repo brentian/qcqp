@@ -1,4 +1,4 @@
-\documentclass[aspectratio=1612, 10pt]{beamer}
+\documentclass[aspectratio=1610, 10pt]{beamer}
 \usepackage[english]{babel}
 \usepackage{amsmath, amsthm, subfiles, bm, hyperref, graphicx}
 % my cmd
@@ -193,7 +193,11 @@
 
   Theorem, \cite{bienstock_cutting-planes_2014}. \(\alpha^\star = 1/\lambda_{\max} (Q_+)\), then lifting inequality is the tightest.
 
+  \
+
   This can be seen as supporting hyperplanes for the convex hull of \(\dagger, \ddagger\). \red{If we already convexify and deploy the SOCP to it, the cutting planes will be useless.}
+
+  \
 
   \textbf{In conclusion},
   the different schemes are actually equivalent, in different views of 1. convex hull by aggregation, 2. cutting plane to reverse convex set.
@@ -202,7 +206,9 @@
 \end{frame}
 
 \begin{frame}[allowframebreaks]{Convexification with the Box Constraint}
-  For a box \(x \in [l, u]\), we use \(n\)-dimensional RLT cut constructed by a doubly nonnegative matrix \(B, B \succeq 0, B \ge 0\), such that,
+  In a B-C framework (simple case when \(x\) is restricted to a small box \(x \in [l, u]\)),
+
+  we use \(n\)-dimensional RLT cut by a doubly nonnegative matrix \(B, B \succeq 0, B \ge 0\), \(\st\),
   \begin{equation*}
     (x-l)^TB(x-u) \le 0
   \end{equation*}
@@ -217,7 +223,7 @@
 
           \framebreak
 
-    \item if \(B= I_n\), it is equivalent to scaling, solve \(\lambda_{\max}(A)\)  (\red{best in most test case})
+    \item if \(B= I_n\), it is equivalent to scaling, solve \(\lambda_{\max}(A)\)
     \item if do D.C., adopt a DNN decomposition,
           \begin{equation}
             B = Q_+ - Q_-,\;, \st, Q_+ \succeq 0, Q_- \succeq 0, Q_- \ge 0
@@ -226,35 +232,43 @@
     \item in MSC, we do not need \(n\)-d RLTs, since we have \((x_i - l_i)(x_i - u_i) \le 0\) for every \(i\), this includes all \(n\)-d cuts.
   \end{enumerate}
 
-  Up to now, we explore convex. techniques for SOCP, Incorporate a matrix \(X\) may be necessary
+  Up to now, we explore,
+
+  \begin{itemize}
+    \item convexification by two quadratic sets
+    \item possible implementation in B-C, previously, use \(B = I\) to convexify all...
+    \item test on unconstrained case (with box only), \(B=I\) is already the \red{best in most test case}, need more analysis.
+  \end{itemize}
 \end{frame}
 
 \begin{frame}[allowframebreaks]{Questions \& Future Work}
 
-  How to implement these cuts?
+  Focus on box constrained case,
   \begin{enumerate}
-    \item RLT on off-diagonal entries, \((x_i - l_i)(x_j - u_j) \le 0\)
-    \item Strengthen by \cite{ye_new_2003} ?
-          \begin{align*}
-                        & a^Tx \le b, \|x\| \le \sqrt\delta,                     \\
-            \Rightarrow & \|(b - a^Tx)x\| = \|bx - Xa\| \le \sqrt\delta (b-a^Tx)
-          \end{align*}
-    \item Incorporate nonlinear intersection cut, \cite{modaresi_convex_2017}
-  \end{enumerate}
-
-  \begin{enumerate}
-    \framebreak
-
     \item for a general optimization model,
           \begin{align*}
                                 & f(x), \;  \st  x \in S, S \text{ compact}                      \\
             \Rightarrow ? \quad & \mx z, \; \st (x, z) \in \conv (S \cap \{(x, z): z \le f(x)\})
           \end{align*}
-
-    \item Refine recent findings into Branch-and-Cut
-
-    \item Local method to find a feasible solution
+    \item give extreme points of a \(A\) and the box
+    \item incorporate nonlinear intersection cut, \cite{modaresi_convex_2017}
   \end{enumerate}
+
+  Consider mixed cones, use \(X\) in some ways,
+  \begin{enumerate}
+
+    \item RLT on off-diagonal entries, \((x_i - l_i)(x_j - u_j) \le 0\)
+
+    \item Strengthen by \cite{ye_new_2003} ?
+          \begin{align*}
+                        & a^Tx \le b, \|x\| \le \sqrt\delta,                     \\
+            \Rightarrow & \|(b - a^Tx)x\| = \|bx - Xa\| \le \sqrt\delta (b-a^Tx)
+          \end{align*}
+
+          \cite{guo_quadratic_2014}, handle the case where \(\delta\) is a variable.
+
+  \end{enumerate}
+
 \end{frame}
 \begin{frame}[allowframebreaks]{Bibliography}
   \bibliography{headers/qcqp}
