@@ -20,7 +20,10 @@ fig
 instances
 instances_pr
 draft/*.pdf
-tex/*/*.pdf
+docs/report/*.pdf
+docs/sections/*.pdf
+
+
 notes
 data/
 build-debug/

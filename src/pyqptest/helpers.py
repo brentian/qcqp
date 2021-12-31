@@ -13,8 +13,11 @@ import pandas as pd
 pd.set_option("display.max_columns", None)
 np.set_printoptions(linewidth=200, precision=4)
 
+# relaxation
 from pyqp import bg_grb, bg_msk, bg_msk_msc, bg_msk_admm, bg_msk_norm, bg_msk_asocp, bg_msk_mc
-from pyqp import bb, bb_diag, bb_nmsc
+# branch and bound
+from pyqp import bb, bb_diag, bb_nmsc, bb_mmsc
+# helper, utilities, et cetera.
 from pyqp.classes import QP, QPI, Bounds, BCParams
 from pyqp.bg_msk_admm import ADMMParams
 
@@ -37,7 +40,8 @@ METHODS = collections.OrderedDict(
     # a-socp
     ("asocp", bg_msk_asocp.socp),
     # mixed-cone
-    ("msocp", bg_msk_mc.socp)
+    ("msocp", bg_msk_mc.socp),
+    ("bb_msocp", bb_mmsc.bb_box_nsocp)
   ]
 )
 
@@ -46,8 +50,8 @@ METHOD_CODES = {idx + 1: m for idx, m in enumerate(METHODS)}
 METHOD_HELP_MSGS = {k: bg_msk.dshor.__doc__ for k, v in METHODS.items()}
 
 QP_SPECIAL_PARAMS = {
-  "msc":  {"decompose_method": "eig-type1", "force_decomp": True},
-  "emsc":  {"decompose_method": "eig-type2", "force_decomp": True},
+  "msc": {"decompose_method": "eig-type1", "force_decomp": True},
+  "emsc": {"decompose_method": "eig-type2", "force_decomp": True},
   "asocp": {"decompose_method": "eig-type1", "force_decomp": False}
 }
 
@@ -73,7 +77,8 @@ parser.add_argument(
   "--m", type=int, help="if randomly generated num of constraints", default=5
 )
 parser.add_argument(
-  "--problem_type", type=int, help=f"if randomly generated, what is the problem type?\n{QP_RANDOM_INSTANCE_TYPE}", default=0
+  "--problem_type", type=int, help=f"if randomly generated, what is the problem type?\n{QP_RANDOM_INSTANCE_TYPE}",
+  default=0
 )
 parser.add_argument(
   "--time_limit", default=60, type=int, help="time limit of running."

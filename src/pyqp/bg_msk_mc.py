@@ -5,6 +5,18 @@ Mixed cone approach
 from .bg_msk_norm import *
 
 
+class MSKMixConeResult(MSKSocpResult):
+  def __init__(self):
+    super(MSKMixConeResult, self).__init__()
+    self.sdpc = None
+    self.sdpcval = None
+  
+  def solve(self, verbose=False, qp=None):
+    super(MSKMixConeResult, self).solve(verbose, qp)
+    # sdpc
+    self.sdpcval = self.sdpc.level().reshape(self.sdpc.getShape())
+
+
 def socp(
     qp: QP,
     bounds: MscBounds = None,
@@ -56,50 +68,69 @@ def socp(
   model.constraint(
     expr.sub(expr.sum(rho), s), dom.equalsTo(0)
   )
-  
-  # R.T x = Z
-  if Q is not None:
-    i, j = n - 2, n - 1
-    # create a small sdp cone,
-    sdpc = model.variable('x0', dom.inPSDCone(3))
+  #
+  edges = kwargs.get('edges', [])
+  n_edges = len(edges)
+  sdpc = model.variable('x0', dom.inPSDCone(3, n_edges)) if n_edges > 0 else None
+  # sdp cone connects to socp cone
+  for idx, (i, j) in enumerate(edges):
     model.constraint(
       expr.sub(
-        sdpc.index([0, 0]), rho.index([i, 0])
+        sdpc.index([idx, 0, 0]), rho.index([i, 0])
       ), dom.equalsTo(0)
     )
     model.constraint(
       expr.sub(
-        sdpc.index([1, 1]), rho.index([j, 0])
+        sdpc.index([idx, 1, 1]), rho.index([j, 0])
       ), dom.equalsTo(0)
     )
     model.constraint(
-      sdpc.index([2, 2])
+      sdpc.index([idx, 2, 2])
       , dom.equalsTo(1)
     )
     model.constraint(
       expr.sub(
-        expr.flatten(sdpc.slice([2, 0], [3, 2])),
+        expr.flatten(sdpc.slice([idx, 2, 0], [idx + 1, 3, 2])),
         x.pick([[i, 0], [j, 0]])
       ), dom.equalsTo(0)
     )
-    # now build new cholesky
-    Q0 = Q[i:j+1, i:j+1].copy()
+  
+  if Q is not None:
+    # decompose Q into
+    # Q1 ⊕ ∑ Q_c
+    # create the complement matrix
     Q1 = Q.copy()
-    Q1[i:j+1, i:j+1] = 0
+    small_cone_sum = 0
+    if n_edges > 0:
+      Q0 = np.empty((n_edges, 2, 2))
+      
+      for idx, (i, j) in enumerate(edges):
+        # now build new cholesky
+        Q0[idx] = Q1[i:j + 1, i:j + 1].copy()
+        Q1[i:j + 1, i:j + 1] = 0
+      
+      small_cone_sum = expr.dot(
+        Q0.flatten(),
+        expr.flatten(sdpc.slice([0, 0, 0], [n_edges, 2, 2]))
+      )
+    
     # Q1 = Q
     l, R = QP._scaled_cholesky(n, - Q1)
     model.constraint(
       expr.vstack(0.5, y.index(0), expr.flatten(expr.mul(R.T, x))),
       dom.inRotatedQCone()
     )
+    partial_sum = expr.add([
+      expr.mul(l, s),
+      expr.mul(-1, z),
+      expr.dot(q, x),
+      expr.mul(-1, y.index(0)),
+    ])
     model.constraint(
-      expr.add([
-        expr.mul(l, s),
-        expr.mul(-1, z),
-        expr.dot(q, x),
-        expr.mul(-1, y.index(0)),
-        expr.dot(Q0, sdpc.slice([0, 0], [2, 2]))
-      ]),
+      expr.add(
+        partial_sum,
+        small_cone_sum
+      ),
       dom.greaterThan(0)
     )
   else:
@@ -151,8 +182,9 @@ def socp(
     if sense == 'min' else mf.ObjectiveSense.Maximize, z
   )
   
-  r = MSKSocpResult()
+  r = MSKMixConeResult()
   r.obj_expr = z
+  r.sdpc = sdpc
   r.xvar = x
   r.yvar = y
   r.svar = s
