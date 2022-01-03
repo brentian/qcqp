@@ -99,6 +99,6 @@ def qp_gurobi(qp: QP,
     r.relax_obj = model.ObjBoundC
     r.true_obj = model.ObjVal
     r.nodes = model.NodeCount
-  r.xval = np.array([i.x for i in x.values()]).reshape(q.shape)
+  r.xval = np.array([i.x for i in x.values()]).reshape(q.shape).round(4)
   
   return r

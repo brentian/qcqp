@@ -114,8 +114,15 @@
     \end{aligned}
   \end{equation}
 \end{frame}
+\begin{frame}[allowframebreaks]{Motivation}
+  \begin{itemize}
+    \item Pure SOCP cones are hard to improve, as we tried \cite{bienstock_cutting-planes_2014}, convexification via aggregations \cite{burer_how_2017}, etc.
+    \item size of SDP cone scales in \(O(n^2)\)
+    \item we seek a \red{mixture of both}
+  \end{itemize}
+\end{frame}
 \begin{frame}[allowframebreaks]{Some Existing Schemes to Mix SOCP or Small SDP Cones}
-  Now assume we use second-order cones. No lifted matrix \(X \succeq 0\) is allowed.
+  Now assume we use second-order cones. Lifted matrix \(X \succeq 0\) is allowed.
 
   \textbf{Method 1},
 
@@ -124,8 +131,14 @@
 \end{frame}
 
 \begin{frame}[allowframebreaks]{A Simple Mixed Cone Decomposition}
-  We partition \(Q\) into a \(n\times n\) matrix, \(Q_0\) plus a set of small matrices \(\mathcal C = \{Q_c\}_{c=1}\)
-  Let \(Q = Q_0 \bigoplus \sum_c \bigoplus Q_c\)
+  We partition \(Q\) into a \(n\times n\) matrix, \(Q_0\) plus a set of small matrices \(\{Q_c\}_{c \in \mathcal C}\)
+
+  Assume,
+  \begin{equation*}
+    x^TQx = x^TQ_0x + \sum_c x_c^TQ_cx_c
+  \end{equation*}
+
+  where \(c \in \mathcal C\) is a subset of index \([n]\)
 
   \begin{enumerate}
     \item for example, we have a large \(Q_0\) and a small \(2\times 2\) matrix \(Q_1\),
@@ -138,11 +151,11 @@
               q_{i 1} &        & 0       &        & 0       &        &         \\
                       &        &         &        &         & \ddots &         \\
                       &        &         &        &         &        & q_{n n}
-            \end{bmatrix} x + Q_c \bullet X_c
+            \end{bmatrix} x + Q_1 \bullet X_1
           \end{equation*}
 
           \framebreak
-    \item similarly, we can construct a set of small cones
+    \item similarly, for \(\mathcal C\) of size larger than 1. We can sequentially construct a set of small cones, a simple scheme at iteration \(k\): \(Q^{(k+1)}_0 = Q^{(k)}_0 - Q_c^{(k)}\)
           \begin{align*}
             x^TQx & = x^TQ_0x + \sum_c Q_c \bullet X_c \\
             X_c   & \succeq x_c x_c^T
@@ -159,6 +172,6 @@
 \end{frame}
 \begin{frame}[allowframebreaks]{Bibliography}
   \bibliography{headers/qcqp}
-  \bibliographystyle{alpha}
+  \bibliographystyle{apalike}
 \end{frame}
 \end{document}

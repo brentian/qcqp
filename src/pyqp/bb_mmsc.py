@@ -1,5 +1,5 @@
 """
-This file the branch-and-cut for Norm-constrained MSC formulation
+This file the branch-and-cut for mixed cone formulation
 
 - use N-MSC in the backend
 - trying to branch on rho = x • xi
@@ -32,6 +32,7 @@ class MMSCBranch(Branch):
     self.rhopivot_val = None
     # keep residuals of xx^T
     self.res = res
+    self.e = None
   
   def simple_vio_branch(self, x, rho, res, bounds):
     """
@@ -53,6 +54,9 @@ class MMSCBranch(Branch):
     self.xpivot = x_index
     self.xpivot_val = bounds.xlb[x_index, 0] / 2 + bounds.xub[x_index, 0] / 2
     self.rhopivot_val = rho[x_index, 0].round(self.PRECISION)
+
+  def generate_edges(self, r):
+    self.e = tuple(self.res.flatten().argsort()[-2:])
 
 
 class Cuts(object):
@@ -107,15 +111,21 @@ class BBItem(object):
       self.bound = bound
 
 
-def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=False, backend_name='msk',
+def generate_child_items(total_nodes, parent: BBItem, branch: MMSCBranch, verbose=False, backend_name='msk',
                          backend_func=None, sdp_solver="MOSEK"):
   Q, q, A, a, b, sign, *_ = parent.qp.unpack()
+  ##############
+  # create new edges
+  ##############
+  if branch.e:
+    new_edges = parent.result.edges.union({branch.e})
+  else:
+    new_edges = parent.result.edges
   # left <=
   left_bounds = Bounds(*parent.bound.unpack())
   left_succ = left_bounds.update_bounds_from_branch(branch, left=True)
   
-  # left_r = backend_func(parent.qp, left_bounds, solver=sdp_solver, verbose=verbose, solve=False)
-  left_r = backend_func(parent.qp, left_bounds, solver=sdp_solver, verbose=verbose, solve=False)
+  left_r = backend_func(parent.qp, left_bounds, edges=new_edges, solver=sdp_solver, verbose=verbose, solve=False)
   if not left_succ:
     # problem is infeasible:
     left_r.solved = True
@@ -133,8 +143,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
   right_bounds = Bounds(*parent.bound.unpack())
   right_succ = right_bounds.update_bounds_from_branch(branch, left=False)
   
-  # right_r = backend_func(parent.qp, right_bounds, solver=sdp_solver, verbose=verbose, solve=False)
-  right_r = backend_func(parent.qp, right_bounds, solver=sdp_solver, verbose=verbose, solve=False)
+  right_r = backend_func(parent.qp, right_bounds, edges=new_edges, solver=sdp_solver, verbose=verbose, solve=False)
   if not right_succ:
     # problem is infeasible
     right_r.solved = True
@@ -156,7 +165,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   backend_name = params.sdp_solver_backend
   if backend_func is None:
     if backend_name == 'msk':
-      backend_func = bg_msk_norm.msc_diag
+      backend_func = bg_msk_mc.socp
     else:
       raise ValueError("not implemented")
   print(f"backend using {backend_func.__name__}")
@@ -187,7 +196,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   while not queue.empty():
     priority, item = queue.get()
     
-    r: bg_msk_norm.MSKNMscResult = item.result
+    r: bg_msk_mc.MSKMixConeResult = item.result
     
     parent_sdp_val = item.parent_bound
     
@@ -221,7 +230,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     res_norm = r.res_norm
     
     print(
-      f"time: {r.solve_time: .2f} #{item.node_id}, "
+      f"time: {r.solve_time: .2f}/{r.unit_time: .4f} #{item.node_id}, #sc: {len(r.edges)} "
       f"depth: {item.depth}, feas: {res.max():.3e}, obj: {r.true_obj:.4f}, "
       f"sdp_obj: {r.relax_obj:.4f}, gap:{gap:.4%} ([{lb: .2f},{ub: .2f}]")
     
@@ -237,6 +246,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     ## branching
     br = MMSCBranch(res)
     br.simple_vio_branch(x, rho, res, item.bound)
+    br.generate_edges(r)
     left_item, right_item = generate_child_items(
       total_nodes, item, br, sdp_solver=params.sdp_solver_backend, verbose=verbose, backend_name=backend_name,
       backend_func=backend_func)

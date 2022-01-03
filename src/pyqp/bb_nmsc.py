@@ -243,7 +243,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     res_norm = r.res_norm
     
     print(
-      f"time: {r.solve_time: .2f} #{item.node_id}, "
+      f"time: {r.solve_time: .2f}/{r.unit_time: .4f} #{item.node_id}, "
       f"depth: {item.depth}, feas: {res.max():.3e}, obj: {r.true_obj:.4f}, "
       f"sdp_obj: {r.relax_obj:.4f}, gap:{gap:.4%} ([{lb: .2f},{ub: .2f}]")
     

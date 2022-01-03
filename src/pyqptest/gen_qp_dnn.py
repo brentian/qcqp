@@ -1,6 +1,7 @@
 """
 Construct D.C. matrices,
  By Q = RR^T - MM^T
+ such that R is doubly nonnegative
 """
 from pyqp.instances import QPInstanceUtils
 from pyqptest.helpers import *

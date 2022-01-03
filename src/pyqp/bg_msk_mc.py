@@ -1,6 +1,7 @@
 """
 Mixed cone approach
 """
+import numpy as np
 
 from .bg_msk_norm import *
 
@@ -10,11 +11,14 @@ class MSKMixConeResult(MSKSocpResult):
     super(MSKMixConeResult, self).__init__()
     self.sdpc = None
     self.sdpcval = None
+    # keep edges
+    self.edges = set()
   
   def solve(self, verbose=False, qp=None):
     super(MSKMixConeResult, self).solve(verbose, qp)
     # sdpc
-    self.sdpcval = self.sdpc.level().reshape(self.sdpc.getShape())
+    if self.sdpc:
+      self.sdpcval = self.sdpc.level().reshape(self.sdpc.getShape())
 
 
 def socp(
@@ -69,7 +73,7 @@ def socp(
     expr.sub(expr.sum(rho), s), dom.equalsTo(0)
   )
   #
-  edges = kwargs.get('edges', [])
+  edges = kwargs.get('edges', set())
   n_edges = len(edges)
   sdpc = model.variable('x0', dom.inPSDCone(3, n_edges)) if n_edges > 0 else None
   # sdp cone connects to socp cone
@@ -106,8 +110,10 @@ def socp(
       
       for idx, (i, j) in enumerate(edges):
         # now build new cholesky
-        Q0[idx] = Q1[i:j + 1, i:j + 1].copy()
-        Q1[i:j + 1, i:j + 1] = 0
+        Q0[idx, 0, 0] = Q1[i, i]
+        Q0[idx, 0, 1] = Q0[idx, 1, 0] = Q1[i, j]
+        Q0[idx, 1, 1] = Q1[j, j]
+        Q1[i, i] = Q1[i, j] = Q1[j, i] = Q1[j, j] = 0
       
       small_cone_sum = expr.dot(
         Q0.flatten(),
@@ -184,6 +190,7 @@ def socp(
   
   r = MSKMixConeResult()
   r.obj_expr = z
+  r.edges = edges
   r.sdpc = sdpc
   r.xvar = x
   r.yvar = y

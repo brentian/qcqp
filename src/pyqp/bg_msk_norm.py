@@ -34,6 +34,7 @@ class MSKNMscResult(MSKResult):
     self.obj_expr = None
     self.qel = None
     self.q = None
+    self.unit_time = 0
   
   def solve(self, verbose=False, qp=None):
     start_time = time.time()
@@ -60,6 +61,7 @@ class MSKNMscResult(MSKResult):
     else:  # infeasible
       self.relax_obj = -1e6
     self.solved = True
+    self.unit_time = self.problem.getSolverDoubleInfo("optimizerTime")
     self.solve_time = round(end_time - start_time, 3)
 
 
@@ -85,6 +87,7 @@ class MSKSocpResult(MSKResult):
     self.obj_expr = None
     self.qel = None
     self.q = None
+    self.unit_time = 0
   
   def solve(self, verbose=False, qp=None):
     start_time = time.time()
@@ -113,6 +116,7 @@ class MSKSocpResult(MSKResult):
     else:  # infeasible
       self.relax_obj = -1e6
     self.solved = True
+    self.unit_time = self.problem.getSolverDoubleInfo("optimizerTime")
     self.solve_time = round(end_time - start_time, 3)
 
 
