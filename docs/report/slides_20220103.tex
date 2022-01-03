@@ -1,6 +1,7 @@
 \documentclass[aspectratio=1610, 10pt]{beamer}
 \usepackage[english]{babel}
 \usepackage{amsmath, amsthm, subfiles, bm, hyperref, graphicx}
+\usepackage{caption, longtable, booktabs}
 % my cmd
 %%%%%%%%%%%%%%%%
 % start my commands
@@ -121,16 +122,22 @@
     \item we seek a \red{mixture of both}
   \end{itemize}
 \end{frame}
-\begin{frame}[allowframebreaks]{Some Existing Schemes to Mix SOCP or Small SDP Cones}
+\begin{frame}[allowframebreaks]{Some Related Schemes to Mix SOCP or Small SDP Cones}
   Now assume we use second-order cones. Lifted matrix \(X \succeq 0\) is allowed.
 
-  \textbf{Method 1},
+  \textbf{Method 1}, Relaxing PSD constraint on \(X\): \cite{kim_exact_2003}, for each \((k, j)\) in sparsity pattern \((k, j) \in \Lambda\),
+  \begin{equation*}
+    (X_{k j})^{2} \leq X_{k k} X_{j j}
+  \end{equation*}
 
-  \textbf{Method 2},
+  \textbf{Method 1.1}, Extension of 1. \cite{kocuk_matrix_2018}, use matrix minors, ensure \(2\times 2\) submatrices are singular.
+
+
+  \textbf{Method 1.1}, Chordal graphs. \cite{fukuda_exploiting_2001}
 
 \end{frame}
 
-\begin{frame}[allowframebreaks]{A Simple Mixed Cone Decomposition}
+\begin{frame}[allowframebreaks]{A Simple Mixed Cone Scheme}
   We partition \(Q\) into a \(n\times n\) matrix, \(Q_0\) plus a set of small matrices \(\{Q_c\}_{c \in \mathcal C}\)
 
   Assume,
@@ -160,12 +167,57 @@
             x^TQx & = x^TQ_0x + \sum_c Q_c \bullet X_c \\
             X_c   & \succeq x_c x_c^T
           \end{align*}
+    \item possible to adopt more sophisticated summation by cones of dimension \(\ge 2\)
   \end{enumerate}
 \end{frame}
 
-\begin{frame}[allowframebreaks]{Questions \& Future Work}
+\begin{frame}[allowframebreaks]{Small test on mixed cones: SOCP + \(2\times 2\) matrices}
   \begin{enumerate}
-    \item todo
+    \item We implement a simple branch and cut, original problem has the constraint,
+          \begin{align*}
+            x\circ x \le \rho
+          \end{align*}
+    \item At each time we find a critical edge \((i, j)\) that has the greatest residual, \(\rho^* - x^* \circ x^*\)
+    \item Then rewrite the objective constraint by updating \(Q_0\) and \(\{Q_c\}\)
+  \end{enumerate}
+  \small
+  \begin{longtable}{llrrrrrl}
+    \toprule
+    {} & prob\_num & solve\_time & best\_bound & best\_obj & relax\_obj & nodes & method          \\
+    \midrule
+    0  & 6:0:0     & 0.00        & 15.12       & 15.12     & 15.12      & 1.0   & grb             \\
+    1  & 6:0:0     & 0.48        & 15.13       & 15.12     & 15.13      & 49.0  & bb\_nmsc        \\
+    2  & 6:0:0     & 0.74        & 15.13       & 15.12     & 15.13      & 43.0  & \red{bb\_msocp} \\
+    0  & 15:0:0    & 0.01        & 66.06       & 66.06     & 66.06      & 1.0   & grb             \\
+    1  & 15:0:0    & 7.01        & 66.07       & 66.06     & 66.07      & 489.0 & bb\_nmsc        \\
+    2  & 15:0:0    & 20.42       & 66.07       & 66.06     & 66.07      & 653.0 & \red{bb\_msocp} \\
+    0  & 15:0:0    & 0.02        & 27.28       & 27.28     & 27.28      & 1.0   & grb             \\
+    1  & 15:0:0    & 5.71        & 27.30       & 27.28     & 27.30      & 397.0 & bb\_nmsc        \\
+    2  & 15:0:0    & 9.18        & 27.29       & 27.28     & 27.29      & 321.0 & \red{bb\_msocp} \\
+    \bottomrule
+  \end{longtable}
+  \normalsize
+\end{frame}
+
+
+\begin{frame}[allowframebreaks]{Questions \& Future Work: Partition Scheme}
+
+  Recall we partition \(x^TQx\) ``online'' in the bb tree.
+
+  Consider some special cases in the form,
+
+  \begin{align*}
+    Q                                & = Q' - Q_0                       \\
+    \text{SOC} \quad   y             & \ge \|R_0^Tx\|^2, R_0R_0^T = Q_0 \\
+    \text{SD} \quad   \max_{x} x^TQx & = \max_{x, X} Q'\bullet X - y
+  \end{align*}
+
+  Assume \(Q', A'_i\) are in a good family.
+  In max problem, \(\text{SOC}\) is tight.
+
+  \begin{enumerate}
+    \item \(Q'\) that is: 1. ``good'' for SDP relaxation; 2. make \(Q_0 \succeq 0\); 3. achieve more sparsity.
+    \item \(Q'\) is diagonal, tested in box constraint (\red{not tight}), \underline{should work in sphere}?
   \end{enumerate}
 
 

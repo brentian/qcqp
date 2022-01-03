@@ -127,8 +127,9 @@ class Branch(object):
 
 class Bounds(object):
   
-  def __init__(self, xlb=None, xub=None, ylb=None, yub=None):
+  def __init__(self, xlb=None, xub=None, ylb=None, yub=None, s=None):
     # sparse implementation
+    self.sphere = s
     self.xlb = xlb.copy()
     self.xub = xub.copy()
     if ylb is not None:

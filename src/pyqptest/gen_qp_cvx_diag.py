@@ -13,6 +13,7 @@ from pyqp.instances import QPInstanceUtils
 def generate(n, m):
   Rp = np.diag(np.random.randint(-5, 5, n))
   Rn = np.random.randint(-4, 4, (n, n))
+  # Rn = np.zeros((n, n))
   Q = Rp - Rn @ Rn.T
   
   Arp = np.diag(np.random.randint(-5, 5, n))
@@ -43,21 +44,30 @@ def sdp(qp):
   Z = model.variable("Z", dom.inPSDCone(n + 1))
   Y = Z.slice([0, 0], [n, n])
   x = Z.slice([0, n], [n, n + 1])
-  model.constraint(x, dom.inRange(0, 1))
   
+  
+  # s = x^Tx
+  s = model.variable('s', dom.lessThan(n/2))
   # y = x^TRR^Tx
   y = model.variable("y", [m + 1])
+  
   Qpos = qp.Qpos[0]
   Qneg = qp.Qneg[0]
   Apos = qp.Apos[0]
   Aneg = qp.Aneg[0]
   # bounds
-  model.constraint(expr.sub(Y.diag(), x), dom.lessThan(0))
+  model.constraint(expr.sub(expr.sum(Y.diag()), s), dom.lessThan(0))
   model.constraint(Z.index(n, n), dom.equalsTo(1.))
   model.constraint(
     expr.vstack(0.5, y.index(0), expr.flatten(expr.mul(Qneg.T, x))),
     dom.inRotatedQCone()
   )
+  model.constraint(
+    expr.vstack(0.5, s, expr.flatten(x)),
+    dom.inRotatedQCone()
+  )
+  # model.constraint(x, dom.inRange(0, 1))
+  
   # objectives
   obj_expr = expr.add(
     [expr.dot(Qpos, Y),
@@ -80,13 +90,20 @@ def sdp(qp):
   #
   
   model.objective(mf.ObjectiveSense.Maximize, obj_expr)
-  model.setSolverParam("intpntSolveForm", "dual")
   model.solve()
-
+  xx = x.level()
+  print(x.level().reshape((n, 1)).round(4))
+  print(Z.level().reshape((n + 1, n + 1)).round(4))
+  print(y.level()[0] - xx@Qneg @ Qneg.T @ xx)
 
 if __name__ == '__main__':
-  n = 6
-  bd = Bounds(xlb=np.zeros(n), xub=np.ones(n))
+  import sys
+  
+  n = int(sys.argv[1])
+  seed = int(sys.argv[2])
+  np.random.seed(seed)
+  bd = Bounds(xlb=np.zeros(n), xub=100*np.ones(n), s=n/2)
   qp = generate(n, 0)
   sdp(qp)
-  qp_gurobi(qp, bd)
+  rg = qp_gurobi(qp, bd, sense='max')
+  print(rg.xval)

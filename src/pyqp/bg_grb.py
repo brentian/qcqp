@@ -5,9 +5,15 @@ import time
 from .classes import Result, Params, QP, Bounds
 
 
-def qp_gurobi(qp: QP,
-              bounds: Bounds,
-              sense="max", relax=True, verbose=True, params: Params = Params(), **kwargs):
+def qp_gurobi(
+    qp: QP,
+    bounds: Bounds,
+    sense="max",
+    relax=True,
+    verbose=True,
+    params: Params = Params(),
+    **kwargs
+):
   """
   QCQP using Gurobi 9.1 as benchmark
   todo: works only for 1-d case now
@@ -40,7 +46,7 @@ def qp_gurobi(qp: QP,
   lb, ub, ylb, yub = bounds.unpack()
   m, n, d = a.shape
   model = grb.Model()
-  model.setParam(grb.GRB.Param.OutputFlag, True)
+  model.setParam(grb.GRB.Param.OutputFlag, verbose)
   
   indices = range(q.shape[0])
   
@@ -49,6 +55,9 @@ def qp_gurobi(qp: QP,
   else:
     x = model.addVars(indices, lb=lb.flatten(), ub=ub.flatten(), vtype=grb.GRB.INTEGER)
   
+  if bounds.sphere:
+    model.addConstr(grb.quicksum(xx * xx for xx in x.values()) <= bounds.sphere)
+    
   obj_expr = grb.quicksum(Q[i][j] * x[i] * x[j] for i, j in itertools.product(indices, indices)) \
              + grb.quicksum(q[i][0] * x[i] for i in indices)
   if sign is not None:
