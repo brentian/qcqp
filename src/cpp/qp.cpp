@@ -27,7 +27,7 @@ void QP::create_diag_Q(int n, int m) {
 
     int i = 0;
 
-    for (auto &Qi:Qd) {
+    for (auto &Qi: Qd) {
         auto *e = new double[n]{0};
         auto *ee = new double[n * n]{0};
         e[i] = -0.5;
@@ -67,13 +67,13 @@ void QP::show() {
     std::cout << "homogenized objective: " << std::endl;
     std::cout << Qh << std::endl;
     if (verbose) {
-        for (auto &Qi:Qd) {
+        for (auto &Qi: Qd) {
             std::cout << "Q\n";
             std::cout << Qi << std::endl;
         }
     }
     std::cout << "homogenized constraints: " << std::endl;
-    for (auto &A_:Ah) {
+    for (auto &A_: Ah) {
         std::cout << A_ << std::endl;
         std::cout << "------------------------" << std::endl;
     }
@@ -84,7 +84,7 @@ void QP::show() {
 
 double QP::inhomogeneous_obj_val(double *x) const {
     eigen_arraymap xm(x, n);
-    auto obj = xm.dot(q) + xm.adjoint() * Q *xm;
+    auto obj = xm.dot(q) + xm.adjoint() * Q * xm;
     return obj;
 }
 
@@ -92,6 +92,13 @@ eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a) {
 
     eigen_matrix Ah(A.cols() + 1, A.cols() + 1);
     Ah << A, a.matrix() / 2, a.matrix().adjoint() / 2, eigen_matrix::Zero(1, 1);
+    return Ah;
+}
+
+eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a, double b) {
+
+    eigen_matrix Ah(A.cols() + 1, A.cols() + 1);
+    Ah << A, a.matrix() / 2, a.matrix().adjoint() / 2, -b * eigen_matrix::Ones(1, 1);
     return Ah;
 }
 

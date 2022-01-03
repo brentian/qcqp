@@ -56,5 +56,5 @@ public:
 
 // QP UTIL FUNCS.
 eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a);
-
+eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a, double b);
 #endif //QCQP_QP_H

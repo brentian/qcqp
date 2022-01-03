@@ -1,7 +1,15 @@
 from pyqp.classes import BCParams
 from .bg_msk_msc import *
+import time
 
 
+class ADMMParams(BCParams):
+  max_iteration = 10000
+  logging_interval = 1
+  time_limit = 60
+  obj_gap = 1e-8
+  res_gap = 1e-8
+  
 class MSKResultXi(MSKMscResult):
   """Result keeper for ADMM subproblem
   for (xi)
@@ -26,7 +34,10 @@ class MSKResultXi(MSKMscResult):
       self.xival = self.xivar.level().reshape(self.xivar.getShape())
     else:  # infeasible
       self.relax_obj = -1e6
-
+      print(status)
+      if status == mf.ProblemStatus.Unknown:
+        self.problem.writeTask("/tmp/dump.task.gz")
+        self.problem.writeTask("/tmp/dump.mps")
     self.solved = True
     self.solve_time = round(end_time - start_time, 3)
 
@@ -87,18 +98,15 @@ class MSKResultX(MSKMscResult):
         self.true_obj = qp_obj_func(qp.Q, qp.q, self.xval)
     else:  # infeasible
       self.relax_obj = -1e6
+      print(status)
+      if status == mf.ProblemStatus.Unknown:
+        self.problem.writeTask("/tmp/dump.task.gz")
 
     self.solved = True
     self.solve_time = round(end_time - start_time, 3)
 
     def check(self, qp: QP):
       pass
-
-
-class ADMMParams(BCParams):
-  max_iteration = 1000
-  logging_interval = 10
-  time_limit = 60
 
 
 def msc_admm(
@@ -112,7 +120,6 @@ def msc_admm(
   **kwargs
 ):
   _unused = kwargs
-  Q, q, A, a, b, sign, *_ = qp.unpack()
   if qp.Qpos is None:
     raise ValueError("decompose QP instance first")
   if qp.decom_method == 'eig-type1':
@@ -132,7 +139,6 @@ def msc_admm(
   _iter = 0
   start_time = time.time()
   while _iter < admmparams.max_iteration:
-    _iter += 1
     r = msc_subproblem_x(
       sval, xival, kappa, mu, rho, qp, bounds, solve=False, verbose=verbose
     )
@@ -148,20 +154,21 @@ def msc_admm(
     residual_ts = tval - sval
     residual_xix = (xival * xval).sum() - tval
     r.bound = (r.yval.T @ qp.Qmul).trace() + (qp.q.T @ xval).trace()
-    gap = (r.bound - r.relax_obj) / (r.bound + 1e-2)
+    gap = abs((r.bound - r.relax_obj) / (r.bound + 1e-2))
     curr_time = time.time()
     adm_time = curr_time - start_time
     if _iter % admmparams.logging_interval == 0:
       print(
         f"//{curr_time - start_time: .2f}, @{_iter} # alm: {r.relax_obj: .4f} gap: {gap:.3%} norm t - s: {residual_ts: .4e}, 𝜉x - t: {residual_xix: .4e}"
       )
-    if (gap < 1e-4) or (max(abs(residual_ts), abs(residual_xix)) < 1e-4):
+    if (gap < admmparams.obj_gap) or (max(abs(residual_ts), abs(residual_xix)) < admmparams.res_gap):
       print(f"terminited by gap")
       break
     if adm_time >= admmparams.time_limit:
       break
     kappa += residual_ts * rho
     mu += residual_xix * rho
+    _iter += 1
   r.result_xi = r_xi
   r.nodes = _iter
   r.solve_time = adm_time
@@ -218,16 +225,12 @@ def msc_subproblem_x(  # follows the args
     model.constraint(zcone.index([idx, 1, 1]), dom.equalsTo(1))
 
   # Q.T x = Z
-  model.constraint(expr.sub(expr.mul((qneg + qpos), z), x), dom.equalsTo(0))
-
-  # RLT cuts
-  rlt_expr = expr.sub(expr.sum(y), expr.dot(bounds.xlb + bounds.xub, x))
-  model.constraint(rlt_expr, dom.lessThan(-(bounds.xlb * bounds.xub).sum()))
-
+  model.constraint(expr.sub(expr.mul((qneg + qpos).T, x), z), dom.equalsTo(0))
+  
   for i in range(m):
     apos, ipos = qp.Apos[i]
     aneg, ineg = qp.Aneg[i]
-    quad_expr = expr.sub(expr.dot(a[i], x), b[i])
+    quad_expr = expr.dot(a[i], x)
 
     if ipos.shape[0] + ineg.shape[0] > 0:
 
@@ -246,34 +249,35 @@ def msc_subproblem_x(  # follows the args
 
       # A.T @ x == z
       model.constraint(
-        expr.sub(expr.mul((apos + aneg), zi), x), dom.equalsTo(0)
+        expr.sub(expr.mul((apos + aneg).T, x), zi), dom.equalsTo(0)
       )
-
-      # this means you can place on x directly.
-      rlt_expr = expr.sub(expr.sum(yi), expr.dot(bounds.xlb + bounds.xub, x))
-      model.constraint(rlt_expr, dom.lessThan(-(bounds.xlb * bounds.xub).sum()))
-
       quad_terms = expr.dot(el, yi)
-
       quad_expr = expr.add(quad_expr, quad_terms)
 
     else:
       Y.append(None)
       Z.append(None)
-
-    quad_dom = dom.equalsTo(0) if sign[i] == 0 else (
-      dom.greaterThan(0) if sign[i] == -1 else dom.lessThan(0)
-    )
-
+    if qp.sign is not None:
+      # unilateral case
+      quad_dom = dom.equalsTo(0) if sign[i] == 0 else (
+        dom.greaterThan(0) if sign[i] == -1 else dom.lessThan(b[i])
+      )
+    else:
+      # bilateral case
+      quad_dom = dom.inRange(qp.al[i], qp.au[i])
+      # quad_dom = dom.lessThan(qp.au[i])
     model.constraint(quad_expr, quad_dom)
-
+  
   ###################
   # The above part is unchanged
   ###################
   # norm bounds on y^Te
-  t = model.variable("t", dom.inRange(0, n))
+  t = model.variable("t", dom.inRange(0, s))
   for idx, yi in enumerate(Y):
-    model.constraint(expr.sub(expr.sum(yi), t), dom.lessThan(0))
+    if yi is not None:
+      model.constraint(expr.sub(expr.sum(yi), t), dom.lessThan(0))
+    else:
+      print("ssss")
 
   # ADMM solves the minimization problem so we reverse the max objective.
   true_obj_expr = expr.add(expr.dot(-q, x), expr.dot(-qel, y))
@@ -340,24 +344,12 @@ def msc_subproblem_xi(  # follows the args
   -------
   """
   _unused = kwargs
-  Q, q, A, a, b, sign, *_ = qp.unpack()
-  if qp.Qpos is None:
-    raise ValueError("decompose QP instance first")
-  if qp.decom_method == 'eig-type1':
-    raise ValueError(f"cannot use {qp.decom_method}")
-  m, n, dim = a.shape
-  xshape = (n, dim)
+  
+  xshape = (qp.n, qp.d)
   model = mf.Model('many_small_cone_msk')
 
   if verbose:
     model.setLogHandler(sys.stdout)
-
-  if bounds is None:
-    bounds = MscBounds.construct(qp)
-
-  # qpos, qipos = qp.Qpos
-  # qneg, qineg = qp.Qneg
-  # qel = qp.Qmul
 
   ###################
   # The above part is unchanged

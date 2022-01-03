@@ -25,7 +25,10 @@ std::string dsdp_stopreason(DSDPTerminationReason st) {
 }
 
 
-void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
+void QP_DSDP::create_problem(
+        bool solve, bool verbose, bool use_lp_cone,
+        bool bool_diag
+) {
 
     setup();
     // declare the problem
@@ -63,31 +66,33 @@ void QP_DSDP::create_problem(bool solve, bool verbose, bool use_lp_cone) {
 #if DSDP_SDP_DBG
     SDPConeViewDataMatrix(sdpcone, 0, 1);
 #endif
-    DSDPSetDualObjective(p, 1, 1.0);
-    // Y <= xx^T,
-    // \tilde Y ∙ E_i + \diag(d) ∙ \diag(e_i)
-    // zi, Ei: k = 2 + (0, ..., n - 1)
-    for (int k = 0; k < n; ++k) {
-        int k_th_diag_idx = (k + 1) * (k + 2) / 2 - 1;
-        _ei_idx[k * 2] = k_th_diag_idx;
-        _ei_idx[k * 2 + 1] = n_lower_tr - 1 - n + k;
-    }
-    for (int k = 0; k < n; ++k) {
-        int vari = k + 2;
-        SDPConeSetSparseVecMat(
-                sdpcone, //SDPCone sdpcone
-                0, //int64 blockj,
-                vari, //int64 vari,
-                ndim, //int64 n,
-                0, //int64 ishift
-                _ei_idx + k * 2, //const int64 ind[],
-                _ei_val, //const double val[],
-                2 // int64 nnz
-        );
-        BConeSetUpperBound(bcone, k + 2, 0);
-        //  @note: equivalent
-        //      BConeSetPSlackVariable(bcone, k + 2);
-        DSDPSetDualObjective(p, vari, 0.0);
+    if (bool_diag) {
+        DSDPSetDualObjective(p, 1, 1.0);
+        // Y <= xx^T,
+        // \tilde Y ∙ E_i + \diag(d) ∙ \diag(e_i)
+        // zi, Ei: k = 2 + (0, ..., n - 1)
+        for (int k = 0; k < n; ++k) {
+            int k_th_diag_idx = (k + 1) * (k + 2) / 2 - 1;
+            _ei_idx[k * 2] = k_th_diag_idx;
+            _ei_idx[k * 2 + 1] = n_lower_tr - 1 - n + k;
+        }
+        for (int k = 0; k < n; ++k) {
+            int vari = k + 2;
+            SDPConeSetSparseVecMat(
+                    sdpcone, //SDPCone sdpcone
+                    0, //int64 blockj,
+                    vari, //int64 vari,
+                    ndim, //int64 n,
+                    0, //int64 ishift
+                    _ei_idx + k * 2, //const int64 ind[],
+                    _ei_val, //const double val[],
+                    2 // int64 nnz
+            );
+            BConeSetUpperBound(bcone, k + 2, 0);
+            //  @note: equivalent
+            //      BConeSetPSlackVariable(bcone, k + 2);
+            DSDPSetDualObjective(p, vari, 0.0);
+        }
     }
 
 
@@ -325,7 +330,7 @@ void Result_DSDP::construct_init_point(Result_DSDP &r, double lambda, int pool_s
     for (int i = 0; i < r.ydim; i++) {
         y[i] = r.y[i];
     }
-    zbar = - r.bound;
+    zbar = -r.bound;
 }
 
 Result_DSDP::Result_DSDP(int n, int m, int d) :

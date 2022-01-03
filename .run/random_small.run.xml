@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="random_small" type="PythonConfigurationType" factoryName="Python" singleton="false">
+  <configuration default="false" name="rs" type="PythonConfigurationType" factoryName="Python" singleton="false">
     <module name="qcqp" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -7,15 +7,15 @@
       <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
     <option name="SDK_HOME" value="$USER_HOME$/anaconda3/bin/python" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/test/msc" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/" />
     <option name="IS_MODULE_SDK" value="true" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/test/random_small.py" />
-    <option name="PARAMETERS" value="--n 6 --m 2 --r 1,2,3" />
+    <option name="SCRIPT_NAME" value="pyqptest.random_small" />
+    <option name="PARAMETERS" value="--n 6 --m 0 --r 1,4,14" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
-    <option name="MODULE_MODE" value="false" />
+    <option name="MODULE_MODE" value="true" />
     <option name="REDIRECT_INPUT" value="false" />
     <option name="INPUT_FILE" value="" />
     <method v="2" />

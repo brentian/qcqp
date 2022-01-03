@@ -1,0 +1,32 @@
+\documentclass{article}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+
+\begin{document}
+
+\[ \left[\begin{array}{cc}
+     x_i & x_j
+   \end{array}\right] \left[\begin{array}{cc}
+     q_{i i} & q_{i j}\\
+     q_{j i} & q_{j j}
+   \end{array}\right] \left[\begin{array}{c}
+     x_i\\
+     x_j
+   \end{array}\right] = Q_c X_c \]
+$x^T Q x = x^T \left[\begin{array}{ccccccc}
+  q_{11} &  & q_{1 j} &  & q_{1 i} &  & \\
+  & \ddots &  &  &  &  & \\
+  q_{j 1} &  & 0 &  & 0 &  & \\
+  &  &  & \ddots &  &  & \\
+  q_{i 1} &  & 0 &  & 0 &  & \\
+  &  &  &  &  & \ddots & \\
+  &  &  &  &  &  & q_{n n}
+\end{array}\right] x + Q_c \bullet X_c$
+
+\
+
+$x^T Q x = x^T Q_0 x + \sum_{_c} Q_c \bullet X_c$
+
+\
+
+\end{document}

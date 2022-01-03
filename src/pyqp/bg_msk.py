@@ -1,3 +1,7 @@
+"""
+Test scripts using SDP based relaxation, i.e.,
+- Lift xx^T to X ⪰ 0
+"""
 import numpy as np
 import sys
 import time
@@ -71,17 +75,6 @@ def shor(qp: QP,
       for basic 0 <= x <= e, diag(Y) <= x
   Parameters
   ----------
-  Q
-  q
-  A
-  a
-  b
-  sign
-  lb
-  ub
-  solver
-  sense
-  kwargs
 
   Returns
   -------
@@ -89,7 +82,7 @@ def shor(qp: QP,
   """
   _unused = kwargs
   st_time = time.time()
-  Q, q, A, a, b, sign = qp.unpack()
+  Q, q, A, a, b, sign, *_ = qp.unpack()
   lb, ub, ylb, yub = bounds.unpack()
   m, n, d = a.shape
   xshape = (n, d)
@@ -103,17 +96,8 @@ def shor(qp: QP,
   x = Z.slice([0, n], [n, n + 1])
 
   # bounds
-  # model.constraint(expr.sub(x, ub), dom.lessThan(0))
-  # model.constraint(expr.sub(x, lb), dom.greaterThan(0))
   model.constraint(expr.sub(Y.diag(), x), dom.lessThan(0))
   model.constraint(Z.index(n, n), dom.equalsTo(1.))
-
-  if r_parent is not None:
-    # Y.setLevel(r_parent.yval.flatten())
-    # x.setLevel(np.zeros(n).tolist())
-    # x.index(0, 0).setLevel([r_parent.xval[0,0]])
-    # need control for the HSD model
-    pass
 
   for i in range(m):
     if sign[i] == 0:
@@ -157,6 +141,8 @@ def dshor(qp: QP,
   dual form of SDP relaxation
     should be equal to primal form of
     the SDP.
+  @note,
+    simply test if I did the Lagrangians right : )
   Parameters
   -------
 

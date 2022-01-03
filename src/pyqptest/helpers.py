@@ -1,4 +1,7 @@
 import collections
+import argparse
+import json
+import copy
 
 import numpy as np
 import pandas as pd
@@ -10,20 +13,35 @@ import pandas as pd
 pd.set_option("display.max_columns", None)
 np.set_printoptions(linewidth=200, precision=4)
 
-from pyqp import bg_grb, bg_msk, bg_msk_msc, bg_msk_chordal, bg_msk_homo, bg_msk_admm
-from pyqp import bb_msc, bb, bb_diag, bb_socp
+# relaxation
+from pyqp import bg_grb, bg_msk, bg_msk_msc, bg_msk_admm, bg_msk_norm, bg_msk_asocp, bg_msk_mc
+# branch and bound
+from pyqp import bb, bb_diag, bb_nmsc, bb_mmsc
+# helper, utilities, et cetera.
 from pyqp.classes import QP, QPI, Bounds, BCParams
 from pyqp.bg_msk_admm import ADMMParams
-import argparse
-import json
 
 METHODS = collections.OrderedDict(
   [
-    ("grb", bg_grb.qp_gurobi), ("shor", bg_msk.shor), ("dshor", bg_msk.dshor),
-    ("msc", bg_msk_msc.msc), ("emsc", bg_msk_msc.msc_diag),
-    ("ssdp", bg_msk_chordal.ssdp), ("bb", bb.bb_box),
-    ("bb_msc", bb_diag.bb_box), ("shor_homo", bg_msk_homo.shor),
-    ("admm_msc", bg_msk_admm.msc_admm)
+    ("grb", bg_grb.qp_gurobi),  # exact benchmark by gurobi nonconvex qcqp
+    # pure sdp
+    ("shor", bg_msk.shor),  # relaxation: shor
+    ("dshor", bg_msk.dshor),  # relaxation: shor-dual
+    ("bb", bb.bb_box),
+    # many small cones
+    ("msc", bg_msk_msc.msc_diag),  # many small cone approach
+    ("emsc", bg_msk_msc.msc_diag),
+    ("bb_msc", bb_diag.bb_box),
+    ("bb_nmsc", bb_nmsc.bb_box),
+    ("admm_nmsc", bg_msk_admm.msc_admm),  # local method using admm
+    # socp
+    ("nsocp", bg_msk_norm.socp),
+    ("bb_nsocp", bb_nmsc.bb_box_nsocp),
+    # a-socp
+    ("asocp", bg_msk_asocp.socp),
+    # mixed-cone
+    ("msocp", bg_msk_mc.socp),
+    ("bb_msocp", bb_mmsc.bb_box_nsocp)
   ]
 )
 
@@ -31,12 +49,27 @@ METHOD_CODES = {idx + 1: m for idx, m in enumerate(METHODS)}
 
 METHOD_HELP_MSGS = {k: bg_msk.dshor.__doc__ for k, v in METHODS.items()}
 
+QP_SPECIAL_PARAMS = {
+  "msc": {"decompose_method": "eig-type1", "force_decomp": True},
+  "emsc": {"decompose_method": "eig-type2", "force_decomp": True},
+  "asocp": {"decompose_method": "eig-type1", "force_decomp": False}
+}
+
+QP_RANDOM_INSTANCE_TYPE = {
+  0: 'normal',
+  1: 'cvx',
+  2: 'dnn',  # difference of doubly psd matrices
+}
+
+###################
+# the argument parser
+###################
 parser = argparse.ArgumentParser("QCQP runner")
 parser.add_argument(
   "--dump_instance", type=int, help="if save instance", default=1
 )
 parser.add_argument(
-  "--r", type=str, help=METHOD_CODES.__str__(), default="1,2,7"
+  "--r", type=str, help=f"solution method desc. \n {METHOD_CODES}", default="1,2,7"
 )
 parser.add_argument("--fpath", type=str, help="path of the instance")
 parser.add_argument("--n", type=int, help="dim of x", default=5)
@@ -44,7 +77,8 @@ parser.add_argument(
   "--m", type=int, help="if randomly generated num of constraints", default=5
 )
 parser.add_argument(
-  "--pc", type=str, help="if randomly generated problem type", default=5
+  "--problem_type", type=int, help=f"if randomly generated, what is the problem type?\n{QP_RANDOM_INSTANCE_TYPE}",
+  default=0
 )
 parser.add_argument(
   "--time_limit", default=60, type=int, help="time limit of running."

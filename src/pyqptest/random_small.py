@@ -19,10 +19,10 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
+import copy
 
 from pyqptest.helpers import *
-
-np.random.seed(1)
+from pyqptest.gen_qp_dnn import gen_dnn
 
 parser.add_argument(
   "--sparsity",
@@ -30,40 +30,60 @@ parser.add_argument(
   default=0.5,
   help="sparsity of the problem, 0-1, 1 means the most dense"
 )
-if __name__ == '__main__':
 
+parser.add_argument(
+  "--seed",
+  type=int,
+  default=1,
+  help="random seed"
+)
+
+if __name__ == '__main__':
+  
   parser.print_usage()
   args = parser.parse_args()
   params = BCParams()
   admmparams = ADMMParams()
   kwargs, r_methods = params.produce_args(parser, METHOD_CODES)
   _ = admmparams.produce_args(parser, METHOD_CODES)
-
-  n, m, pc = args.n, args.m, args.pc
+  
+  np.random.seed(args.seed)
+  n, m, ptype = args.n, args.m, args.problem_type
   # problem
   problem_id = f"{n}:{m}:{0}"
   # start
   # qp = QPI.block(n, m, r=2, eps=0.5)
-  qp = QPI.normal(int(n), int(m), rho=args.sparsity)
+  if ptype == 0:
+    qp = QPI.normal(int(n), int(m), rho=args.sparsity)
+  else:
+    qp = gen_dnn(int(n), int(m))
   bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
-
+  # bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.random.random((n, 1)))
+  
   evals = []
   results = {}
   # run methods
   for k in r_methods:
     func = METHODS[k]
-    qp1 = bb_msc.QP(*qp.unpack())
-    qp1.decompose()
-    r = func(qp1, bd, params=params, admmparams=admmparams)
-    reval = r.eval(problem_id)
-    evals.append({**reval.__dict__, "method": k})
-    results[k] = r
-
+    
+    qp1 = copy.deepcopy(qp)
+    special_params = QP_SPECIAL_PARAMS.get(k, {})
+    if qp1.Qpos is None or special_params.get("force_decomp", True):
+      qp1.decompose(special_params)
+    try:
+      r = func(qp1, bd, params=params, admmparams=admmparams)
+      reval = r.eval(problem_id)
+      evals.append({**reval.__dict__, "method": k})
+      results[k] = r
+    except Exception as e:
+      raise e
+      print(f"method {k} failed")
+  
   for k, r in results.items():
     print(f"{k} benchmark @{r.relax_obj}")
     r.check(qp)
     print(r.xval)
-
+  
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)
   print(
@@ -72,6 +92,6 @@ if __name__ == '__main__':
       'method'
     ]].to_latex()
   )
-
+  
   if args.dump_instance:
     pass

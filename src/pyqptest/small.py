@@ -33,18 +33,22 @@ if __name__ == '__main__':
 
   n, m = qp.n, qp.m
   # problem
-  problem_id = f"{n}:{m}:{0}"
+  problem_id = qp.name if qp.name else f"{n}:{m}:{0}"
   # start
-  bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
+  bd = Bounds(xlb=qp.vl, xub=qp.vu)
 
   evals = []
   results = {}
   # run methods
   for k in r_methods:
     func = METHODS[k]
-    qp1 = bb.QP(*qp.unpack())
-    qp1.decompose()
-    r = func(qp1, bd, params=params, admmparams=admmparams)
+    qp1 = copy.deepcopy(QP)
+    if qp.Qpos is None:
+      qp1.decompose(**QP_SPECIAL_PARAMS.get(k, {}))
+    try:
+      r = func(qp1, bd, params=params, admmparams=admmparams)
+    except Exception as e:
+      print(f"method {k} failed")
     reval = r.eval(problem_id)
     evals.append({**reval.__dict__, "method": k})
     results[k] = r
@@ -57,4 +61,9 @@ if __name__ == '__main__':
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)
   print(r.xval)
-  print(df_eval[['prob_num', 'solve_time', 'relax_obj', 'method']].to_latex())
+  print(
+    df_eval[[
+      'prob_num', 'solve_time', 'best_bound', 'best_obj', 'relax_obj', 'nodes',
+      'method'
+    ]].to_latex()
+  )
