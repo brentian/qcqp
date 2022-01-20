@@ -36,7 +36,7 @@ class MscBranch(Branch):
     _succeed = False
     n, m = self.zpivot
     _pivot = (m, n)
-    _val = self.zpivot_val.round(4)
+    _val = self.zpivot_val.round(6)
     newbl = MscBounds(*bounds.unpack())
     _lb, _ub = newbl.zlb[(*_pivot, 0)], newbl.zub[(*_pivot, 0)]
     if left and _val < _ub:
@@ -98,7 +98,7 @@ class MscBranch(Branch):
       # cal √l
       for _zleft in (True, False):
         newbl = MscBounds(zlb, zub, ylb, yub, *_)
-        newl = np.sqrt(newbl.ylb[(*_pivot, 0)]).round(4)
+        newl = np.sqrt(newbl.ylb[(*_pivot, 0)]).round(6)
         if _zleft and - newl < _zub:
           # <= and a valid upper bound
           newbl.zub[(*_pivot, 0)] = - newl
@@ -352,7 +352,7 @@ def bb_box(
     )
     for next_item in _:
       total_nodes += 1
-      next_priority = - r.relax_obj.round(3)
+      next_priority = - r.relax_obj.round(PRECISION_OBJVAL)
       queue.put((next_priority, next_item))
       ub_dict[next_item.node_id] = r.relax_obj
     #

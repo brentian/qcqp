@@ -19,51 +19,81 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
+import copy
 
-from .helpers import *
+from pyqptest.helpers import *
+import pyqptest.gen_qp_dnn as gen_dnn
+import pyqptest.gen_qp_low_rank as gen_ncvx_fixed
+
+parser.add_argument(
+  "--seed",
+  type=int,
+  default=1,
+  help="random seed"
+)
 
 if __name__ == '__main__':
-
+  
+  parser.print_usage()
+  args = parser.parse_args()
   params = BCParams()
   admmparams = ADMMParams()
   kwargs, r_methods = params.produce_args(parser, METHOD_CODES)
   _ = admmparams.produce_args(parser, METHOD_CODES)
-
-  qp = QP.read(params.fpath)
-
-  n, m = qp.n, qp.m
+  
+  np.random.seed(args.seed)
+  n, m, ptype, btype = args.n, args.m, args.problem_type, args.bound_type
+  # problem dtls
+  pdtl_str = args.problem_dtls
+  bdtl_str = args.bound_dtls
   # problem
-  problem_id = qp.name if qp.name else f"{n}:{m}:{0}"
+  problem_id = f"{n}:{m}:{0}"
   # start
-  bd = Bounds(xlb=qp.vl, xub=qp.vu)
-
+  if ptype == 0:
+    qp = QPI.normal(int(n), int(m), rho=0.5)
+  elif ptype == 1:
+    qp = gen_dnn.generate(int(n), int(m))
+  elif ptype == 2:
+    qp = gen_ncvx_fixed.generate(int(n), int(m), pdtl_str)
+  else:
+    raise ValueError("no such problem type defined")
+  if btype == 0:
+    bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
+  else:
+    bd = Bounds(xlb=np.zeros(shape=(n, 1)), s=n)
   evals = []
   results = {}
   # run methods
   for k in r_methods:
     func = METHODS[k]
-    qp1 = copy.deepcopy(QP)
-    if qp.Qpos is None:
-      qp1.decompose(**QP_SPECIAL_PARAMS.get(k, {}))
+    
+    qp1 = copy.deepcopy(qp)
+    special_params = QP_SPECIAL_PARAMS.get(k, {})
+    if qp1.Qpos is None or special_params.get("force_decomp", True):
+      qp1.decompose(special_params)
     try:
       r = func(qp1, bd, params=params, admmparams=admmparams)
+      reval = r.eval(problem_id)
+      evals.append({**reval.__dict__, "method": k})
+      results[k] = r
     except Exception as e:
       print(f"method {k} failed")
-    reval = r.eval(problem_id)
-    evals.append({**reval.__dict__, "method": k})
-    results[k] = r
-
+      import logging
+      
+      logging.exception(e)
   for k, r in results.items():
     print(f"{k} benchmark @{r.relax_obj}")
-    print(f"{k} benchmark x\n" f"{r.xval.round(PRECISION_OBJVAL)}")
     r.check(qp)
-
+    print(r.xval[r.xval > 0])
+  
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)
-  print(r.xval)
   print(
     df_eval[[
       'prob_num', 'solve_time', 'best_bound', 'best_obj', 'node_time', 'nodes',
       'method'
     ]].to_latex()
   )
+  
+  if args.dump_instance:
+    pass

@@ -12,9 +12,26 @@ import time
 
 from . import bg_msk, bg_cvx
 from .classes import qp_obj_func, QP, BCParams, Result, Bounds, Branch, CuttingPlane
+from .classes import PRECISION_OBJVAL, PRECISION_SOL
 
 
-
+class SDPSmallCone(CuttingPlane):
+  def __init__(self, data):
+    self.data = data
+  
+  def serialize_to_msk(self, *args, **kwargs):
+    pass
+  
+  @staticmethod
+  def apply(branch, bounds):
+    # todo, find a way to implement this
+    # or to show it is not valid.
+    raise ValueError("not finished!")
+    i = branch.xpivot
+    j = branch.xminor
+    u_i, l_i = bounds.xub[i, 0], bounds.xlb[i, 0]
+    u_j, l_j = bounds.xub[j, 0], bounds.xlb[j, 0]
+    return SDPSmallCone((i, j, u_i, l_i, u_j, l_j))
 
 
 class RLTCuttingPlane(CuttingPlane):
@@ -148,7 +165,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
   # left <=
   left_bounds = Bounds(*parent.bound.unpack())
   left_succ = left_bounds.update_bounds_from_branch(branch, left=True)
- 
+  
   # left_r = backend_func(parent.qp, left_bounds, solver=sdp_solver, verbose=verbose, solve=False)
   left_r = backend_func(parent.qp, left_bounds, solver=sdp_solver, verbose=verbose, solve=False, r_parent=parent.result)
   if not left_succ:
@@ -169,7 +186,8 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
   right_succ = right_bounds.update_bounds_from_branch(branch, left=False)
   
   # right_r = backend_func(parent.qp, right_bounds, solver=sdp_solver, verbose=verbose, solve=False)
-  right_r = backend_func(parent.qp, right_bounds, solver=sdp_solver, verbose=verbose, solve=False, r_parent=parent.result)
+  right_r = backend_func(parent.qp, right_bounds, solver=sdp_solver, verbose=verbose, solve=False,
+                         r_parent=parent.result)
   if not right_succ:
     # problem is infeasible
     right_r.solved = True
@@ -227,6 +245,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     if parent_sdp_val < lb:
       # prune this tree
       print(f"prune #{item.node_id} since parent pruned")
+      ub_dict.pop(item.node_id)
       continue
     
     if not r.solved:
@@ -236,15 +255,16 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     if r.relax_obj < lb:
       # prune this tree
       print(f"prune #{item.node_id} by bound")
+      ub_dict.pop(item.node_id)
       continue
     
-    ub = min(parent_sdp_val, ub)
-    r.bound = ub
+    ub = max(ub_dict.values())
+    ub_dict.pop(item.node_id)
     if r.true_obj > lb:
       best_r = r
       lb = r.true_obj
     
-    gap = (ub - lb) / abs(lb)
+    gap = (ub - lb) / (abs(lb) + 1e-2)
     
     x = r.xval
     y = r.yval
@@ -252,7 +272,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     res_norm = r.res_norm
     
     print(
-      f"time: {r.solve_time: .2f} #{item.node_id}, "
+      f"time: {r.solve_time: .2f}/{r.unit_time: .4f} #{item.node_id}, "
       f"depth: {item.depth}, feas: {res.max():.3e}, obj: {r.true_obj:.4f}, "
       f"sdp_obj: {r.relax_obj:.4f}, gap:{gap:.4%} ([{lb: .2f},{ub: .2f}]")
     
@@ -273,10 +293,12 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       total_nodes, item, br, sdp_solver=params.sdp_solver_backend, verbose=verbose, backend_name=backend_name,
       backend_func=backend_func)
     total_nodes += 2
-    # next_priority = - r.relax_obj.round(3)
-    next_priority = - r.true_obj
+    next_priority = - r.relax_obj.round(PRECISION_OBJVAL)
+    # next_priority = - r.true_obj
     queue.put((next_priority, right_item))
     queue.put((next_priority, left_item))
+    ub_dict[left_item.node_id] = r.relax_obj.round(PRECISION_OBJVAL)
+    ub_dict[right_item.node_id] = r.relax_obj.round(PRECISION_OBJVAL)
     #
     
     k += 1

@@ -16,6 +16,7 @@ from . import bg_msk, bg_cvx
 from .bb import BCParams, BBItem, Cuts, RLTCuttingPlane
 from .classes import MscBounds, Branch, Bounds
 from .classes import QP, qp_obj_func, Result
+from .classes import PRECISION_OBJVAL, PRECISION_SOL
 
 
 class MscBranch(Branch):
@@ -58,7 +59,7 @@ class MscBranch(Branch):
     x_index = np.unravel_index(np.argmax(res, axis=None), res.shape)
     # x_index = res_sum.argmax()
     self.xpivot = x_index
-    self.xpivot_val = x[x_index].round(6)
+    self.xpivot_val = x[x_index].round(self.PRECISION)
     self.type = MscBranch.bound
     self.var_type = not relax
   
@@ -299,100 +300,91 @@ def bb_box(
   feasible = {}
   
   while not queue.empty():
-    try:
-      priority, item = queue.get()
-      del ub_dict[item.node_id]
-      r = item.result
-      
-      parent_sdp_val = item.parent_bound
-      
-      # if parent_sdp_val < lb:
-      #   # prune this tree
-      #   print(f"prune #{item.node_id} since parent pruned")
-      #   continue
-      
-      if not r.solved:
-        r.solve(verbose=verbose)
-        r.solve_time = time.time() - start_time
-      
-      if r.relax_obj < lb:
-        # prune this tree
-        if k % logging_interval == 0:
-          print(f"prune #{item.node_id} @{r.relax_obj :.4f} by bound")
-        continue
-      
-      x = r.xval
-      z = r.zval
-      y = r.yval
-      zc = r.Zval
-      yc = r.Yval
-      try:
-        resc = np.abs(yc - zc ** 2)
-      except:
-        print(1)
-      resc_feas = resc.max()
-      resc_feasC = resc[:, 1:].max() if resc.shape[1] > 1 else 0
-      
-      # it is for real a lower bound by real objective
-      #   if and only if it is feasible
-      bool_integral_feasible = True if params.relax else (r.xval.round() - r.xval).max() <= params.feas_eps
-      bool_sol_feasible = resc_feasC <= params.feas_eps and bool_integral_feasible
-      bool_feasible = resc_feas <= params.feas_eps and bool_integral_feasible
-      r.true_obj = qp_obj_func(item.qp.Q, item.qp.q, r.xval) if bool_sol_feasible else 0
-      
-      r.bound = r.relax_obj
-      if r.true_obj > lb:
-        best_r = r
-        lb = r.true_obj
-      
-      ub = max([r.relax_obj, max(ub_dict.values()) if len(ub_dict) > 0 else 0])
-      gap = (ub - lb) / (abs(lb) + 1e-3)
-      
+    
+    priority, item = queue.get()
+    
+    r = item.result
+    
+    parent_sdp_val = item.parent_bound
+    
+    if parent_sdp_val < lb:
+      # prune this tree
+      print(f"prune #{item.node_id} since parent pruned")
+      ub_dict.pop(item.node_id)
+      continue
+    
+    if not r.solved:
+      r.solve(verbose=verbose, qp=qp)
+      r.solve_time = time.time() - start_time
+    
+    if r.relax_obj < lb:
+      # prune this tree
       if k % logging_interval == 0:
-        print(
-          f"time: {r.solve_time: .2f} #{item.node_id}, "
-          f"depth: {item.depth}, "
-          f"feas: {resc_feas:.3e} "
-          f"feasC: {resc_feasC:.3e}"
-          f"obj: {r.true_obj:.4f}, "
-          f"sdp_obj: {r.relax_obj:.4f}, gap:{gap:.4%} ([{lb: .2f},{ub: .2f}]")
-        
-        if gap <= params.opt_eps or r.solve_time >= params.time_limit:
-          print(f"terminate #{item.node_id} by gap or time_limit")
-          break
-      
-      if bool_feasible:
-        print(f"prune #{item.node_id} by feasible solution")
-        feasible[item.node_id] = r
-        continue
-      
-      ## branching
-      br = MscBranch()
-      branch_args = (
-        x, y, z, yc, zc, resc, item.bound
-      )
-      br.branch(*branch_args, relax=params.relax, name=branch_name)
-      
-      _ = generate_child_items(
-        total_nodes, item, br,
-        sdp_solver=params.sdp_solver_backend,
-        verbose=verbose,
-        backend_name=backend_name,
-        backend_func=backend_func,
-      )
-      for next_item in _:
-        total_nodes += 1
-        next_priority = - r.relax_obj.round(3)
-        queue.put((next_priority, next_item))
-        ub_dict[next_item.node_id] = r.relax_obj
-      #
-      k += 1
-    except KeyboardInterrupt as e:
-      print("optimization terminated")
+        print(f"prune #{item.node_id} @{r.relax_obj :.4f} by bound")
+      continue
+    
+    ub = max(ub_dict.values())
+    ub_dict.pop(item.node_id)
+    
+    x = r.xval
+    z = r.zval
+    y = r.yval
+    zc = r.Zval
+    yc = r.Yval
+    
+    # it is for real a lower bound by real objective
+    #   if and only if it is feasible
+    bool_integral_feasible = True if params.relax else (r.xval.round() - r.xval).max() <= params.feas_eps
+    bool_sol_feasible = r.resc_feasC <= params.feas_eps and bool_integral_feasible
+    bool_feasible = r.resc_feas <= params.feas_eps and bool_integral_feasible
+    
+    if r.true_obj > lb:
+      best_r = r
+      lb = r.true_obj
+    
+    gap = (ub - lb) / (abs(lb) + 1e-3)
+    
+    if k % logging_interval == 0:
+      print(
+        f"time: {r.solve_time: .2f} #{item.node_id}, "
+        f"depth: {item.depth}, "
+        f"feas: {r.resc_feas:.3e} "
+        f"feasC: {r.resc_feasC:.3e} "
+        f"obj: {r.true_obj:.4f}, "
+        f"sdp_obj: {r.relax_obj:.4f}, gap:{gap:.4%} ([{lb: .2f},{r.relax_obj:.4f},{ub: .2f}]")
+    
+    if gap <= params.opt_eps or r.solve_time >= params.time_limit:
+      print(f"terminate #{item.node_id} by gap or time_limit")
       break
+    
+    if bool_feasible:
+      print(f"prune #{item.node_id} by feasible solution")
+      feasible[item.node_id] = r
+      continue
+    
+    ## branching
+    br = MscBranch()
+    branch_args = (
+      x, y, z, yc, zc, r.resc, item.bound
+    )
+    br.branch(*branch_args, relax=params.relax, name=branch_name)
+    
+    _ = generate_child_items(
+      total_nodes, item, br,
+      sdp_solver=params.sdp_solver_backend,
+      verbose=verbose,
+      backend_name=backend_name,
+      backend_func=backend_func,
+    )
+    for next_item in _:
+      total_nodes += 1
+      next_priority = - r.relax_obj.round(PRECISION_OBJVAL)
+      queue.put((next_priority, next_item))
+      ub_dict[next_item.node_id] = r.relax_obj
+    #
+    k += 1
   
   best_r.nodes = total_nodes
-  best_r.bound = min(ub, best_r.bound)
-  best_r.relax_obj = best_r.relax_obj
+  best_r.relax_obj = min([best_r.relax_obj, *ub_dict.values()])
   best_r.solve_time = time.time() - start_time
   return best_r

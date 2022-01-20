@@ -13,7 +13,7 @@ from collections import defaultdict
 class QP(object):
   import copy
   cp = copy.deepcopy
-
+  
   def __init__(self, Q, q, A, a, b, sign, al=None, au=None):
     self.Q = Q / 2 + Q.T / 2
     self.q = q
@@ -41,21 +41,67 @@ class QP(object):
     self.ic = None
     self.Er = None
     self.name = None
-
+    
     # infer from data
     self.n, self.d = q.shape
     self.m, *_ = a.shape
-
+    self.eigen()
+  
   def __str__(self):
     # todo add a description
     return ""
-
+  
   def __repr__(self):
     return self.description
-
+  
   def unpack(self):
     return self.Q, self.q, self.A, self.a, self.b, self.sign, self.al, self.au
-
+  
+  ########################
+  # store eigenvalues
+  ########################
+  def eigen(self):
+    n, m = self.n, self.m
+    self.U = np.empty((m + 1, n, n), dtype=np.float)
+    self.gamma = np.empty((m + 1, n), dtype=np.float)
+    gamma, u = nl.eigh(self.Q)
+    self.gamma[0] = gamma
+    self.U[0] = u
+    for i in range(self.m):
+      Ai = self.A[i]
+      gamma_i, u_i = nl.eigh(Ai)
+      self.gamma[i + 1] = gamma_i
+      self.U[i + 1] = u_i
+  
+  ########################
+  # homogenization
+  ########################
+  def construct_homo(self):
+    self.Qh = np.bmat([[self.Q, self.q / 2], [self.q.T / 2, np.zeros((1, 1))]]).__array__()
+    self.Ah = []
+    for i in range(self.m):
+      _Ah = np.bmat(
+        [
+          [self.A[i], self.a[i] / 2],
+          [self.a[i].T / 2, np.ones((1, 1)) * (-self.b[i])]
+        ]
+      )
+      self.Ah.append(_Ah.__array__())
+  
+  ########################
+  # feasibility checking
+  ########################
+  def check(self, x):
+    if (0 <= x).all() and (x <= 1).all():
+      pass
+    else:
+      return False
+    for i in range(self.m):
+      _va = (x.T @ self.A[i] @ x).trace() + (x.T @ self.a[i]).trace()
+      if _va > self.b[i]:
+        return False
+    return True
+  
   ########################
   # eigenvalue decomposition
   # and orthogonal basis
@@ -90,7 +136,7 @@ class QP(object):
       decom_map[0, 0, ipos] = 1
       decom_map[0, 1, ineg] = 1
       decom_arr.append([ipos, ineg])
-
+    
     for i in range(self.m):
       Ai = self.A[i]
       if Ai is not None:
@@ -102,7 +148,7 @@ class QP(object):
         decom_map[i + 1, 0, ip] = 1
         decom_map[i + 1, 1, inn] = 1
         decom_arr.append([ip, inn])
-        
+      
       else:
         self.Apos[i] = None
         self.Aneg[i] = None
@@ -122,14 +168,23 @@ class QP(object):
   
   @staticmethod
   def _scaled_cholesky(n, A):
+    """
+    Scale an indefinite A to be PSD
+     R = l*I + A
+    :param n:
+    :param A:
+    :return:
+    """
     gamma, u = nl.eigh(A)
     l = 0 if min(gamma) > 0 else - min(gamma) + 1e-2
     R = nl.cholesky(A + l * np.eye(n))
     return l, R
-    
+  
   def _decompose_matrix(self, A):
     """
     A cholesky like decomposition.
+     Q = VLV^T,
+     then Q+ = V√L+, Q- = V√L-
     :param A:
     :return:
     """
@@ -144,9 +199,9 @@ class QP(object):
     ineg, *_ = np.nonzero(ineg)
     mul = np.ones(shape=(self.n, 1))  # todo: fix this for matrix case
     mul[ineg] = -1
-
+    
     return (upos, ipos), (uneg, ineg), mul, gamma.reshape((self.n, 1))
-
+  
   def _decompose_matrix_eig(self, A):
     gamma, u = nl.eigh(A)
     ipos = (gamma > 0).astype(int)
@@ -158,9 +213,9 @@ class QP(object):
     ipos, *_ = np.nonzero(ipos)
     ineg, *_ = np.nonzero(ineg)
     mul = gamma.reshape((self.n, 1))
-
+    
     return (upos, ipos), (uneg, ineg), mul, gamma.reshape((self.n, 1))
-
+  
   ########################
   # cliques and chordal sparsity
   ########################
@@ -195,7 +250,7 @@ class QP(object):
         self.node_to_Eir[l].append(idx_cr)
     self.g = g
     self.g_chordal = g_chordal
-
+  
   @staticmethod
   def create_er_from_clique(cr, n):
     nr = len(cr)
@@ -203,7 +258,7 @@ class QP(object):
     for row, col in enumerate(cr):
       Er[row, col] = 1
     return Er
-
+  
   ####################
   # serialization
   ####################
@@ -212,7 +267,7 @@ class QP(object):
     import os
     import time
     stamp = int(time.time())
-
+    
     fname = os.path.join(wdir, f"{self.n}_{self.m}.{stamp}.json")
     data = {}
     data['n'] = self.n
@@ -224,7 +279,7 @@ class QP(object):
     data['a'] = self.a.flatten().astype(float).tolist()
     data['b'] = self.b.flatten().astype(float).tolist()
     json.dump(data, open(fname, 'w'))
-
+  
   @classmethod
   def read(cls, fpath):
     data = json.load(open(fpath, 'r'))
@@ -278,39 +333,16 @@ class QP(object):
     instance.name = data.get("name")
     return instance
 
-  def check(self, x):
-    if (0 <= x).all() and (x <= 1).all():
-      pass
-    else:
-      return False
-    for i in range(self.m):
-      _va = (x.T @ self.A[i] @ x).trace() + (x.T @ self.a[i]).trace()
-      if _va > self.b[i]:
-        return False
-    return True
-
-  def construct_homo(self):
-    self.Qh = np.bmat([[self.Q, self.q / 2], [self.q.T / 2, np.zeros((1, 1))]]).__array__()
-    self.Ah = []
-    for i in range(self.m):
-      _Ah = np.bmat(
-        [
-          [self.A[i], self.a[i] / 2],
-          [self.a[i].T / 2, np.ones((1, 1)) * (-self.b[i])]
-        ]
-      )
-      self.Ah.append(_Ah.__array__())
-
 
 class QPInstanceUtils(object):
   """
   create special QP instances
   """
-
+  
   @staticmethod
   def _wrapper(Q, q, A, a, b, sign):
     return QP(Q, q, A, a, b, sign)
-
+  
   @staticmethod
   def cvx(n, m):
     """
@@ -330,7 +362,7 @@ class QPInstanceUtils(object):
     Q = Q.T @ Q
     A = -A.transpose(0, 2, 1) @ A
     return QPInstanceUtils._wrapper(Q, q, A, a, b, sign)
-
+  
   @staticmethod
   def normal(n, m, rho=0.5):
     """
@@ -351,7 +383,7 @@ class QPInstanceUtils(object):
     Q = (np.random.random(Q.shape) <= rho) * (Q + Q.T)
     A = (np.random.random(A.shape) <= rho) @ (A + A.transpose(0, 2, 1))
     return QPInstanceUtils._wrapper(Q, q, A, a, b, sign)
-
+  
   @staticmethod
   def block(n, m, r, eps=0):
     """
@@ -380,6 +412,6 @@ class QPInstanceUtils(object):
         Er[row, col] = 1
       qr = Er @ Q @ Er.T
       qc += Er.T @ qr @ Er
-
+    
     qp = QPInstanceUtils._wrapper(qc, q, A, a, b, sign)
     return qp

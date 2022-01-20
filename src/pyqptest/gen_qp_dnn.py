@@ -1,13 +1,13 @@
 """
 Construct D.C. matrices,
  By Q = RR^T - MM^T
- such that R is doubly nonnegative
+ such that M is doubly nonnegative
 """
 from pyqp.instances import QPInstanceUtils
 from pyqptest.helpers import *
 
 
-def gen_dnn(n, m):
+def generate(n, m):
   Rp = np.random.randint(-5, 5, (n, n))
   Rn = np.random.randint(0, 4, (n, n))
   Q = Rp @ Rp.T - Rn @ Rn.T
@@ -39,7 +39,7 @@ if __name__ == '__main__':
   problem_id = f"{n}:{m}:{0}"
   # start
   bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
-  qp = gen_dnn(n, m)
+  qp = generate(n, m)
   
   if params.fpath:
     qp.serialize(params.fpath)

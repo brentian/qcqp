@@ -43,7 +43,7 @@ class MSKSocpResultBi(MSKSocpResult):
   
   def solve(self, verbose=False, qp=None):
     super(MSKSocpResultBi, self).solve(verbose, qp)
-    self.xival = self.xivar.level().reshape(self.xivar.getShape()).round(4)
+    self.xival = self.xivar.level().reshape(self.xivar.getShape()).round(6)
 
 
 def socp(

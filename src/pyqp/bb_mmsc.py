@@ -15,7 +15,7 @@ import time
 
 from . import bg_msk_mc, bg_msk, bg_msk_norm
 from .classes import qp_obj_func, QP, BCParams, Result, Bounds, Branch, CuttingPlane
-
+from .classes import PRECISION_OBJVAL, PRECISION_SOL
 
 cutting_method = {
   # 'rlt': add_rlt_cuts not needed in this case
@@ -24,7 +24,7 @@ cutting_method = {
 
 
 class MMSCBranch(Branch):
-  PRECISION = 6
+  PRECISION = PRECISION_SOL
   
   def __init__(self, res):
     self.xpivot = None
@@ -251,11 +251,11 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       total_nodes, item, br, sdp_solver=params.sdp_solver_backend, verbose=verbose, backend_name=backend_name,
       backend_func=backend_func)
     total_nodes += 2
-    next_priority = - r.relax_obj.round(3)
+    next_priority = - r.relax_obj.round(PRECISION_OBJVAL)
     queue.put((next_priority, right_item))
     queue.put((next_priority, left_item))
-    ub_dict[left_item.node_id] = r.relax_obj.round(3)
-    ub_dict[right_item.node_id] = r.relax_obj.round(3)
+    ub_dict[left_item.node_id] = r.relax_obj.round(PRECISION_OBJVAL)
+    ub_dict[right_item.node_id] = r.relax_obj.round(PRECISION_OBJVAL)
     #
     
     k += 1

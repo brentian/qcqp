@@ -64,21 +64,21 @@ class MSKResultX(MSKMscResult):
       status = 'failed'
     end_time = time.time()
     if status == mf.ProblemStatus.PrimalAndDualFeasible:
-      self.xval = self.xvar.level().reshape(self.xvar.getShape()).round(4)
-      self.zval = self.zvar.level().reshape(self.zvar.getShape()).round(4)
+      self.xval = self.xvar.level().reshape(self.xvar.getShape()).round(6)
+      self.zval = self.zvar.level().reshape(self.zvar.getShape()).round(6)
       self.Zval = np.hstack(
         [
-          xx.level().reshape(self.xvar.getShape()).round(4)
+          xx.level().reshape(self.xvar.getShape()).round(6)
           if xx is not None else np.zeros(self.xvar.getShape())
           for xx in self.Zvar
         ]
       )
       if self.yvar is not None:
-        self.yval = self.yvar.level().reshape(self.yvar.getShape()).round(4)
+        self.yval = self.yvar.level().reshape(self.yvar.getShape()).round(6)
       if self.Yvar is not None:
         self.Yval = np.hstack(
           [
-            xx.level().reshape(self.xvar.getShape()).round(4)
+            xx.level().reshape(self.xvar.getShape()).round(6)
             if xx is not None else np.zeros(self.xvar.getShape())
             for xx in self.Yvar
           ]
@@ -87,7 +87,7 @@ class MSKResultX(MSKMscResult):
       if self.Dvar is not None:
         self.Dval = np.hstack(
           [
-            xx.level().reshape((2, 1)).round(4) if xx is not None else np.zeros(
+            xx.level().reshape((2, 1)).round(6) if xx is not None else np.zeros(
               (2, 1)
             ) for xx in self.Dvar
           ]

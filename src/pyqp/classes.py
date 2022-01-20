@@ -10,20 +10,28 @@ import numpy as np
 import numpy.linalg as nl
 from .instances import QP, QPInstanceUtils as QPI
 
+###########
+PRECISION_OBJVAL = 4
+PRECISION_SOL = 6
+PRECISION_TIME = 3
+
+
+###########
 
 class Eval(object):
   
-  def __init__(self, prob_num, solve_time, best_bound, best_obj, relax_obj=0.0, nodes=1):
+  def __init__(self, prob_num, solve_time, best_bound, best_obj, relax_obj=0.0, nodes=1, unit_time=0):
     super(Eval, self).__init__()
     self.prob_num = prob_num
-    self.solve_time = round(solve_time, 2)
-    self.best_bound = best_bound if best_bound == "-" else round(best_bound, 2)
-    self.best_obj = round(best_obj, 2)
-    self.relax_obj = round(relax_obj, 2)
+    self.solve_time = round(solve_time, PRECISION_TIME)
+    self.best_bound = best_bound if best_bound == "-" else round(best_bound, PRECISION_OBJVAL)
+    self.best_obj = round(best_obj, PRECISION_OBJVAL)
     self.nodes = nodes
+    self.node_time = unit_time.__round__(PRECISION_TIME)
 
 
 class Result:
+  PRECISION = PRECISION_SOL
   
   def __init__(
       self,
@@ -38,6 +46,7 @@ class Result:
     self.total_time = 0
     self.build_time = 0
     self.nodes = 0
+    self.unit_time = 0
   
   def eval(self, problem_id=""):
     return Eval(
@@ -45,8 +54,8 @@ class Result:
       self.solve_time,
       self.bound,
       self.true_obj,
-      relax_obj=self.relax_obj,
-      nodes=self.nodes
+      nodes=self.nodes,
+      unit_time=self.unit_time
     )
   
   def check(self, qp: QP):
@@ -74,10 +83,10 @@ class BCParams(Params):
   def __init__(self):
     super().__init__()
   
-  feas_eps = 1e-3
-  opt_eps = 5e-4
+  feas_eps = 1e-5
+  opt_eps = 1e-5
   time_limit = 200
-  logging_interval = 10
+  logging_interval = 1
   relax = True  # todo fix this
   sdp_solver_backend = 'msk'
   sdp_rank_redunction_solver = 1
@@ -104,6 +113,7 @@ def qp_obj_func(Q, q, xval: np.ndarray):
 
 
 class Branch(object):
+  PRECISION = PRECISION_SOL
   
   def __init__(self):
     self.xpivot = None
@@ -117,32 +127,36 @@ class Branch(object):
     res_sum = res.sum(0)
     x_index = res_sum.argmax()
     self.xpivot = x_index
-    self.xpivot_val = x[self.xpivot, 0].round(6)
+    self.xpivot_val = x[self.xpivot, 0].round(self.PRECISION)
     x_minor = res[x_index].argmax()
     self.xminor = x_minor
-    self.xminor_val = x[x_minor, 0].round(6)
+    self.xminor_val = x[x_minor, 0].round(self.PRECISION)
     self.ypivot = x_index, x_minor
-    self.ypivot_val = y[x_index, x_minor].round(6)
+    self.ypivot_val = y[x_index, x_minor].round(self.PRECISION)
 
 
 class Bounds(object):
+  PRECISION = PRECISION_SOL
   
   def __init__(self, xlb=None, xub=None, ylb=None, yub=None, s=None):
     # sparse implementation
-    self.sphere = s
+    if s is not None:
+      self.sphere = s
+    else:
+      self.sphere = np.sqrt(
+        max((xlb ** 2).sum(), (xub ** 2).sum())
+      )
     self.xlb = xlb.copy()
-    self.xub = xub.copy()
-    if ylb is not None:
-      self.ylb = ylb.copy()
+    if xub is not None:
+      self.xub = xub.copy()
     else:
-      self.ylb = xlb @ xlb.T
-    if yub is not None:
-      self.yub = yub.copy()
-    else:
-      self.yub = xub @ xub.T
+      self.xub = np.ones(xlb.shape) * s
+    
+    self.ylb = ylb
+    self.yub = yub
   
   def unpack(self):
-    return self.xlb, self.xub, self.ylb, self.yub
+    return self.xlb, self.xub, self.ylb, self.yub, self.sphere
   
   def update_bounds_from_branch(self, branch: Branch, left=True):
     # todo, extend this
@@ -265,7 +279,7 @@ class MscBounds(Bounds):
                                                    (aneg.T < 0)).sum(axis=1)
         ).reshape(qp.q.shape)
       )
-    newbl = cls(xlb, xub, np.array(zlb).round(4), np.array(zub).round(4))
+    newbl = cls(xlb, xub, np.array(zlb).round(cls.PRECISION), np.array(zub).round(cls.PRECISION))
     if imply_y:
       newbl.imply_y(qp)
     return newbl

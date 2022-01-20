@@ -285,7 +285,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
       with_shor=r_shor,
     )
     total_nodes += 2
-    next_priority = - r.relax_obj.round(3)
+    next_priority = - r.relax_obj.round(PRECISION_OBJVAL)
     queue.put((next_priority, right_item))
     queue.put((next_priority, left_item))
     #
