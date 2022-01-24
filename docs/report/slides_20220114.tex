@@ -89,7 +89,7 @@
 \begin{document}
 
 
-\title{QCQP: A Report on Disjunctions}
+\title{QCQP: Progress Report}
 
 \author{
   Chuwen Zhang
@@ -102,13 +102,11 @@
   \begin{equation}
     \label{eq:inhoqcqp}
     \begin{aligned}
-      \model{QCQP} \quad \mx \quad & x^T Qx + q^T x                                    \\
-      \textrm{s.t.} \quad          & x^T A_i x + a_i^T x \hspace{0.27em} (\le, =, \ge)
-      \hspace{0.27em} b_i                                                              \\
-                                   & 0 \le x \le 1
+      \model{QCQP} \quad \mx \quad & x^T Qx + q^T x                                        \\
+      \textrm{s.t.} \quad          & x^T A_i x + a_i^T x \hspace{0.27em} (\le, =, \ge) b_i \\
     \end{aligned}
   \end{equation}
-  Alternatively, we may have \(\|x\| \le \delta\)
+  Alternatively, we may have \(\|x\| \le \delta\) or box \(x \in [0, 1]^n\)
 \end{frame}
 \begin{frame}[allowframebreaks]{Quadratic inequality with one negative/positive eigenvalue}
   Suppose \(Q = RR^T - aa^T\)
@@ -133,7 +131,7 @@
 
 \end{frame}
 \begin{frame}[allowframebreaks]{Max of quadratic function with one negative/positive eigenvalue}
-  Consider maximization,
+  Consider maximization, (and assume Q has one positive eigenvalue)
   \begin{align*}
     \max \quad             & x^T(aa^T-RR^T)x + q^Tx           \\
     \Rightarrow \max \quad & z                                \\
