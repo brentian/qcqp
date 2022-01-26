@@ -16,6 +16,7 @@ import time
 from . import bg_msk, bg_cvx, bg_msk_norm
 from .classes import qp_obj_func, QP, BCParams, Result, Bounds, Branch, CuttingPlane
 from .ex_structure import Disjunctions, DisjunctionCuttingPlane
+from .classes import PRECISION_OBJVAL, PRECISION_SOL
 
 cutting_method = {
   # 'rlt': add_rlt_cuts not needed in this case

@@ -92,7 +92,6 @@ def msc_diag(
     sense="max",
     verbose=True,
     solve=True,
-    norm=-1,
     *args,
     **kwargs
 ):
@@ -135,12 +134,11 @@ def msc_diag(
   model.constraint(expr.sub(expr.mul((qneg + qpos), z), x), dom.equalsTo(0))
   
   # RLT cuts
-  if norm <= 0:
-    # this means you can place on x directly.
-    rlt_expr = expr.sub(expr.sum(y), expr.dot(bounds.xlb + bounds.xub, x))
-    model.constraint(rlt_expr, dom.lessThan(-(bounds.xlb * bounds.xub).sum()))
-  else:
-    model.constraint(expr.sum(y), dom.lessThan(norm))
+  # this means you can place on x directly.
+  rlt_expr = expr.sub(expr.sum(y), expr.dot(bounds.xlb + bounds.xub, x))
+  model.constraint(rlt_expr, dom.lessThan(-(bounds.xlb * bounds.xub).sum()))
+  # else:
+  model.constraint(expr.sum(y), dom.lessThan(bounds.sphere**2))
   
   for i in range(m):
     apos, ipos = qp.Apos[i]

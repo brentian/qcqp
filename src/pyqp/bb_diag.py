@@ -70,7 +70,7 @@ class MscBranch(Branch):
     if self.var_type:
       _lval = np.floor(_val)
       _rval = np.ceil(_val)
-    newbl = MscBounds(*bounds.unpack())
+    newbl = MscBounds(**bounds.__dict__)
     if target == 'zvar':
       _lb_arr, _ub_arr = newbl.zlb, newbl.zub
       _lb, _ub = _lb_arr[(*_pivot, 0)], _ub_arr[(*_pivot, 0)]
@@ -279,7 +279,7 @@ def bb_box(
   qp.decompose(decompose_method=decompose_method)
   
   # root
-  root_bound = MscBounds.construct(qp, imply_y=True)
+  root_bound = MscBounds(**bounds.__dict__, qp=qp)
   
   print("Solving root node")
   root_r = backend_func(qp, bounds=root_bound, solver=params.sdp_solver_backend, verbose=True, solve=True,

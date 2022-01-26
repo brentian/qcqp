@@ -138,7 +138,7 @@ class Branch(object):
 class Bounds(object):
   PRECISION = PRECISION_SOL
   
-  def __init__(self, xlb=None, xub=None, ylb=None, yub=None, s=None):
+  def __init__(self, xlb=None, xub=None, ylb=None, yub=None, s=None, shape=None):
     # sparse implementation
     if s is not None:
       self.sphere = s
@@ -146,11 +146,15 @@ class Bounds(object):
       self.sphere = np.sqrt(
         max((xlb ** 2).sum(), (xub ** 2).sum())
       )
-    self.xlb = xlb.copy()
+    if xlb is not None:
+      self.xlb = xlb.copy()
+    else:
+      self.xlb = - np.ones(shape) * s
+    
     if xub is not None:
       self.xub = xub.copy()
     else:
-      self.xub = np.ones(xlb.shape) * s
+      self.xub = np.ones(shape) * s
     
     self.ylb = ylb
     self.yub = yub
@@ -210,35 +214,75 @@ class MscBounds(Bounds):
       ylb=None,
       yub=None,
       dlb=None,
-      dub=None
+      dub=None,
+      sphere=None,
+      shape=None,
+      qp=None
   ):
     # sparse implementation
     self.xlb = xlb.copy()
     self.xub = xub.copy()
-    self.zlb = zlb.copy()
-    self.zub = zub.copy()
-    if ylb is not None:
-      self.ylb = ylb.copy()
+    self.ylb = ylb
+    self.yub = yub
+    
+    self.sphere = sphere
+    self.shape = shape
+    
+    # if dub is not None:
+    #   self.dlb = dlb.copy()
+    # else:
+    #   self.dlb = None
+    # if dub is not None:
+    #   self.dub = dub.copy()
+    # else:
+    #   self.dub = None
+    
+    if zlb is not None:
+      self.zlb = zlb.copy()
+      self.zub = zub.copy()
     else:
-      self.ylb = None
-    if yub is not None:
-      self.yub = yub.copy()
-    else:
-      self.yub = None
-    if dub is not None:
-      self.dlb = dlb.copy()
-    else:
-      self.dlb = None
-    if dub is not None:
-      self.dub = dub.copy()
-    else:
-      self.dub = None
+      # for z and y's
+      zlb = []
+      zub = []
+      qpos, qipos = qp.Qpos
+      qneg, qineg = qp.Qneg
+  
+      zub.append(
+        (
+            (qpos.T * (qpos.T > 0)).sum(axis=1) + (qneg.T *
+                                                   (qneg.T > 0)).sum(axis=1)
+        ).reshape(qp.q.shape)
+      )
+      zlb.append(
+        (
+            (qpos.T * (qpos.T < 0)).sum(axis=1) + (qneg.T *
+                                                   (qneg.T < 0)).sum(axis=1)
+        ).reshape(qp.q.shape)
+      )
+  
+      for i in range(qp.a.shape[0]):
+        apos, ipos = qp.Apos[i]
+        aneg, ineg = qp.Aneg[i]
+        zub.append(
+          (
+              (apos.T * (apos.T > 0)).sum(axis=1) + (aneg.T *
+                                                     (aneg.T > 0)).sum(axis=1)
+          ).reshape(qp.q.shape)
+        )
+        zlb.append(
+          (
+              (apos.T * (apos.T < 0)).sum(axis=1) + (aneg.T *
+                                                     (aneg.T < 0)).sum(axis=1)
+          ).reshape(qp.q.shape)
+        )
+      self.zlb, self.zub = np.array(zlb).round(self.PRECISION), np.array(zub).round(self.PRECISION)
   
   def unpack(self):
     return self.xlb.copy(), self.xub.copy(), \
            self.zlb.copy(), self.zub.copy(), \
-           self.ylb.copy(), self.yub.copy(), \
-           self.dlb.copy(), self.dub.copy()
+           self.ylb, self.yub, \
+           self.dlb, self.dub, \
+           self.sphere
   
   @classmethod
   def construct(cls, qp: QP, imply_y=True):

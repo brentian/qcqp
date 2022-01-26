@@ -8,6 +8,8 @@ from pyqp.bg_grb import *
 from pyqp.bg_msk_mc import *
 from pyqp.instances import QPInstanceUtils
 
+ANNOTATION = lambda x: f"Q {int(x)}-indefinite"
+
 
 def generate(n, m, problem_dtls: str):
   r, *_ = problem_dtls.split(",")
@@ -19,10 +21,16 @@ def generate(n, m, problem_dtls: str):
   
   Q = Rp @ Rp.T - Rn @ Rn.T
   
-  Arp = np.random.randint(0, 5, (m, n, r))
+  Ga = np.random.randint(-5, 5, (m, r))
+  Rr = np.empty((m, r, r))
+  for i in range(m):
+    np.fill_diagonal(Rr[i], np.diagonal(Ga[i]))
+  
+  Arp = np.random.randint(-5, 5, (m, n, r))
+  
   Arn = np.random.randint(0, 5, (m, n, n))
   
-  A = Arp @ Arp.transpose(0, 2, 1) - Arn @ Arn.transpose(0, 2, 1)
+  A = Arp @ Rr @ Arp.transpose(0, 2, 1) - Arn @ Arn.transpose(0, 2, 1)
   q = np.random.randint(0, 5, (n, 1))
   a = np.random.randint(0, 5, (m, n, 1))
   b = np.ones(m) * n
@@ -33,6 +41,7 @@ def generate(n, m, problem_dtls: str):
   qp.Qneg = Rn, None
   qp.Apos = Arp, None
   qp.Aneg = Arn, None
+  qp.note = ANNOTATION(r)
   return qp
 
 

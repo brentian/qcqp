@@ -62,11 +62,19 @@ Consider QCQP,
 \end{equation}
 In addition, we may have \(\|x\| \le \delta\) or box \(x \in [0, 1]^n\).
 
-We further assume each matrix \(A\) in \(Q, A_i, i=1,...,m\) has the spectral decomposition with eigenvalues \(\{\lambda_j\}_{j=1}^n\). We further assume \(\lambda_1 \le \lambda_2 \le ... \le \lambda_n\) and that first \(r\) eigenvalues are negative.
+\paragraph{Rank-\(r\) indefiniteness}
 
-For clarity, we say \(A_i\) is \emph{rank-\(r\) indefinite} if first \(r\) eigenvalues are negative. In comparison, \(Q\) is rank-\(r\) indefinite if last \(r\) eigenvalues are positive accounting for a maximization problem.
+Formally, a quadratic inequality induced by a symmetric matrix \(A\) can be expressed as the following,
 
-\section{Rank-\(1\) Indefinite Matrix}
+\begin{equation}
+    x^T \left(\sum_{j\in J_+} \lambda_j v_jv_j^T\right)x +a^Tx \le b + \left(\sum_{j\in J_-} \lambda_j v_jv_j^T\right) \\
+\end{equation}
+
+where \(\{\lambda_j\}_{j=1}^n\) are the absolute value of the eigenvalues of \(A\), \(\{v_j\}_{j=1}^n\) are corresponding eigenvectors, and \(J_-, J_+\) are index sets of negative and non-negative eigenvalues. If A is rank-\(r\) indefinite, then \(|J_-| = r\).
+
+For clarity, we say a quadratic inequality by \(A_i\) is \emph{rank-\(r\) indefinite} if first \(r\) eigenvalues are negative. In comparison, a maximization problem with matrix \(Q\) is rank-\(r\) indefinite if last \(r\) eigenvalues are nonnegative.
+
+\section{Rank-\(r\) Indefinite}
 
 Consider the case where \(r=1\).
 \subsection{Homogeneous quadratic inequality}
@@ -83,7 +91,10 @@ Note if \(r = 0\), \( \Omega\) is readily a convex set. If there is only one neg
 \end{equation}
 
 Then we can decompose the problem into two disjunctions, each of which is convex.
-\subsection{\(Q\) is rank-\(1\) indefinite}
+
+
+\subsection{Inhomogeneous quadratic inequality}
+\subsection{Rank-\(1\) indefinite function}
 
 If \(m = 0\), that is, there is no further constraints, then \(x^TQx = x^T(\lambda\cdot vv^T-RR^T)x + q^Tx\), \eqref{eq:inhoqcqp} can be rewritten into the following form,
 
@@ -104,8 +115,98 @@ then,
 \end{equation}
 Obviously, \eqref{eq:qp_unc_r1_conic} is a convex relaxation of \eqref{eq:qp_unc_r1}. The problem is unbounded without regularization on \((\rho, v^Tx)\) that can be constructed from the boundary of \(x\). In practice, such boundary could be a box or a ball by \(2\)-norm.
 
-\subsection{Inhomogeneous quadratic inequality}
-\section{Q with positive \(r\) eigenvalues}
-Now we consider QCQP wi
+\subsection{Rank-\(r\) indefinite}
+Now we consider the case for \(r \ge 2\), the convex relaxation,
+
+\begin{equation}\label{eq:qp_unc_rr_conic}
+    \begin{aligned}
+        \mx \quad & z                                                                                  \\
+        \st \quad & \sum_{j \in J_{-}} \lambda_{j} z_j - q^T x+z \le  \sum_{j \in J_{+}} \lambda_j z_j \\
+                  & y_j \ge (x_j^T v_j)^2, j= 1, ..., n
+    \end{aligned}
+\end{equation}
+
+Note we have \(r\) positive eigenvalues, so \(y_j = (x_j^Tv_j)^2\) is tight for any \(j \in J_-\), if \(y_j = (x_j^Tv_j)^2\) are active for rest of \(j\in J_+\), the problem is solved.
+
+\eqref{eq:qp_unc_rr_conic} is likely to be unbounded, if \(r \ge 1\) and no regularity constraint such a box, ball, or an ellipsoid is present.
+
+
+
+\pagebreak
+
+\section{Computational Results}
+\subsection{Boxed Constrained QP with \(r\) indefinite Q}
+\scriptsize
+\begin{table}[h!]
+    \begin{tabular}{llrrrrrl}
+        \toprule
+        {} & prob\_num & solve\_time & best\_bound & best\_obj & node\_time & nodes    & method        \\
+        \midrule
+        0  & 12:0:0    & 0.134       & 258.6487    & 258.6487  & 0.000      & 726.0    & grb           \\
+        1  & 12:0:0    & 0.040       & 258.6487    & 258.6487  & 0.025      & 1.0      & bb\_sdp       \\
+        2  & 12:0:0    & 0.174       & 258.6488    & 258.6487  & 0.001      & 15.0     & bb\_msc       \\
+        3  & 12:0:0    & 15.395      & 258.6497    & 258.6485  & 0.003      & 1623.0   & bb\_nsocp     \\
+        \midrule
+        0  & 20:0:0    & 100.025     & 47.1953     & 47.1886   & 0.000      & 166519.0 & grb           \\
+        1  & 20:0:0    & \red{0.427} & 47.1894     & 47.1886   & 0.002      & 21.0     & \red{bb\_msc} \\
+        2  & 20:0:0    & 100.061     & 47.2924     & 46.9227   & 0.011      & 3001     & bb\_sdp       \\
+        \midrule
+        0  & 100:0:0   & 100.024     & 4966.1144   & 0.1682    & 0.000      & 7.0      & grb           \\
+        1  & 100:0:0   & 100.043     & 109.0224    & -84.1555  & 0.073      & 1429.0   & bb\_sdp       \\
+        2  & 100:0:0   & 1.609       & 0.1705      & 0.1682    & 0.026      & 17.0     & bb\_msc       \\
+        \midrule
+        0  & 200:0:0   & 100.166     & 71975.3347  & 0.0743    & 0.000      & 1.0      & grb           \\
+        1  & 200:0:0   & 4.228       & 0.0776      & 0.0743    & 0.118      & 15.0     & bb\_msc       \\
+        \bottomrule
+    \end{tabular}
+    \caption{\(r=1\)}
+
+\end{table}
+\begin{table}[h!]
+    \begin{tabular}{llrrrrrl}
+        \toprule
+        {} & prob\_num & solve\_time & best\_bound & best\_obj & node\_time & nodes & method  \\
+        \midrule
+        0  & 100:0:0   & 100.019     & 5013.7126   & 0.2170    & 0.000      & 7.0   & grb     \\
+        1  & 100:0:0   & 7.859       & 0.2195      & 0.2166    & 0.027      & 87.0  & bb\_msc \\
+        \bottomrule
+    \end{tabular}
+    \caption{\(r=2, n=100\)}
+\end{table}
+\begin{table}[h!]
+    \begin{tabular}{llrrrrrl}
+        \toprule
+        {} & prob\_num & solve\_time & best\_bound & best\_obj & node\_time & nodes  & method  \\
+        \midrule
+        0  & 100:0:0   & 100.015     & 11652.5910  & 526.5704  & 0.000      & 1.0    & grb     \\
+        1  & 100:0:0   & 100.073     & 1540.5022   & 309.6513  & 0.019      & 1263.0 & bb\_msc \\
+        \bottomrule
+    \end{tabular}
+    \caption{\(r=10, n=100\)}
+\end{table}
+\normalsize
+
+\subsection{Ball Constrained QP}
+In this part, we test \eqref{eq:qp_unc_rr_conic} with regularity,
+\begin{equation}
+    y^Te = \|x\|^2 \le \delta^2
+\end{equation}
+\scriptsize
+\begin{table}[h!]
+    \begin{tabular}{llrrrrrl}
+        \toprule
+        {} & prob\_num & solve\_time & best\_bound  & best\_obj    & node\_time & nodes   & method    \\
+        \midrule
+        0  & 12:0:0    & 100.052     & 2282.8435    & 2198.0355    & 0.000      & 62831.0 & grb       \\
+        1  & 12:0:0    & 0.027       & 2198.0355    & 2198.0355    & 0.017      & 1.0     & bb\_msc   \\
+        2  & 12:0:0    & 0.013       & 2198.0355    & 2198.0354    & 0.002      & 2.0     & bb\_nsocp \\
+        \midrule
+        0  & 120:0:0   & 0.134       & 1.852151e+06 & 1.852151e+06 & 0.024      & 1       & bb\_msc   \\
+        \midrule
+        0  & 1200:0:0  & 7.472       & 1.874103e+09 & 1.874104e+09 & 2.994      & 1       & bb\_msc   \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+\normalsize
 \section{Review}
 \end{document}

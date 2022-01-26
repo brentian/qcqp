@@ -30,15 +30,13 @@ METHODS = collections.OrderedDict(
     ("bb_sdp", bb.bb_box),
     # many small cones
     ("msc", bg_msk_msc.msc_diag),  # many small cone approach
-    ("emsc", bg_msk_msc.msc_diag),
     ("bb_msc", bb_diag.bb_box),
     ("bb_nmsc", bb_nmsc.bb_box),
     ("admm_nmsc", bg_msk_admm.msc_admm),  # local method using admm
     # socp
     ("nsocp", bg_msk_norm.socp),
     ("bb_nsocp", bb_nmsc.bb_box_nsocp),
-    
-    # mixed-cone
+    # mixed-cone, todo.
     ("mcone", bg_msk_mc.socp),
     ("bb_mcone", bb_mmsc.bb_box_nsocp)
   ]

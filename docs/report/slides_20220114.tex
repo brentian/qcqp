@@ -1,6 +1,7 @@
 \documentclass[aspectratio=1610, 10pt]{beamer}
 \usepackage[english]{babel}
 \usepackage{amsmath, amsthm, subfiles, bm, hyperref, graphicx}
+\usepackage{mathrsfs}
 \usepackage{caption, longtable, booktabs}
 \usepackage{cancel}
 
@@ -98,7 +99,7 @@
 
 \maketitle
 \begin{frame}{The QCQP}
-  We consider the QCQP under a box constraint
+  We consider the QCQP，
   \begin{equation}
     \label{eq:inhoqcqp}
     \begin{aligned}
@@ -106,9 +107,22 @@
       \textrm{s.t.} \quad          & x^T A_i x + a_i^T x \hspace{0.27em} (\le, =, \ge) b_i \\
     \end{aligned}
   \end{equation}
-  Alternatively, we may have \(\|x\| \le \delta\) or box \(x \in [0, 1]^n\)
 \end{frame}
-\begin{frame}[allowframebreaks]{Quadratic inequality with one negative/positive eigenvalue}
+\begin{frame}[allowframebreaks]{Rank-\(r\) Indefiniteness}
+
+  Formally, a quadratic inequality induced by a symmetric matrix \(A\) can be expressed as the following,
+
+  \begin{equation}
+    x^T \left(\sum_{j\in J_+} \lambda_j v_jv_j^T\right)x +a^Tx \le b + \left(\sum_{j\in J_-} \lambda_j v_jv_j^T\right)
+  \end{equation}
+
+  \begin{itemize}
+    \item For clarity, we say a quadratic inequality by \(A_i\) is \emph{rank-\(r\) indefinite} if first \(r\) eigenvalues are negative.
+    \item In comparison, a maximization problem with matrix \(Q\) is rank-\(r\) indefinite if last \(r\) eigenvalues are nonnegative.
+  \end{itemize}
+
+\end{frame}
+\begin{frame}[allowframebreaks]{Rank-\(1\) Indefinite Quadratic Inequality}
   Suppose \(Q = RR^T - aa^T\)
 
   For quadratic inquality,  it can be written as,
@@ -126,12 +140,13 @@
   Implementation,
   \begin{itemize}
     \item Create offline subregions at depth 0 (multiple root nodes)
-    \item Effective for quadratic inqualities.
+    \item \red{Seems} impossible to do explicit disjunctions for inhomogeneous case.
+    \item Apply branch and bound.
   \end{itemize}
 
 \end{frame}
-\begin{frame}[allowframebreaks]{Max of quadratic function with one negative/positive eigenvalue}
-  Consider maximization, (and assume Q has one positive eigenvalue)
+\begin{frame}[allowframebreaks]{Rank-\(1\) Indefinite Maximization}
+  Consider maximization
   \begin{align*}
     \max \quad             & x^T(aa^T-RR^T)x + q^Tx           \\
     \Rightarrow \max \quad & z                                \\
@@ -145,21 +160,144 @@
 
   \begin{enumerate}
     \item Simply branch on \(sign(a^Tx)\) will prune one region very fast by bound.
+    \item \red{Seems} impossible to do explicit disjunctions as homogeneous inequality.
     \item If using \red{best bound} rule in node selection, it has no obvious advantage.
+    \item Apply branch and bound.
   \end{enumerate}
+  \framebreak
+\end{frame}
+\begin{frame}[allowframebreaks]{Extension to rank-\(r\)}
 
-  \begin{tabular}{llrrrrrl}
-    \toprule
-    {} & prob\_num & solve\_time & best\_bound & best\_obj & node\_time & nodes  & method    \\
-    \midrule
-    0  & 20:0:0    & 2.77        & 23.06       & 23.06     & 0.0000     & 3475.0 & grb       \\
-    1  & 20:0:0    & 60.08       & 23.45       & 22.28     & 0.0072     & 2215.0 & bb\_sdp   \\
-    2  & 20:0:0    & 0.37        & 23.07       & 23.06     & 0.0031     & 17.0   & bb\_msc   \\
-    3  & 20:0:0    & 60.00       & 32.00       & 17.06     & 0.0040     & 6095.0 & bb\_nsocp \\
-    \bottomrule
-  \end{tabular}
+  Consider quadratic maximization,
+  \begin{equation}\label{eq:qp_unc_rr_conic}
+    \begin{aligned}
+      \mx \quad & z                                                                                  \\
+      \st \quad & \sum_{j \in J_{-}} \lambda_{j} z_j - q^T x+z \le  \sum_{j \in J_{+}} \lambda_j z_j \\
+                & y_j \ge (x_j^T v_j)^2, j= 1, ..., n
+    \end{aligned}
+  \end{equation}
+
+  With box or ball as regularity (else \eqref{eq:qp_unc_rr_conic} will be unbounded.)
+  \begin{itemize}
+    \item ball: \(x\in B(0, \delta)\), \(x\in [0, 1]^n\)
+    \item ellipsoid: \(x \in \{x: x^TAx + a^Tx \le \delta^2\}\)
+    \item regularity implies, (explains why ball constraint is easier.)
+          \begin{equation}
+            y^Te = \|x\|^2
+          \end{equation}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Computational Results}
+  \begin{itemize}
+    \item We test on ``unconstrained'' (with only a box or ball on \(x\))
+    \item MSC is very effective in the test problems. as \(r \nearrow \), the problem becomes hard.
+    \item MSC is tight with only ball constraints? (TRS)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Future Work}
+  \begin{itemize}
+    \item Extension to an indefinite quadratic inequalities
+    \item Plug in ADMM as primal feasible solution.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Future Work: Multiple Quadratic Constraints}
+  Our old MSC.
+  \begin{align}
+    \nonumber \mathrm{Maximize}\quad & y_0 ^T\lambda_0 + q^Tx                         \\
+    \mathrm{s.t.} \quad              & V_i z_i = x                        & i=0,...,m \\
+                                     & y_i ^T\lambda_i  + a_i^Tx  \le b_i & i=1,...,m \\
+    \label{quad}                     & y_i = z_i \circ z_i                & i=0,...,m
+  \end{align}
+  \begin{itemize}
+    \item In this formulation, we need \(m \times n\) auxillary pairs \((z, y)\) by allowing different bases \(V_i\)
+    \item Actually this may not be necessary...
+  \end{itemize}
+
+  \framebreak
+  Consider one indefinite \(A\) with a rank-\(r\) indefinite \(Q\), we can convexify \(A\) by\dots
+  \begin{align*}
+    Q = \sum_{J_+} \lambda_j v_jv_j^T - \sum_{J_-} \lambda_j v_jv_j^T
+  \end{align*}
+  \begin{eqnarray}
+    & x^TA_+ x - x^TA-x + a^Tx \le b \\
+    \Rightarrow \quad & x^T\left(A + V_-\red{\Gamma}V^T_-\right )x +a^Tx \le b + \underbrace{x^T(V_-\red{\Gamma}V^T_-)x}_{\diag(\Gamma)^Ty}
+  \end{eqnarray}
+  \begin{itemize}
+    \item Then we do not need to add more \(\{y\}\) for this constraint.
+    \item The only question left is whether we can find \(\Gamma\) such that,
+          \begin{equation}
+            V_-\red{\Gamma}V^T_- - A_- \succeq 0
+          \end{equation}
+    \item This is weaker than simultaneous diagonalization via congruence.
+  \end{itemize}
+\end{frame}
+\begin{frame}[allowframebreaks]{Future Work: ADMM in the original \(x\)}
+
+  Notice,
+  \begin{equation}
+    \|x\|^2 = \max_{\|\xi\| \le \sqrt s} \xi^T x
+  \end{equation}
+  So we add slack variable \(s, t, \xi\) and bilinear constraint.
+  \begin{align}
+    \model{MSC} \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0                     \\
+    \mathrm{s.t.} \quad                        & (y,z,x) \in \Omega                  \\
+                                               & y_i^Te \le t       & i=0, \cdots, m \\
+    (\kappa) \quad                             & t= s               & i=0, \cdots, m \\
+    (\mu)    \quad                             & \xi^Tx = t                          \\
+                                               & \xi^T\xi \le s
+  \end{align}
+  If \(s, t, \xi, y, z, x\) is the solution, then \( y, z, x\) is the optimal solution for MSC.
+
+  This allows the augmented Lagrangian function,
+
+  \begin{align*}
+    \mathscr L\left(x,y,z,\xi,s,\kappa,\mu\right) & = - y_0 ^T\lambda_0 + \kappa(t-s) + \mu(\xi^Tx - t) + \frac{\rho}{2}(t-s)^2 + \frac{\rho}{2}(\xi^Tx - s)^2
+  \end{align*}
+
+  The ADMM iteration,
+
+  \begin{align*}
+    (x,y,z,t)^{k+1} & = {\arg\min}_{(x,y,z)\in\Omega, t\ge 0} L\left(x,y,z,\xi^k,s^k,\kappa^k,\mu^k\right)       \\
+    (s, \xi)^{k+1}  & = {\arg\min}_{(s, \xi)\in\mathscr{Q}} L\left((x,y,z,t)^{k+1},\xi,s, \kappa^k, \mu^k\right) \\
+    \kappa^{k+1}    & = \kappa^k + \rho\left(t^{k+1}-s^{k+1}\right)                                              \\
+    \mu^{k+1}       & = \mu^k + \rho\left( \langle\xi^{k+1}, x^{k+1}\rangle - s^{k+1}\right)
+  \end{align*}
+  where \(\mathscr{Q(\cdot)}\) forms a simple SOCP for \(s, \xi\),
+  \begin{equation}
+    \mathscr{Q}(x) =\left\{(s,\xi): \|\xi\|^2 \le s\right\}
+  \end{equation}
+
   \framebreak
 
+  The size of auxillary variable \(\xi\) equals to \(n\), if \(r\) is small,
+
+  We can actually shrink the size of above problem.
+  \begin{align}
+    \model{MSC} \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0                                       \\
+    \mathrm{s.t.} \quad                        & (y,z,x) \in \Omega                                    \\
+                                               & y_i^Te = s                           & i=0, \cdots, m \\
+    ( \mu_i, i\in I_+ )    \quad               & \xi_i \cdot (v_i^Tx) = y_i           & \red{i\in I_+} \\
+                                               & \xi_i^2 \le y_i,  (v_i^Tx)^2 \le y_i
+  \end{align}
+  The ADMM,
+
+  \begin{equation}
+    \mathcal L = y^T\lambda + \sum_{i \in I_+} \mu_i \left [\xi_i \cdot(v_i^Tx) - y_i\right] + \frac{\rho}{2}\sum_{i \in I_+} (\xi_i \cdot (v_i^Tx) - y_i)^2
+  \end{equation}
+
+  Which is easier than old ADMM for general case.
+
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%
+% appendix
+%%%%%%%%%%%%%%%
+\begin{frame}[allowframebreaks]{Attempt for explicit disjunctions for inhomogeneous case}
   \textbf{Alternatively}: branching on \(z - q^Tx\).
 
   \textbf{Case I}: if \(z - q^Tx \le 0\), then,

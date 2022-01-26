@@ -38,8 +38,8 @@
 
 <\references>
   <\collection>
-    <associate|auto-1|<tuple|1|1|../../../../../.TeXmacs/texts/scratch/no_name_4.tm>>
-    <associate|auto-2|<tuple|2|?|../../../../../.TeXmacs/texts/scratch/no_name_4.tm>>
+    <associate|auto-1|<tuple|1|1>>
+    <associate|auto-2|<tuple|2|1>>
   </collection>
 </references>
 
@@ -47,8 +47,12 @@
   <\collection>
     <\associate|table>
       <tuple|normal|<\surround|<hidden-binding|<tuple>|1>|>
-        Classification of QCQP\ 
+        A classification of QCQP\ 
       </surround>|<pageref|auto-1>>
+
+      <tuple|normal|<\surround|<hidden-binding|<tuple>|2>|>
+        Different attributes of QCQP
+      </surround>|<pageref|auto-2>>
     </associate>
   </collection>
 </auxiliary>

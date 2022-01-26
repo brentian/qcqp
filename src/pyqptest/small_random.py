@@ -60,7 +60,7 @@ if __name__ == '__main__':
   if btype == 0:
     bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
   else:
-    bd = Bounds(xlb=np.zeros(shape=(n, 1)), s=n)
+    bd = Bounds(shape=(n, 1), s=n/10)
   evals = []
   results = {}
   # run methods
