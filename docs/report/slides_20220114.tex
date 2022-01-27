@@ -297,61 +297,61 @@
 %%%%%%%%%%%%%%%
 % appendix
 %%%%%%%%%%%%%%%
-\begin{frame}[allowframebreaks]{Attempt for explicit disjunctions for inhomogeneous case}
-  \textbf{Alternatively}: branching on \(z - q^Tx\).
+% \begin{frame}[allowframebreaks]{Attempt for explicit disjunctions for inhomogeneous case}
+%   \textbf{Alternatively}: branching on \(z - q^Tx\).
 
-  \textbf{Case I}: if \(z - q^Tx \le 0\), then,
-  \begin{align*}
-                                           & x^TRR^Tx - \underbrace{(q^Tx - z)}_{\Delta \ge 0} = (a^Tx)^2 \\
-    \text{Let: }\beta \ge 1 \Rightarrow \; & \red{\beta}\cdot \Delta\ge \|R^Tx\|^2                        \\
-    \Rightarrow \;                         & \red{(\beta - 1)}\cdot\Delta \ge (a^Tx)^2
-  \end{align*}
+%   \textbf{Case I}: if \(z - q^Tx \le 0\), then,
+%   \begin{align*}
+%                                            & x^TRR^Tx - \underbrace{(q^Tx - z)}_{\Delta \ge 0} = (a^Tx)^2 \\
+%     \text{Let: }\beta \ge 1 \Rightarrow \; & \red{\beta}\cdot \Delta\ge \|R^Tx\|^2                        \\
+%     \Rightarrow \;                         & \red{(\beta - 1)}\cdot\Delta \ge (a^Tx)^2
+%   \end{align*}
 
-  Can be rewritten as two rotated cones,
-  \begin{align*}
-    \beta + \Delta     & \ge \left\|\begin{array}{c} 2R^Tx \\ \beta - \Delta \end{array}\right\| \\
-    \beta - 1 + \Delta & \ge \left\|\begin{array}{c} 2a^Tx \\ \beta - 1 - \Delta \end{array}\right\| \\
-  \end{align*}
-  \framebreak
+%   Can be rewritten as two rotated cones,
+%   \begin{align*}
+%     \beta + \Delta     & \ge \left\|\begin{array}{c} 2R^Tx \\ \beta - \Delta \end{array}\right\| \\
+%     \beta - 1 + \Delta & \ge \left\|\begin{array}{c} 2a^Tx \\ \beta - 1 - \Delta \end{array}\right\| \\
+%   \end{align*}
+%   \framebreak
 
-  \textbf{Case II}: if \(z - q^Tx \ge 0\),
+%   \textbf{Case II}: if \(z - q^Tx \ge 0\),
 
-  \begin{align*}
-    x^TRR^Tx +     & \underbrace{(z - q^Tx)}_{\Delta \ge 0} = (a^Tx)^2      \\
-                   & x^TRR^Tx + \red{\cancel{\Delta}} \le (a^Tx)^2          \\
-    \Rightarrow \; & \underbrace{a^Tx \ge \|R^Tx\|}_{\textsf{subcase II.1}}
-    \vee \underbrace{- a^Tx \ge \|R^Tx\|}_{\textsf{subcase II.2}}           \\
-  \end{align*}
-
-
-  This creates unbalanced subregions (same situation before.)
-
-  \framebreak
-
-  Try something similar to \textbf{Case I}
-
-  \begin{align*}
-    \beta \ge 1 \Rightarrow \; & \red{\beta}\cdot\Delta \ge (a^Tx)^2       \\
-                               & \red{(\beta - 1)}\cdot\Delta \ge (R^Tx)^2 \\
-                               & \red{\beta} \ge 1
-  \end{align*}
-
-  \(\Delta \doteq z - q^Tx\) is not bounded from above (we are maximizing \(z\))
+%   \begin{align*}
+%     x^TRR^Tx +     & \underbrace{(z - q^Tx)}_{\Delta \ge 0} = (a^Tx)^2      \\
+%                    & x^TRR^Tx + \red{\cancel{\Delta}} \le (a^Tx)^2          \\
+%     \Rightarrow \; & \underbrace{a^Tx \ge \|R^Tx\|}_{\textsf{subcase II.1}}
+%     \vee \underbrace{- a^Tx \ge \|R^Tx\|}_{\textsf{subcase II.2}}           \\
+%   \end{align*}
 
 
-  \begin{align*}
-    \rho            & \ge (a^Tx)^2 \quad \dagger \\
-    \rho  -  \Delta & \ge \|R^Tx\|^2             \\
-  \end{align*}
+%   This creates unbalanced subregions (same situation before.)
 
-  \(\rho\) is not bounded from above \(\dagger\) will not be tight.
-  So the branch and bound is implemented on \(a^Tx \)
-  % Then we branch by last solution \(\rho^*\)
-  % \begin{equation*}
-  %   a^Tx \le \sqrt{\rho^*} \vee a^Tx \le \sqrt{\rho^*}
-  % \end{equation*}
+%   \framebreak
 
-\end{frame}
+%   Try something similar to \textbf{Case I}
+
+%   \begin{align*}
+%     \beta \ge 1 \Rightarrow \; & \red{\beta}\cdot\Delta \ge (a^Tx)^2       \\
+%                                & \red{(\beta - 1)}\cdot\Delta \ge (R^Tx)^2 \\
+%                                & \red{\beta} \ge 1
+%   \end{align*}
+
+%   \(\Delta \doteq z - q^Tx\) is not bounded from above (we are maximizing \(z\))
+
+
+%   \begin{align*}
+%     \rho            & \ge (a^Tx)^2 \quad \dagger \\
+%     \rho  -  \Delta & \ge \|R^Tx\|^2             \\
+%   \end{align*}
+
+%   \(\rho\) is not bounded from above \(\dagger\) will not be tight.
+%   So the branch and bound is implemented on \(a^Tx \)
+%   % Then we branch by last solution \(\rho^*\)
+%   % \begin{equation*}
+%   %   a^Tx \le \sqrt{\rho^*} \vee a^Tx \le \sqrt{\rho^*}
+%   % \end{equation*}
+
+% \end{frame}
 
 
 % \begin{frame}[allowframebreaks]{Bibliography}
