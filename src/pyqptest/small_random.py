@@ -38,8 +38,7 @@ if __name__ == '__main__':
   args = parser.parse_args()
   params = BCParams()
   admmparams = ADMMParams()
-  kwargs, r_methods = params.produce_args(parser, METHOD_CODES)
-  _ = admmparams.produce_args(parser, METHOD_CODES)
+  params.produce_args(parser, METHOD_CODES)
   
   np.random.seed(args.seed)
   n, m, ptype, btype = args.n, args.m, args.problem_type, args.bound_type
@@ -64,7 +63,7 @@ if __name__ == '__main__':
   evals = []
   results = {}
   # run methods
-  for k in r_methods:
+  for k in params.selected_methods:
     func = METHODS[k]
     
     qp1 = copy.deepcopy(qp)

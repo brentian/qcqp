@@ -12,9 +12,9 @@ import numpy as np
 import time
 
 import pyqp.bg_msk_msc
-from . import bg_msk, bg_cvx
+from . import bg_msk, bg_cvx, bg_msk_msc, bg_msk_msc_admm, bg_msk_norm_admm
 from .bb import BCParams, BBItem, Cuts, RLTCuttingPlane
-from .classes import MscBounds, Branch, Bounds
+from .classes import MscBounds, Branch, Bounds, ADMMParams
 from .classes import QP, qp_obj_func, Result
 from .classes import PRECISION_OBJVAL, PRECISION_SOL
 
@@ -250,25 +250,36 @@ def bb_box(
     bounds: Bounds,
     verbose=False,
     params=BCParams(),
-    bool_use_shor=False,
-    constr_d=False,
-    rlt=True,
     decompose_method="eig-type2",
     **kwargs
 ):
   print(json.dumps(params.__dict__(), indent=2))
-  backend_func = kwargs.get('func')
   branch_name = kwargs.get('branch_name', MscBranch.vio)
-  backend_name = params.sdp_solver_backend
+  backend_func = kwargs.get('func')
+  backend_name = params.dual_backend
+  primal_func = kwargs.get('primal_func')
+  primal_name = params.primal_backend
   logging_interval = params.logging_interval
+  primal_interval = params.primal_interval
+  
+  admmparams = ADMMParams()
+  admmparams.max_iteration = 200
   # choose backend
   if backend_func is None:
     if backend_name == 'msk':
-      backend_func = pyqp.bg_msk_msc.msc_diag
+      backend_func = bg_msk_msc.msc_diag
     elif backend_name == 'cvx':
       backend_func = bg_cvx.msc_relaxation
     else:
       raise ValueError("not implemented")
+  # choose backend
+  if primal_func is None:
+    if primal_name == 'admm':
+      primal_func = bg_msk_msc_admm.msc_admm
+    elif primal_name == 'nadmm':
+      primal_func = bg_msk_norm_admm.msc_admm
+    else:
+      pass
   
   # problems
   k = 0
@@ -282,8 +293,7 @@ def bb_box(
   root_bound = MscBounds(**bounds.__dict__, qp=qp)
   
   print("Solving root node")
-  root_r = backend_func(qp, bounds=root_bound, solver=params.sdp_solver_backend, verbose=True, solve=True,
-                        constr_d=constr_d, rlt=rlt)
+  root_r = backend_func(qp, bounds=root_bound, solver=params.dual_backend, verbose=True, solve=True)
   
   best_r = root_r
   
@@ -326,17 +336,22 @@ def bb_box(
     ub = max(ub_dict.values())
     ub_dict.pop(item.node_id)
     
-    x = r.xval
-    z = r.zval
-    y = r.yval
-    zc = r.Zval
-    yc = r.Yval
+    
     
     # it is for real a lower bound by real objective
     #   if and only if it is feasible
     bool_integral_feasible = True if params.relax else (r.xval.round() - r.xval).max() <= params.feas_eps
     bool_sol_feasible = r.resc_feasC <= params.feas_eps and bool_integral_feasible
     bool_feasible = r.resc_feas <= params.feas_eps and bool_integral_feasible
+    
+    if primal_func is not None \
+        and k % primal_interval == 0:
+      r_primal = primal_func(qp, item.bound, True, admmparams)
+      if not bool_sol_feasible or r_primal.true_obj > r.true_obj:
+        r.xval = r_primal.xval
+        r.yval = r_primal.yval
+        r.zval = r_primal.zval
+        r.true_obj = r_primal.true_obj
     
     if r.true_obj > lb:
       best_r = r
@@ -363,6 +378,11 @@ def bb_box(
       continue
     
     ## branching
+    x = r.xval
+    z = r.zval
+    y = r.yval
+    zc = r.Zval
+    yc = r.Yval
     br = MscBranch()
     branch_args = (
       x, y, z, yc, zc, r.resc, item.bound
@@ -371,7 +391,7 @@ def bb_box(
     
     _ = generate_child_items(
       total_nodes, item, br,
-      sdp_solver=params.sdp_solver_backend,
+      sdp_solver=params.dual_backend,
       verbose=verbose,
       backend_name=backend_name,
       backend_func=backend_func,

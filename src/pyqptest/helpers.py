@@ -14,9 +14,12 @@ pd.set_option("display.max_columns", None)
 np.set_printoptions(linewidth=200, precision=3)
 
 # relaxation
-from pyqp import bg_grb, bg_msk, bg_msk_msc, bg_msk_norm_admm, bg_msk_norm, bg_msk_mc
+from pyqp import bg_grb, bg_msk
+from pyqp import bg_msk_msc, bg_msk_msc_admm
+from pyqp import bg_msk_norm, bg_msk_norm_admm
+from pyqp import bg_msk_mix
 # branch and bound
-from pyqp import bb, bb_diag, bb_nmsc, bb_mmsc
+from pyqp import bb, bb_diag, bb_nmsc, bb_mix
 # helper, utilities, et cetera.
 from pyqp.classes import QP, QPI, Bounds, BCParams, ADMMParams
 
@@ -27,17 +30,18 @@ METHODS = collections.OrderedDict(
     ("shor", bg_msk.shor),  # relaxation: shor
     ("dshor", bg_msk.dshor),  # relaxation: shor-dual
     ("bb_sdp", bb.bb_box),
-    # many small cones
+    # msc (many-small-cones)
     ("msc", bg_msk_msc.msc_diag),  # many small cone approach
     ("bb_msc", bb_diag.bb_box),
-    ("bb_nmsc", bb_nmsc.bb_box),
-    ("admm_nmsc", bg_msk_norm_admm.msc_admm),  # local method using admm
-    # socp
+    ("admm_msc", bg_msk_msc_admm.msc_admm),
+    # msc and socp using norm balls
     ("nsocp", bg_msk_norm.socp),
+    ("bb_nmsc", bb_nmsc.bb_box),
     ("bb_nsocp", bb_nmsc.bb_box_nsocp),
+    ("admm_nmsc", bg_msk_norm_admm.msc_admm),  # local method using admm
     # mixed-cone, todo.
-    ("mcone", bg_msk_mc.socp),
-    ("bb_mcone", bb_mmsc.bb_box_nsocp)
+    ("mcone", bg_msk_mix.socp),
+    ("bb_mcone", bb_mix.bb_box_nsocp)
   ]
 )
 
@@ -86,7 +90,7 @@ parser.add_argument(
   "--bg", default='msk', type=str, help="backend used"
 )
 parser.add_argument(
-  "--bg_rd", default=0, type=int, help="backend used, rank reduction"
+  "--bg_pr", default=None, type=str, help="backend used, rank reduction"
 )
 parser.add_argument(
   "--problem_type", type=int, help=f"if randomly generated, what is the problem type?\n{QP_RANDOM_INSTANCE_TYPE}",

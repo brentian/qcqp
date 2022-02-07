@@ -242,7 +242,7 @@ def bb_box(
 ):
   print(json.dumps(params.__dict__(), indent=2))
   backend_func = kwargs.get('func')
-  backend_name = params.sdp_solver_backend
+  backend_name = params.dual_backend
   if backend_func is None:
     if backend_name == 'msk':
       backend_func = pyqp.bg_msk_msc.msc
@@ -262,7 +262,7 @@ def bb_box(
   root_bound = MscBounds.construct(qp, imply_y=True)
   
   print("Solving root node")
-  root_r = backend_func(qp, bounds=root_bound, solver=params.sdp_solver_backend, verbose=True, solve=True,
+  root_r = backend_func(qp, bounds=root_bound, solver=params.dual_backend, verbose=True, solve=True,
                         constr_d=constr_d, rlt=rlt)
   
   best_r = root_r

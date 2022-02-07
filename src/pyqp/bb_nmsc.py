@@ -156,7 +156,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
 def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   print(json.dumps(params.__dict__(), indent=2))
   backend_func = kwargs.get('func')
-  backend_name = params.sdp_solver_backend
+  backend_name = params.dual_backend
   if backend_func is None:
     if backend_name == 'msk':
       backend_func = bg_msk_norm.msc_diag
@@ -188,7 +188,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   struct.create_disjunctions()
   if struct.bool_created:
     for ct in struct.disjunctions:
-      root_r = backend_func(qp, root_bound, solver=params.sdp_solver_backend, verbose=False, solve=False)
+      root_r = backend_func(qp, root_bound, solver=params.dual_backend, verbose=False, solve=False)
       best_r = root_r
     
       # global cuts
@@ -206,7 +206,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       
   else:
     print(f"no global disjunctions defined")
-    root_r = backend_func(qp, root_bound, solver=params.sdp_solver_backend, verbose=False, solve=False)
+    root_r = backend_func(qp, root_bound, solver=params.dual_backend, verbose=False, solve=False)
     best_r = root_r
   
     # global cuts
@@ -277,7 +277,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     br = NMSCBranch(res)
     br.simple_vio_branch(x, rho, res, item.bound)
     left_item, right_item = generate_child_items(
-      total_nodes, item, br, sdp_solver=params.sdp_solver_backend, verbose=verbose, backend_name=backend_name,
+      total_nodes, item, br, sdp_solver=params.dual_backend, verbose=verbose, backend_name=backend_name,
       backend_func=backend_func)
     total_nodes += 2
     next_priority = - r.relax_obj.round(PRECISION_OBJVAL)

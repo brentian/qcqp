@@ -14,6 +14,8 @@ from .instances import QP, QPInstanceUtils as QPI
 PRECISION_OBJVAL = 4
 PRECISION_SOL = 6
 PRECISION_TIME = 3
+
+
 ###########
 
 class Eval(object):
@@ -85,8 +87,11 @@ class BCParams(Params):
   opt_eps = 1e-5
   time_limit = 200
   logging_interval = 1
+  primal_interval = 5
+  verbose = False
   relax = True  # todo fix this
-  sdp_solver_backend = 'msk'
+  dual_backend = 'msk'
+  primal_backend = 'admm'
   sdp_rank_redunction_solver = 1
   fpath = None
   
@@ -95,22 +100,20 @@ class BCParams(Params):
     
     r = sorted(map(int, args.r.split(",")))
     selected_methods = [method_universe[k] for k in r]
-    verbose = args.verbose
+    self.verbose = args.verbose
     self.time_limit = args.time_limit
-    self.sdp_solver_backend = args.bg
-    self.sdp_rank_redunction_solver = args.bg_rd
+    self.dual_backend = args.bg
+    self.primal_backend = args.bg_pr
     self.fpath = args.fpath
-    kwargs = dict(
-      relax=True, sense="max", verbose=verbose, params=self, rlt=True
-    )
-    return kwargs, selected_methods
+    self.selected_methods = selected_methods
+
 
 class ADMMParams(Params):
-  max_iteration = 10000
+  max_iteration = 1000
   logging_interval = 1
   time_limit = 60
-  obj_gap = 1e-8
-  res_gap = 1e-8
+  obj_gap = 1e-4
+  res_gap = 1e-4
 
 
 def qp_obj_func(Q, q, xval: np.ndarray):
@@ -251,7 +254,7 @@ class MscBounds(Bounds):
       zub = []
       qpos, qipos = qp.Qpos
       qneg, qineg = qp.Qneg
-  
+      
       zub.append(
         (
             (qpos.T * (qpos.T > 0)).sum(axis=1) + (qneg.T *
@@ -264,7 +267,7 @@ class MscBounds(Bounds):
                                                    (qneg.T < 0)).sum(axis=1)
         ).reshape(qp.q.shape)
       )
-  
+      
       for i in range(qp.a.shape[0]):
         apos, ipos = qp.Apos[i]
         aneg, ineg = qp.Aneg[i]

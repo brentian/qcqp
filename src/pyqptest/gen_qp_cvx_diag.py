@@ -6,7 +6,7 @@ Construct D.C. matrices,
 """
 import numpy as np
 from pyqp.bg_grb import *
-from pyqp.bg_msk_mc import *
+from pyqp.bg_msk_mix import *
 from pyqp.instances import QPInstanceUtils
 
 
