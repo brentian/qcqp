@@ -113,66 +113,21 @@
   Formally, a quadratic inequality induced by a symmetric matrix \(A\) can be expressed as the following,
 
   \begin{equation}
-    x^T \left(\sum_{j\in J_+} \lambda_j v_jv_j^T\right)x +a^Tx \le b + \left(\sum_{j\in J_-} \lambda_j v_jv_j^T\right)
+    x^T \left(\sum_{j\in J_+} \lambda_j v_jv_j^T\right)x +a^Tx \le b + x^T\left(\sum_{j\in J_-} \lambda_j v_jv_j^T\right)x
   \end{equation}
 
   \begin{itemize}
-    \item For clarity, we say a quadratic inequality\(x^TAx + a^Tx \le b\) is \emph{rank-\(r\) indefinite} if first \(r\) eigenvalues are negative.
+    \item For clarity, we say a quadratic inequality \(x^TAx + a^Tx \le b\) is \emph{rank-\(r\) indefinite} if first \(r\) eigenvalues are negative.
     \item In comparison, a maximization problem with matrix \(Q\) is rank-\(r\) indefinite if last \(r\) eigenvalues are nonnegative.
   \end{itemize}
 
-\end{frame}
-\begin{frame}[allowframebreaks]{Rank-\(1\) Indefinite Quadratic Inequality}
-  Suppose \(Q = RR^T - aa^T\)
-
-  For quadratic inquality,  it can be written as,
-
-  \begin{equation*}
-    x^TRR^Tx \le (a^Tx)^2
-  \end{equation*}
-
-  Then we natually solve the problem in two disjoint subregions, by \(a^Tx \ge 0 \vee  a^Tx \le 0 \),
-  \begin{align*}
-    (P1) \quad & \|R^Tx\| \le - a^Tx \\
-    (P2) \quad & \|R^Tx\| \le a^Tx
-  \end{align*}
-
-  Implementation,
-  \begin{itemize}
-    \item Create offline subregions at depth 0 (multiple root nodes)
-    \item \red{Seems} impossible to do explicit disjunctions for inhomogeneous case.
-    \item Apply branch and bound.
-  \end{itemize}
-
-\end{frame}
-\begin{frame}[allowframebreaks]{Rank-\(1\) Indefinite Maximization}
-  Consider maximization
-  \begin{align*}
-    \max \quad             & x^T(aa^T-RR^T)x + q^Tx           \\
-    \Rightarrow \max \quad & z                                \\
-    \st \quad              & z + x^TRR^Tx - q^Tx \le (a^Tx)^2
-  \end{align*}
-
-  We analyze,
-  \begin{equation*}
-    S = \{(z, x): x^TRR^Tx + z - q^Tx \le (a^Tx)^2\}
-  \end{equation*}
-
-  \begin{enumerate}
-    \item Simply branch on \(sign(a^Tx)\) will prune one region very fast by bound.
-    \item \red{Seems} impossible to do explicit disjunctions as homogeneous inequality.
-    \item If using \red{best bound} rule in node selection, it has no obvious advantage.
-    \item Apply branch and bound.
-  \end{enumerate}
   \framebreak
-\end{frame}
-\begin{frame}[allowframebreaks]{Extension to rank-\(r\)}
 
   Consider quadratic maximization,
   \begin{equation}\label{eq:qp_unc_rr_conic}
     \begin{aligned}
-      \mx \quad & z                                                                                  \\
-      \st \quad & \sum_{j \in J_{-}} \lambda_{j} z_j - q^T x+z \le  \sum_{j \in J_{+}} \lambda_j z_j \\
+      \mx \quad & \sum_j \lambda_j y_j                                                             \\
+      \st \quad & \sum_{j \in J_{-}} \lambda_{j} y_j - q^T x \le  \sum_{j \in J_{+}} \lambda_j y_j \\
                 & y_j \ge (x_j^T v_j)^2, j= 1, ..., n
     \end{aligned}
   \end{equation}
@@ -187,7 +142,30 @@
           \end{equation}
   \end{itemize}
 \end{frame}
+\begin{frame}{ADMM}
+  \begin{align}
+    \model{MSC} \quad \mathrm{Maximize: }\quad & y ^T\lambda_0                                         \\
+    \mathrm{s.t.} \quad                        & (y,z,x) \in \Omega                                    \\
+                                               & y_i^Te = s                           & i=0, \cdots, m \\
+    ( \mu_i, i\in I_+ )    \quad               & \xi_i \cdot (v_i^Tx) = y_i           & \red{i\in I_+} \\
+                                               & \xi_i^2 \le y_i,  (v_i^Tx)^2 \le y_i
+  \end{align}
+  The ADMM,
 
+  \begin{equation}
+    \mathcal L = y^T\lambda + \sum_{i \in I_+} \mu_i \left [\xi_i \cdot(v_i^Tx) - y_i\right] + \frac{\rho}{2}\sum_{i \in I_+} (\xi_i \cdot (v_i^Tx) - y_i)^2
+  \end{equation}
+
+  At iteration \(k\),
+
+  \begin{align*}
+    (x,y,z,t)^{k+1} & = {\arg\min}_{(x,y,z)\in\Omega, t\ge 0} L\left(x,y,z,\xi^k,s^k,\kappa^k,\mu^k\right)       \\
+    (s, \xi)^{k+1}  & = {\arg\min}_{(s, \xi)\in\mathscr{Q}} L\left((x,y,z,t)^{k+1},\xi,s, \kappa^k, \mu^k\right) \\
+    \kappa^{k+1}    & = \kappa^k + \rho\left(t^{k+1}-s^{k+1}\right)                                              \\
+    \mu^{k+1}       & = \mu^k + \rho\left( \langle\xi^{k+1}, x^{k+1}\rangle - s^{k+1}\right)
+  \end{align*}
+
+\end{frame}
 \begin{frame}[allowframebreaks]{Computational Results}
   \begin{itemize}
     \item We test on ``unconstrained'' (with only a box or ball on \(x\))

@@ -14,8 +14,6 @@ from .instances import QP, QPInstanceUtils as QPI
 PRECISION_OBJVAL = 4
 PRECISION_SOL = 6
 PRECISION_TIME = 3
-
-
 ###########
 
 class Eval(object):
@@ -106,6 +104,13 @@ class BCParams(Params):
       relax=True, sense="max", verbose=verbose, params=self, rlt=True
     )
     return kwargs, selected_methods
+
+class ADMMParams(Params):
+  max_iteration = 10000
+  logging_interval = 1
+  time_limit = 60
+  obj_gap = 1e-8
+  res_gap = 1e-8
 
 
 def qp_obj_func(Q, q, xval: np.ndarray):

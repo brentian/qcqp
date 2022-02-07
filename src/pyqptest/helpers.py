@@ -14,12 +14,11 @@ pd.set_option("display.max_columns", None)
 np.set_printoptions(linewidth=200, precision=3)
 
 # relaxation
-from pyqp import bg_grb, bg_msk, bg_msk_msc, bg_msk_admm, bg_msk_norm, bg_msk_mc
+from pyqp import bg_grb, bg_msk, bg_msk_msc, bg_msk_norm_admm, bg_msk_norm, bg_msk_mc
 # branch and bound
 from pyqp import bb, bb_diag, bb_nmsc, bb_mmsc
 # helper, utilities, et cetera.
-from pyqp.classes import QP, QPI, Bounds, BCParams
-from pyqp.bg_msk_admm import ADMMParams
+from pyqp.classes import QP, QPI, Bounds, BCParams, ADMMParams
 
 METHODS = collections.OrderedDict(
   [
@@ -32,7 +31,7 @@ METHODS = collections.OrderedDict(
     ("msc", bg_msk_msc.msc_diag),  # many small cone approach
     ("bb_msc", bb_diag.bb_box),
     ("bb_nmsc", bb_nmsc.bb_box),
-    ("admm_nmsc", bg_msk_admm.msc_admm),  # local method using admm
+    ("admm_nmsc", bg_msk_norm_admm.msc_admm),  # local method using admm
     # socp
     ("nsocp", bg_msk_norm.socp),
     ("bb_nsocp", bb_nmsc.bb_box_nsocp),
@@ -106,5 +105,3 @@ parser.add_argument(
   "--bound_dtls", type=str,
   help=f"bound details",
 )
-
-

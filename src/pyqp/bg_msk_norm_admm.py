@@ -1,15 +1,12 @@
-from pyqp.classes import BCParams
+"""
+admm based on the norm constrained formulations,
+using bilinear term:
+- ξ · x = ρ · e
+- ρ = (ξ ◦ x)
+"""
 from .bg_msk_msc import *
 import time
 
-
-class ADMMParams(BCParams):
-  max_iteration = 10000
-  logging_interval = 1
-  time_limit = 60
-  obj_gap = 1e-8
-  res_gap = 1e-8
-  
 class MSKResultXi(MSKMscResult):
   """Result keeper for ADMM subproblem
   for (xi)

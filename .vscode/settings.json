@@ -38,4 +38,22 @@
         },
     ],
     "editor.fontWeight": "400",
+    "grammarly.overrides": [
+        {
+            "files": [
+                "**/docs/report/slides_20220127_talk.tex"
+            ],
+            "config": {
+                "audience": "expert",
+                "dialect": "american",
+                "domain": "academic",
+                "emotions": [
+                    "confident"
+                ],
+                "goals": [
+                    "describe"
+                ]
+            }
+        }
+    ],
 }
