@@ -61,6 +61,10 @@ class QP(object):
   # store eigenvalues
   ########################
   def eigen(self):
+    """
+    now we simply construct it by eigenvalue decomposition.
+    :return:
+    """
     n, m = self.n, self.m
     self.U = np.empty((m + 1, n, n), dtype=np.float)
     self.gamma = np.empty((m + 1, n), dtype=np.float)
@@ -106,7 +110,12 @@ class QP(object):
   # eigenvalue decomposition
   # and orthogonal basis
   ########################
-  def decompose(self, validate=False, decompose_method='eig-type2', **kwargs):
+  def decompose(
+      self,
+      decompose_method='eig-type2',
+      convexify_method=0,
+      **kwargs
+  ):
     """
     decompose into positive and negative part
     Returns
@@ -156,6 +165,19 @@ class QP(object):
         self.Aeig[i] = None
     self.decom_map = decom_map
     self.decom_arr = decom_arr
+    
+    # convexify
+    self.convexify(method=convexify_method)
+  
+  def convexify(self, method: int = 0):
+    """
+    :param method:
+    1. 0, use x'x \le s to convexify
+    2. 1, use Q = VLV', and then (V'x)
+    3. 2, more complex...
+    
+    :return:
+    """
     # construct convex cones
     for i in range(self.m):
       Ai = self.A[i]
@@ -165,6 +187,8 @@ class QP(object):
       l, R = self._scaled_cholesky(self.n, - self.Q)
       self.l[-1] = l
       self.R[-1] = R
+      
+    return 1
   
   @staticmethod
   def _scaled_cholesky(n, A):
@@ -176,8 +200,13 @@ class QP(object):
     :return:
     """
     gamma, u = nl.eigh(A)
-    l = 0 if min(gamma) > 0 else - min(gamma) + 1e-2
-    R = nl.cholesky(A + l * np.eye(n))
+    l = (0 if min(gamma) > 0 else - min(gamma)) + 1e-2
+    As = A + l * np.eye(n)
+    try:
+      R = np.linalg.cholesky(As)
+    except:
+      print(np.linalg.eigvalsh(As))
+      print(As)
     return l, R
   
   def _decompose_matrix(self, A):

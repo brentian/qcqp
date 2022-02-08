@@ -87,7 +87,7 @@ class BCParams(Params):
   opt_eps = 1e-5
   time_limit = 200
   logging_interval = 1
-  primal_interval = 5
+  primal_interval = 2
   verbose = False
   relax = True  # todo fix this
   dual_backend = 'msk'
@@ -109,7 +109,7 @@ class BCParams(Params):
 
 
 class ADMMParams(Params):
-  max_iteration = 1000
+  max_iteration = 100
   logging_interval = 1
   time_limit = 60
   obj_gap = 1e-4

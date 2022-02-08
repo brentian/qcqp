@@ -142,8 +142,8 @@ class MscRLT(RLTCuttingPlane):
     
     m, n, ui, li = self.data
     # n = yvar.getShape()[0]
-    yi = yvar[m].index(n, 0)
-    zi = zvar[m].index(n, 0)
+    yi = yvar.index(n, 0)
+    zi = zvar.index(n, 0)
     # (xi - li)(xi - ui) <= 0
     expr1, dom1 = exprs(exprs(yi, exprm(ui, zi)),
                         exprm(li, zi)), bg_msk.dom.lessThan(- ui * li)
@@ -194,7 +194,7 @@ class MscCuts(Cuts):
   def add_cuts_to_cvx(self, r: bg_cvx.CVXMscResult):
     
     _problem = r.problem
-    z, y = r.Zvar, r.Yvar
+    z, y = r.zvar, r.yvar
     
     for cut_type, cut_list in self.cuts.items():
       for ct in cut_list:
@@ -204,7 +204,7 @@ class MscCuts(Cuts):
   def add_cuts_to_msk(self, r: bg_cvx.CVXMscResult):
     
     _problem: bg_msk.mf.Model = r.problem
-    z, y = r.Zvar, r.Yvar
+    z, y = r.zvar, r.yvar
     
     for cut_type, cut_list in self.cuts.items():
       for ct in cut_list:
@@ -259,11 +259,12 @@ def bb_box(
   backend_name = params.dual_backend
   primal_func = kwargs.get('primal_func')
   primal_name = params.primal_backend
+  bool_use_primal = kwargs.get("use_primal", True)
   logging_interval = params.logging_interval
   primal_interval = params.primal_interval
   
   admmparams = ADMMParams()
-  admmparams.max_iteration = 200
+  admmparams.max_iteration = 20
   # choose backend
   if backend_func is None:
     if backend_name == 'msk':
@@ -273,7 +274,7 @@ def bb_box(
     else:
       raise ValueError("not implemented")
   # choose backend
-  if primal_func is None:
+  if primal_func is None and bool_use_primal:
     if primal_name == 'admm':
       primal_func = bg_msk_msc_admm.msc_admm
     elif primal_name == 'nadmm':
@@ -293,7 +294,7 @@ def bb_box(
   root_bound = MscBounds(**bounds.__dict__, qp=qp)
   
   print("Solving root node")
-  root_r = backend_func(qp, bounds=root_bound, solver=params.dual_backend, verbose=True, solve=True)
+  root_r = backend_func(qp, bounds=root_bound, solver=params.dual_backend, verbose=False, solve=True)
   
   best_r = root_r
   
@@ -301,6 +302,7 @@ def bb_box(
   glc = MscCuts()
   root = MscBBItem(qp, 0, 0, -1, 1e8, result=root_r, bound=root_bound, cuts=glc)
   total_nodes = 1
+  solved_nodes = 1
   ub = root_r.relax_obj
   lb = -1e6
   
@@ -326,6 +328,7 @@ def bb_box(
     if not r.solved:
       r.solve(verbose=verbose, qp=qp)
       r.solve_time = time.time() - start_time
+      solved_nodes += 1
     
     if r.relax_obj < lb:
       # prune this tree
@@ -336,58 +339,62 @@ def bb_box(
     ub = max(ub_dict.values())
     ub_dict.pop(item.node_id)
     
-    
-    
-    # it is for real a lower bound by real objective
+    # it is essentially a lower bound by real objective
     #   if and only if it is feasible
     bool_integral_feasible = True if params.relax else (r.xval.round() - r.xval).max() <= params.feas_eps
     bool_sol_feasible = r.resc_feasC <= params.feas_eps and bool_integral_feasible
     bool_feasible = r.resc_feas <= params.feas_eps and bool_integral_feasible
-    
-    if primal_func is not None \
-        and k % primal_interval == 0:
-      r_primal = primal_func(qp, item.bound, True, admmparams)
-      if not bool_sol_feasible or r_primal.true_obj > r.true_obj:
-        r.xval = r_primal.xval
-        r.yval = r_primal.yval
-        r.zval = r_primal.zval
-        r.true_obj = r_primal.true_obj
-    
-    if r.true_obj > lb:
-      best_r = r
-      lb = r.true_obj
-    
-    gap = (ub - lb) / (abs(lb) + 1e-3)
-    
-    if k % logging_interval == 0:
-      print(
-        f"time: {r.solve_time: .2f} #{item.node_id}, "
-        f"depth: {item.depth}, "
-        f"feas: {r.resc_feas:.3e} "
-        f"feasC: {r.resc_feasC:.3e} "
-        f"obj: {r.true_obj:.4f}, "
-        f"sdp_obj: {r.relax_obj:.4f}, gap:{gap:.4%} ([{lb: .2f},{r.relax_obj:.4f},{ub: .2f}]")
-    
-    if gap <= params.opt_eps or r.solve_time >= params.time_limit:
-      print(f"terminate #{item.node_id} by gap or time_limit")
-      break
-    
-    if bool_feasible:
-      print(f"prune #{item.node_id} by feasible solution")
-      feasible[item.node_id] = r
-      continue
-    
+
     ## branching
     x = r.xval
-    z = r.zval
-    y = r.yval
-    zc = r.Zval
-    yc = r.Yval
+    zc = z = r.zval
+    yc = y = r.yval
     br = MscBranch()
     branch_args = (
       x, y, z, yc, zc, r.resc, item.bound
     )
     br.branch(*branch_args, relax=params.relax, name=branch_name)
+    
+    if primal_func is not None and k \
+        and k % primal_interval == 0:
+      try:
+        r_primal = primal_func(qp, item.bound, True, admmparams, r.zval, r.yval)
+        
+        if not bool_sol_feasible or r_primal.true_obj > r.true_obj:
+          r.xval = r_primal.xval
+          r.yval = r_primal.yval
+          r.zval = r_primal.zval
+          print(f"primal {primal_func.__name__} is better: {r_primal.true_obj, r.true_obj}")
+          r.true_obj = r_primal.true_obj
+      except Exception as e:
+        print(f"primal {primal_func.__name__} failed ")
+    
+    if r.true_obj > lb:
+      best_r = r
+      lb = r.true_obj
+    
+    gap = (ub - lb) / (abs(ub) + 1e-3)
+    gap_primal = abs(r.true_obj - r.relax_obj) / (abs(r.relax_obj) + 1e-3)
+    
+    if k % logging_interval == 0:
+      print(
+        f"time: {r.solve_time:.2e} #{item.node_id:.2e}, "
+        f"depth: {item.depth:.2e}, "
+        f"feas: {r.resc_feas:.3e} "
+        f"feasC: {r.resc_feasC:.3e} "
+        f"obj: {r.true_obj:.3e}, "
+        f"sdp_obj: {r.relax_obj:.3e}, "
+        f"gap_*: {gap_primal:.2%} ",
+        f"gap:{gap:.2%} ([{lb:.2e},{r.true_obj:.2e},{r.relax_obj:.2e},{ub:.2e}]")
+    
+    if gap <= params.opt_eps or r.solve_time >= params.time_limit:
+      print(f"terminate #{item.node_id} by gap or time_limit")
+      break
+    
+    if bool_feasible or gap_primal < params.opt_eps:
+      print(f"prune #{item.node_id} by feasible solution")
+      feasible[item.node_id] = r
+      continue
     
     _ = generate_child_items(
       total_nodes, item, br,
@@ -404,7 +411,7 @@ def bb_box(
     #
     k += 1
   
-  best_r.nodes = total_nodes
+  best_r.nodes = solved_nodes
   best_r.relax_obj = min([best_r.relax_obj, *ub_dict.values()])
   best_r.solve_time = time.time() - start_time
   return best_r

@@ -69,9 +69,10 @@ if __name__ == '__main__':
     qp1 = copy.deepcopy(qp)
     special_params = QP_SPECIAL_PARAMS.get(k, {})
     if qp1.Qpos is None or special_params.get("force_decomp", True):
-      qp1.decompose(special_params)
+      qp1.decompose(**special_params)
+      print(f"redecomposition with method {special_params}")
     try:
-      r = func(qp1, bd, params=params, admmparams=admmparams)
+      r = func(qp1, bd, params=params, admmparams=admmparams, **special_params)
       reval = r.eval(problem_id)
       evals.append({**reval.__dict__, "method": k})
       results[k] = r

@@ -104,8 +104,10 @@ class MSKResultX(MSKMscResult):
 def msc_admm(
     qp: QP,  # the QP instance
     bounds: MscBounds = None,
-    verbose=False,
+    verbose=True,
     admmparams: ADMMParams = ADMMParams(),
+    yval=None,
+    zval=None,
     *args,
     **kwargs
 ):
@@ -118,9 +120,11 @@ def msc_admm(
   ########################
   # initialization
   ########################
-  zval = np.ones((n, dim))
+  if zval is None:
+    zval = np.ones((n, dim))
+    yval = np.ones((n, dim))
   mu = np.zeros((n, dim))
-  rho = 0.5
+  rho = 2
   xival = zval
   # test run
   
@@ -130,10 +134,12 @@ def msc_admm(
     r = msc_subproblem_x(
       xival, mu, rho, qp, bounds, solve=False, verbose=False
     )
+    
     r.solve()
     xval = r.xval
     zval = r.zval
     yval = r.yval
+
     r_xi = msc_subproblem_xi(
       yval, zval, mu, rho, qp, bounds, solve=False, verbose=False
     )
@@ -145,7 +151,7 @@ def msc_admm(
     gap = abs((r.bound - r.relax_obj) / (r.bound + 1e-2))
     curr_time = time.time()
     adm_time = curr_time - start_time
-    if verbose and  _iter % admmparams.logging_interval == 0:
+    if verbose and _iter % admmparams.logging_interval == 0:
       print(
         f"//{curr_time - start_time: .2f}, @{_iter} # alm: {r.relax_obj: .4f} gap: {gap:.3%}, 𝜉x - y: {residual_xix_sum: .4e}"
       )
@@ -198,64 +204,43 @@ def msc_subproblem_x(  # follows the args
   if bounds is None:
     bounds = MscBounds.construct(qp)
   
-  qpos, qipos = qp.Qpos
-  qneg, qineg = qp.Qneg
-  
   qel = qp.gamma[0].reshape(xshape)
-  
+  qcones = model.variable("xr", dom.inRotatedQCone(3, n))
+  ones = qcones.slice([0, 0], [1, n])
+  y = qcones.slice([1, 0], [2, n]).reshape(n, 1)
+  z = qcones.slice([2, 0], [3, n]).reshape(n, 1)
+  model.constraint(ones, dom.equalsTo(0.5))
+  s = model.variable('sqr', [m])
   x = model.variable("x", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
-  zcone = model.variable("zc", dom.inPSDCone(2, n))
-  y = zcone.slice([0, 0, 0], [n, 1, 1]).reshape([n, 1])
-  z = zcone.slice([0, 0, 1], [n, 1, 2]).reshape([n, 1])
   Y = [y]
   Z = [z]
-  for idx in range(n):
-    model.constraint(zcone.index([idx, 1, 1]), dom.equalsTo(1))
   
   # Q.T x = Z
   model.constraint(expr.sub(expr.mul(qp.U[0].T, x), z), dom.equalsTo(0))
   if hasattr(bounds, 'zlb'):
     model.constraint(z, dom.inRange(bounds.zlb[0], bounds.zub[0]))
-  
+
   for i in range(m):
-    apos, ipos = qp.Apos[i]
-    aneg, ineg = qp.Aneg[i]
     quad_expr = expr.dot(a[i], x)
-    
-    if ipos.shape[0] + ineg.shape[0] > 0:
-      
-      # if it is indeed quadratic
-      zconei = model.variable(f"zci@{i}", dom.inPSDCone(2, n))
-      yi = zconei.slice([0, 0, 0], [n, 1, 1]).reshape([n, 1])
-      zi = zconei.slice([0, 0, 1], [n, 1, 2]).reshape([n, 1])
-      Y.append(yi)
-      Z.append(zi)
-      
-      el = qp.Amul[i]
-      
-      # Z[-1, -1] == 1
-      for idx in range(n):
-        model.constraint(zconei.index([idx, 1, 1]), dom.equalsTo(1))
-      
-      # A.T @ x == z
+    Ai = qp.A[i]
+    if Ai is not None:
       model.constraint(
-        expr.sub(expr.mul((apos + aneg).T, x), zi), dom.equalsTo(0)
+        expr.vstack(0.5, s.index(i), expr.flatten(expr.mul(qp.R[i].T, x))),
+        dom.inRotatedQCone()
       )
-      quad_terms = expr.dot(el, yi)
-      quad_expr = expr.add(quad_expr, quad_terms)
-    
-    else:
-      Y.append(None)
-      Z.append(None)
+      quad_expr = expr.add(quad_expr, s.index(i))
+      quad_expr = expr.sub(quad_expr, expr.dot(qp.l[i] * np.ones((n, 1)), y))
+  
     if qp.sign is not None:
       # unilateral case
-      quad_dom = dom.equalsTo(0) if sign[i] == 0 else (
-        dom.greaterThan(0) if sign[i] == -1 else dom.lessThan(b[i])
-      )
+      quad_dom = dom.equalsTo(b[i]) if sign[i] == 0 else dom.lessThan(b[i])
+  
     else:
       # bilateral case
-      quad_dom = dom.inRange(qp.al[i], qp.au[i])
-      # quad_dom = dom.lessThan(qp.au[i])
+      # todo, fix this
+      # quad_dom = dom.inRange(qp.al[i], qp.au[i])
+      quad_dom = dom.lessThan(qp.au[i])
+  
     model.constraint(quad_expr, quad_dom)
   
   ###################

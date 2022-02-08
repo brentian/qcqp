@@ -32,6 +32,7 @@ METHODS = collections.OrderedDict(
     ("bb_sdp", bb.bb_box),
     # msc (many-small-cones)
     ("msc", bg_msk_msc.msc_diag),  # many small cone approach
+    ("bb_msc_no_primal", bb_diag.bb_box),
     ("bb_msc", bb_diag.bb_box),
     ("admm_msc", bg_msk_msc_admm.msc_admm),
     # msc and socp using norm balls
@@ -50,9 +51,13 @@ METHOD_CODES = {idx + 1: m for idx, m in enumerate(METHODS)}
 METHOD_HELP_MSGS = {k: bg_msk.dshor.__doc__ for k, v in METHODS.items()}
 
 QP_SPECIAL_PARAMS = {
+  # relaxation
   "msc": {"decompose_method": "eig-type1", "force_decomp": True},
   "emsc": {"decompose_method": "eig-type2", "force_decomp": True},
-  "asocp": {"decompose_method": "eig-type1", "force_decomp": False}
+  "asocp": {"decompose_method": "eig-type1", "force_decomp": False},
+  # global method
+  "bb_msc_no_primal": {"convexify_method": 1, "use_primal": False, "force_decomp": True},
+  "bb_msc": {"convexify_method": 1, "use_primal": True, "force_decomp": True},
 }
 
 QP_RANDOM_INSTANCE_TYPE = {

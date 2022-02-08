@@ -24,7 +24,7 @@ def generate(n, m, problem_dtls: str):
   Ga = np.random.randint(-5, 5, (m, r))
   Rr = np.empty((m, r, r))
   for i in range(m):
-    np.fill_diagonal(Rr[i], np.diagonal(Ga[i]))
+    np.fill_diagonal(Rr[i], np.diag(Ga[i]))
   
   Arp = np.random.randint(-5, 5, (m, n, r))
   
