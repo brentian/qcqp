@@ -242,10 +242,12 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     
     parent_sdp_val = item.parent_bound
     
+    ub = max(ub_dict.values())
+    ub_dict.pop(item.node_id)
+    
     if parent_sdp_val < lb:
       # prune this tree
       print(f"prune #{item.node_id} since parent pruned")
-      ub_dict.pop(item.node_id)
       continue
     
     if not r.solved:
@@ -255,11 +257,8 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     if r.relax_obj < lb:
       # prune this tree
       print(f"prune #{item.node_id} by bound")
-      ub_dict.pop(item.node_id)
       continue
     
-    ub = max(ub_dict.values())
-    ub_dict.pop(item.node_id)
     if r.true_obj > lb:
       best_r = r
       lb = r.true_obj

@@ -190,38 +190,36 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     for ct in struct.disjunctions:
       root_r = backend_func(qp, root_bound, solver=params.dual_backend, verbose=False, solve=False)
       best_r = root_r
-    
+      
       # global cuts
       glc = Cuts()
       glc.cuts['disjunction'] = [ct]
-    
+      
       glc.add_cuts(root_r, backend_name)
       root = BBItem(qp, depth=0, node_id=root_num, parent_id=-1, parent_bound=ub, result=root_r, bound=root_bound,
                     cuts=glc)
-    
+      
       ub_dict[root_num] = ub
       root_num += 1
       total_nodes += 1
       queue.put((-ub, root))
-      
+  
   else:
     print(f"no global disjunctions defined")
     root_r = backend_func(qp, root_bound, solver=params.dual_backend, verbose=False, solve=False)
     best_r = root_r
-  
+    
     # global cuts
     glc = Cuts()
-  
+    glc.cuts['disjunction'] = []
+    
     root = BBItem(qp, depth=0, node_id=root_num, parent_id=-1, parent_bound=ub, result=root_r, bound=root_bound,
                   cuts=glc)
     queue.put((-ub, root))
     ub_dict[root_num] = ub
-  
+    
     root_num += 1
     total_nodes += 1
-    
-    
-      
   
   while not queue.empty():
     priority, item = queue.get()
@@ -230,10 +228,12 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     
     parent_sdp_val = item.parent_bound
     
+    ub = max(ub_dict.values())
+    ub_dict.pop(item.node_id)
+    
     if parent_sdp_val < lb:
       # prune this tree
       print(f"prune #{item.node_id} since parent pruned")
-      ub_dict.pop(item.node_id)
       continue
     
     if not r.solved:
@@ -246,8 +246,6 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
       ub_dict.pop(item.node_id)
       continue
     
-    ub = max(ub_dict.values())
-    ub_dict.pop(item.node_id)
     if r.true_obj > lb:
       best_r = r
       lb = r.true_obj

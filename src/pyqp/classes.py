@@ -109,7 +109,7 @@ class BCParams(Params):
 
 
 class ADMMParams(Params):
-  max_iteration = 100
+  max_iteration = 500
   logging_interval = 1
   time_limit = 60
   obj_gap = 1e-4

@@ -401,11 +401,11 @@ class QPInstanceUtils(object):
     :param rho: density
     :return:
     """
-    Q = np.random.randint(-4, 4, (n, n))
+    Q = np.random.randint(-4, 10, (n, n))
     # Q = - Q.T @ Q
     A = np.random.randint(-5, 5, (m, n, n))
     # A = np.zeros(A.shape)
-    q = np.random.randint(0, 5, (n, 1))
+    q = np.random.randint(-5, 5, (n, 1))
     a = np.random.randint(0, 5, (m, n, 1))
     b = np.ones(m) * n
     sign = np.ones(shape=m)

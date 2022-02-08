@@ -138,13 +138,13 @@ def msc_admm(
   start_time = time.time()
   while _iter < admmparams.max_iteration:
     r = msc_subproblem_x(
-      sval, xival, kappa, mu, rho, qp, bounds, solve=False, verbose=verbose
+      sval, xival, kappa, mu, rho, qp, bounds, solve=False, verbose=False
     )
     r.solve()
     xval = r.xval
     tval = r.tval
     r_xi = msc_subproblem_xi(
-      xval, tval, kappa, mu, rho, qp, bounds, solve=False, verbose=verbose
+      xval, tval, kappa, mu, rho, qp, bounds, solve=False, verbose=False
     )
     r_xi.solve()
     sval = r_xi.sval
@@ -155,7 +155,7 @@ def msc_admm(
     gap = abs((r.bound - r.relax_obj) / (r.bound + 1e-2))
     curr_time = time.time()
     adm_time = curr_time - start_time
-    if  _iter % admmparams.logging_interval == 0:
+    if verbose and _iter % admmparams.logging_interval == 0:
       print(
         f"//{curr_time - start_time: .2f}, @{_iter} # alm: {r.relax_obj: .4f} gap: {gap:.3%} norm t - s: {residual_ts: .4e}, 𝜉x - t: {residual_xix: .4e}"
       )

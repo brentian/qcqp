@@ -318,11 +318,13 @@ def bb_box(
     r = item.result
     
     parent_sdp_val = item.parent_bound
-    
+
+    ub = max(ub_dict.values())
+    ub_dict.pop(item.node_id)
+
     if parent_sdp_val < lb:
       # prune this tree
       print(f"prune #{item.node_id} since parent pruned")
-      ub_dict.pop(item.node_id)
       continue
     
     if not r.solved:
@@ -335,9 +337,6 @@ def bb_box(
       if k % logging_interval == 0:
         print(f"prune #{item.node_id} @{r.relax_obj :.4f} by bound")
       continue
-    
-    ub = max(ub_dict.values())
-    ub_dict.pop(item.node_id)
     
     # it is essentially a lower bound by real objective
     #   if and only if it is feasible
@@ -385,7 +384,7 @@ def bb_box(
         f"obj: {r.true_obj:.3e}, "
         f"sdp_obj: {r.relax_obj:.3e}, "
         f"gap_*: {gap_primal:.2%} ",
-        f"gap:{gap:.2%} ([{lb:.2e},{r.true_obj:.2e},{r.relax_obj:.2e},{ub:.2e}]")
+        f"gap:{gap:.2%} ([{lb:.2e},{r.relax_obj:.2e},{ub:.2e}]")
     
     if gap <= params.opt_eps or r.solve_time >= params.time_limit:
       print(f"terminate #{item.node_id} by gap or time_limit")
