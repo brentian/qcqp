@@ -106,8 +106,7 @@ def msc_admm(
     bounds: MscBounds = None,
     verbose=True,
     admmparams: ADMMParams = ADMMParams(),
-    yval=None,
-    zval=None,
+    ws_result = None,
     *args,
     **kwargs
 ):
@@ -120,12 +119,12 @@ def msc_admm(
   ########################
   # initialization
   ########################
-  if zval is None:
+  if ws_result.zval is None:
     zval = np.ones((n, dim))
-    yval = np.ones((n, dim))
+  
   mu = np.zeros((n, dim))
   rho = 2
-  xival = zval
+  xival = ws_result.zval
   # test run
   
   _iter = 0

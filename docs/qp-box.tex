@@ -208,5 +208,41 @@ In this part, we test \eqref{eq:qp_unc_rr_conic} with regularity,
     \end{tabular}
 \end{table}
 \normalsize
+
+\subsection{Box QP in \cite{luo_new_2019}}
+
+We mark \textsf{Luo, ADMBB} as the method of using ADMM + BB using in \cite{luo_new_2019}.  Their method is basically the following:
+\begin{itemize}
+    \item Their ADMM penalizes \(V^Tx = Z\)
+    \item The BB procedure is the same, except for the branching rules. In \textsf{Luo, ADMBB}, the pivot is calculated by \(z := \frac{1}{2}(l_z + u_z)\) instead of \(z^*\)
+    \item In the Box QP, the convex relaxation is the same. They use CPLEX to solve QCP directly.
+    \item The instances are generated following the tradition in \cite{le_an_solving_1997}.
+\end{itemize}
+
+\scriptsize
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{llllll}
+        \toprule
+        \(n\) & \(r\) & solve\_time & nodes & \#ADMM & method              \\
+        \midrule
+        50    & 5     & 29.089      & 11223 & -      & grb                 \\
+        50    & 5     & 11.059      & 529   &        & bb\_msc             \\
+        50    & 5     & 8.114       & 245   & 3      & \textsf{Luo, ADMBB} \\
+        100   & 5     & 90.549      & 439   & -      & grb                 \\
+        100   & 5     & 9.683       & 529   &        & bb\_msc             \\
+        100   & 5     & 8.776       & 305   & 5      & \textsf{Luo, ADMBB} \\
+        100   & 5     & 241.730     & 439   & -      & grb                 \\
+        100   & 5     & 31.602      & 537   &        & bb\_msc             \\
+        100   & 5     & 12.56       & 305   & 8      & \textsf{Luo, ADMBB} \\
+        \bottomrule
+    \end{tabular}
+    \caption{The box QP instances generated using the method in \cite{luo_new_2019}.
+        We terminate Gurobi very early here (gap \(\le e^{-3}\))}
+\end{table}
+\normalsize
+
+\bibliography{headers/qcqp}
+\bibliographystyle{apalike}
 \section{Review}
 \end{document}

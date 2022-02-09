@@ -114,6 +114,7 @@ def msc_admm(
   bounds: MscBounds = None,
   verbose=False,
   admmparams: ADMMParams = ADMMParams(),
+  ws_result = None,
   *args,
   **kwargs
 ):
@@ -126,7 +127,10 @@ def msc_admm(
   ########################
   # initialization
   ########################
-  xval = np.ones((n, dim))
+  if ws_result is None:
+    xval = np.ones((n, dim))
+  else:
+    xval = ws_result.xval
   sval = (xval.T @ xval).trace()
   rho = 1
   kappa = 0

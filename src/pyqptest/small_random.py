@@ -22,8 +22,9 @@
 import copy
 
 from pyqptest.helpers import *
-import pyqptest.gen_qp_dnn as gen_dnn
-import pyqptest.gen_qp_low_rank as gen_ncvx_fixed
+import pyqptest.gen_dnn as gen_dnn
+import pyqptest.gen_low_rank as gen_ncvx_fixed
+import pyqptest.gen_bqp as gen_bqp
 
 parser.add_argument(
   "--seed",
@@ -51,7 +52,7 @@ if __name__ == '__main__':
   if ptype == 0:
     qp = QPI.normal(int(n), int(m), rho=0.5)
   elif ptype == 1:
-    qp = gen_dnn.generate(int(n), int(m))
+    qp = gen_bqp.generate(int(n), pdtl_str)
   elif ptype == 2:
     qp = gen_ncvx_fixed.generate(int(n), int(m), pdtl_str)
   else:

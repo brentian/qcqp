@@ -104,7 +104,6 @@ class MscBranch(Branch):
     
     for _zzleft in (True, False):
       _succeed, newbl = self._imply_bounds(_pivot, _zval, bounds, left=_zzleft, target='zvar')
-      newbl.imply_y(qp)
       yield _succeed, newbl
   
   def _imply_all_bounds_x(self, qp: QP, bounds: MscBounds):
@@ -261,10 +260,9 @@ def bb_box(
   primal_name = params.primal_backend
   bool_use_primal = kwargs.get("use_primal", True)
   logging_interval = params.logging_interval
-  primal_interval = params.primal_interval
   
   admmparams = ADMMParams()
-  admmparams.max_iteration = 20
+  
   # choose backend
   if backend_func is None:
     if backend_name == 'msk':
@@ -274,13 +272,18 @@ def bb_box(
     else:
       raise ValueError("not implemented")
   # choose backend
+  primal_interval = params.primal_interval
   if primal_func is None and bool_use_primal:
     if primal_name == 'admm':
       primal_func = bg_msk_msc_admm.msc_admm
+      admmparams.max_iteration = 20
     elif primal_name == 'nadmm':
+      # more expensive
       primal_func = bg_msk_norm_admm.msc_admm
+      admmparams.max_iteration = 200
+      primal_interval = params.primal_interval * 10
     else:
-      pass
+      primal_interval = 1
   
   # problems
   k = 0
@@ -301,15 +304,23 @@ def bb_box(
   # global cuts
   glc = MscCuts()
   root = MscBBItem(qp, 0, 0, -1, 1e8, result=root_r, bound=root_bound, cuts=glc)
-  total_nodes = 1
-  solved_nodes = 1
   ub = root_r.relax_obj
   lb = -1e6
+  
+  #############
+  # counters
+  #############
+  counter_primal_improv = 0
+  counter_primal_invoke = 0
+  counter_total_nodes = 1
+  counter_solved_nodes = 1
   
   ub_dict = {0: ub}
   queue = PriorityQueue()
   queue.put((-ub, root))
   feasible = {}
+  feasible_via_primal = {}  # solution by heuristics
+  feasible_node_id = {}
   
   while not queue.empty():
     
@@ -318,10 +329,10 @@ def bb_box(
     r = item.result
     
     parent_sdp_val = item.parent_bound
-
+    
     ub = max(ub_dict.values())
     ub_dict.pop(item.node_id)
-
+    
     if parent_sdp_val < lb:
       # prune this tree
       print(f"prune #{item.node_id} since parent pruned")
@@ -330,7 +341,7 @@ def bb_box(
     if not r.solved:
       r.solve(verbose=verbose, qp=qp)
       r.solve_time = time.time() - start_time
-      solved_nodes += 1
+      counter_solved_nodes += 1
     
     if r.relax_obj < lb:
       # prune this tree
@@ -343,8 +354,10 @@ def bb_box(
     bool_integral_feasible = True if params.relax else (r.xval.round() - r.xval).max() <= params.feas_eps
     bool_sol_feasible = r.resc_feasC <= params.feas_eps and bool_integral_feasible
     bool_feasible = r.resc_feas <= params.feas_eps and bool_integral_feasible
-
-    ## branching
+    
+    ##########################
+    # branching
+    ##########################
     x = r.xval
     zc = z = r.zval
     yc = y = r.yval
@@ -354,19 +367,45 @@ def bb_box(
     )
     br.branch(*branch_args, relax=params.relax, name=branch_name)
     
-    if primal_func is not None and k \
-        and k % primal_interval == 0:
+    ##########################
+    # primal solution condition
+    ##########################
+    bool_pass_primal = False
+    bool_has_primal = primal_func is not None
+    bool_start_primal = k % primal_interval == 0
+    if bool_has_primal and k > 0:
+      if bool_start_primal:
+        _parent_primal_id = feasible_node_id[item.parent_id]
+        _parent_primal_r = feasible_via_primal[_parent_primal_id]
+        # check if still feasible, if so then the solution is valid
+        #  there is no need for this.
+        _zval = _parent_primal_r.zval
+        if np.all(_zval <= item.bound.zub) and np.all(_zval >= item.bound.zub):
+          bool_pass_primal = True
+      else:
+        bool_pass_primal = True
+    
+    if bool_start_primal and bool_has_primal:
       try:
-        r_primal = primal_func(qp, item.bound, True, admmparams, r.zval, r.yval)
-        
+        r_primal = primal_func(qp, item.bound, True, admmparams, r)
+        feasible_via_primal[item.node_id] = r_primal
+        feasible_node_id[item.node_id] = item.node_id
+        counter_primal_invoke += 1
         if not bool_sol_feasible or r_primal.true_obj > r.true_obj:
           r.xval = r_primal.xval
           r.yval = r_primal.yval
           r.zval = r_primal.zval
           print(f"primal {primal_func.__name__} is better: {r_primal.true_obj, r.true_obj}")
           r.true_obj = r_primal.true_obj
+          counter_primal_improv += 1
       except Exception as e:
         print(f"primal {primal_func.__name__} failed ")
+    
+    if bool_pass_primal:
+      # do not need to start primal
+      # still using parent's primal
+      print("primal passed")
+      feasible_node_id[item.node_id] = feasible_node_id[item.parent_id]
     
     if r.true_obj > lb:
       best_r = r
@@ -396,21 +435,24 @@ def bb_box(
       continue
     
     _ = generate_child_items(
-      total_nodes, item, br,
+      counter_total_nodes, item, br,
       sdp_solver=params.dual_backend,
       verbose=verbose,
       backend_name=backend_name,
       backend_func=backend_func,
     )
     for next_item in _:
-      total_nodes += 1
+      counter_total_nodes += 1
       next_priority = - r.relax_obj.round(PRECISION_OBJVAL)
       queue.put((next_priority, next_item))
       ub_dict[next_item.node_id] = r.relax_obj
     #
     k += 1
   
-  best_r.nodes = solved_nodes
+  best_r.nodes = counter_solved_nodes
   best_r.relax_obj = min([best_r.relax_obj, *ub_dict.values()])
   best_r.solve_time = time.time() - start_time
+  print(f"//finished with {best_r.solve_time: .3f} s \n"
+        f"//primal improvement {counter_primal_improv} \n"
+        f"//primal invocation {counter_primal_invoke}")
   return best_r

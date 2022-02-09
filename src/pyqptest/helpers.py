@@ -58,12 +58,14 @@ QP_SPECIAL_PARAMS = {
   # global method
   "bb_msc_no_primal": {"convexify_method": 1, "use_primal": False, "force_decomp": True},
   "bb_msc": {"convexify_method": 1, "use_primal": True, "force_decomp": True},
+  # admm
+  "admm_nmsc": {"verbose": True}
 }
 
 QP_RANDOM_INSTANCE_TYPE = {
   0: 'normal',
-  1: 'cvx',
-  2: 'dnn',  # difference of doubly psd matrices
+  1: 'rankr',
+  2: 'bqp',
 }
 
 ###################

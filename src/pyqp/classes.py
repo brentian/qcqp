@@ -84,10 +84,10 @@ class BCParams(Params):
     super().__init__()
   
   feas_eps = 1e-5
-  opt_eps = 1e-5
+  opt_eps = 1e-4
   time_limit = 200
   logging_interval = 1
-  primal_interval = 2
+  primal_interval = 30
   verbose = False
   relax = True  # todo fix this
   dual_backend = 'msk'

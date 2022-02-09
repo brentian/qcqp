@@ -1,4 +1,4 @@
-\documentclass[aspectratio=1610, 10pt]{beamer}
+\documentclass[aspectratio=1610, 9pt]{beamer}
 \usepackage[english]{babel}
 \usepackage{amsmath, amsthm, subfiles, bm, hyperref, graphicx}
 \usepackage{mathrsfs}
@@ -95,11 +95,11 @@
 \author{
   Chuwen Zhang
 }
-
-
 \maketitle
+
+\section{QCQP}
 \begin{frame}{The QCQP}
-  We consider the QCQP，
+  We consider the QCQP,
   \begin{equation}
     \label{eq:inhoqcqp}
     \begin{aligned}
@@ -165,6 +165,7 @@
     \mu^{k+1}       & = \mu^k + \rho\left( \langle\xi^{k+1}, x^{k+1}\rangle - s^{k+1}\right)
   \end{align*}
 
+  As a comparison, see the full-dimensional \hyperlink{oldad}{ADMM}.
 \end{frame}
 \begin{frame}[allowframebreaks]{Computational Results}
   \begin{itemize}
@@ -174,14 +175,54 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}[allowframebreaks]{Future Work}
+\begin{frame}[allowframebreaks]{Box QP}
+  We mark \textsf{Luo, ADMBB} as the method of using ADMM + BB using in \cite{luo_new_2019}.  Their method is basically the following:
   \begin{itemize}
-    \item Extension to an indefinite quadratic inequalities
-    \item Plug in ADMM as primal feasible solution.
+    \item Their ADMM penalizes \(V^Tx = Z\)
+    \item The BB procedure is the same, except for the branching rules. In \textsf{Luo, ADMBB}, the pivot is calculated by \(z := \frac{1}{2}(l_z + u_z)\) instead of \(z^*\)
+    \item In the Box QP, the convex relaxation is the same. They use CPLEX to solve QCP directly.
+    \item The instances are generated following the tradition in \cite{le_an_solving_1997}.
   \end{itemize}
+
+  \framebreak
+
+  \begin{table}[h!]
+    \centering
+    \begin{tabular}{llllll}
+      \toprule
+      \(n\) & \(r\) & solve\_time & nodes & \#ADMM & method              \\
+      \midrule
+      50    & 5     & 29.089      & 1122  & -      & grb                 \\
+      50    & 5     & 11.059      & 529   & 2      & bb\_msc             \\
+      50    & 5     & 8.114       & 245   & 3      & \textsf{Luo, ADMBB} \\
+      100   & 5     & 90.549      & 439   & -      & grb                 \\
+      100   & 5     & 9.683       & 529   & 4      & bb\_msc             \\
+      100   & 5     & 8.776       & 305   & 5      & \textsf{Luo, ADMBB} \\
+      150   & 5     & 241.730     & 439   & -      & grb                 \\
+      150   & 5     & 31.602      & 537   & 4      & bb\_msc             \\
+      150   & 5     & 12.56       & 305   & 8      & \textsf{Luo, ADMBB} \\
+      200   & 5     & 0.082       & 3     & -      & grb                 \\
+      200   & 5     & 34.344      & 315   & 7      & bb\_msc             \\
+      200   & 5     & 58.51       & 187   & 4      & \textsf{Luo, ADMBB} \\
+      \bottomrule
+    \end{tabular}
+    \caption{The box QP instances generated using the method in \cite{luo_new_2019}.
+      We terminate Gurobi very early here (gap \(\le e^{-3}\))}
+
+    \framebreak
+
+    \begin{itemize}
+      \item In Box-QP, our relaxation will produce the feasible solutions, and thus the ADMM or any other primal method is not critical
+      \item In \textsf{Luo, ADMBB}, we can also see the number of required or invoked ADMM iterations are limited.
+    \end{itemize}
+  \end{table}
+
+
 \end{frame}
 
-\begin{frame}[allowframebreaks]{Future Work: Multiple Quadratic Constraints}
+
+
+\begin{frame}[allowframebreaks]{Extension to Multiple Quadratic Constraints}
   Our old MSC.
   \begin{align}
     \nonumber \mathrm{Maximize}\quad & y_0 ^T\lambda_0 + q^Tx                         \\
@@ -212,7 +253,16 @@
     \item This is weaker than simultaneous diagonalization via congruence.
   \end{itemize}
 \end{frame}
-\begin{frame}[allowframebreaks]{Future Work: ADMM in the original \(x\)}
+
+\begin{frame}[allowframebreaks]{Future Work}
+  \begin{itemize}
+    \item Extension to an indefinite quadratic inequalities
+    \item Plug in ADMM as primal feasible solution.
+  \end{itemize}
+\end{frame}
+
+\section{Appendix}
+\begin{frame}[allowframebreaks]{\hypertarget{oldad}{Appendix: ADMM in the original \(x\)}}
 
   Notice,
   \begin{equation}
@@ -247,26 +297,6 @@
   \begin{equation}
     \mathscr{Q}(x) =\left\{(s,\xi): \|\xi\|^2 \le s\right\}
   \end{equation}
-
-  \framebreak
-
-  The size of auxillary variable \(\xi\) equals to \(n\), if \(r\) is small,
-
-  We can actually shrink the size of above problem.
-  \begin{align}
-    \model{MSC} \quad \mathrm{Maximize: }\quad & y_0 ^T\lambda_0                                       \\
-    \mathrm{s.t.} \quad                        & (y,z,x) \in \Omega                                    \\
-                                               & y_i^Te = s                           & i=0, \cdots, m \\
-    ( \mu_i, i\in I_+ )    \quad               & \xi_i \cdot (v_i^Tx) = y_i           & \red{i\in I_+} \\
-                                               & \xi_i^2 \le y_i,  (v_i^Tx)^2 \le y_i
-  \end{align}
-  The ADMM,
-
-  \begin{equation}
-    \mathcal L = y^T\lambda + \sum_{i \in I_+} \mu_i \left [\xi_i \cdot(v_i^Tx) - y_i\right] + \frac{\rho}{2}\sum_{i \in I_+} (\xi_i \cdot (v_i^Tx) - y_i)^2
-  \end{equation}
-
-  Which is easier than old ADMM for general case.
 
 \end{frame}
 
@@ -332,8 +362,8 @@
 % \end{frame}
 
 
-% \begin{frame}[allowframebreaks]{Bibliography}
-%   \bibliography{headers/qcqp}
-%   \bibliographystyle{apalike}
-% \end{frame}
+\begin{frame}[allowframebreaks]{Bibliography}
+  \bibliography{headers/qcqp}
+  \bibliographystyle{apalike}
+\end{frame}
 \end{document}
