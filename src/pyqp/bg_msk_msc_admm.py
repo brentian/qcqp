@@ -217,7 +217,7 @@ def msc_subproblem_x(  # follows the args
   # Q.T x = Z
   model.constraint(expr.sub(expr.mul(qp.U[0].T, x), z), dom.equalsTo(0))
   if hasattr(bounds, 'zlb'):
-    model.constraint(z, dom.inRange(bounds.zlb[0], bounds.zub[0]))
+    model.constraint(z, dom.inRange(bounds.zlb, bounds.zub))
 
   for i in range(m):
     quad_expr = expr.dot(a[i], x)
@@ -316,8 +316,9 @@ def msc_subproblem_xi(  # follows the args
   yr = qcones.slice([1, 0], [2, n]).reshape(n, 1)
   xi = qcones.slice([2, 0], [3, n]).reshape(n, 1)
   model.constraint(ones, dom.equalsTo(0.5))
-  
   model.constraint(yr, dom.equalsTo(y))
+  # if hasattr(bounds, 'zlb'):
+  #   model.constraint(xi, dom.inRange(bounds.zlb, bounds.zub))
   
   # ADMM solves the minimization problem so we reverse the max objective.
   # ALM terms

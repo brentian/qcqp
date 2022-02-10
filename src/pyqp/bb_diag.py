@@ -39,19 +39,35 @@ class MscBranch(Branch):
     
     x, y, z, yc, zc, res, bound = args
     if name == MscBranch.vio:
-      self.simple_vio_branch(x, y, z, yc, zc, res, relax)
+      # self.simple_vio_branch(x, y, z, yc, zc, res, relax, bound)
+      self.simple_bls_branch(x, y, z, yc, zc, res, relax, bound)
     elif name == MscBranch.bound:
       self.simple_bound_branch(x, y, bound, relax)
     else:
       return False
   
-  def simple_vio_branch(self, x, y, z, yc, zc, res, relax=False):
+  def simple_vio_branch(self, x, y, z, yc, zc, res, relax=False, bound=None):
     if not relax:
       raise ValueError(f"cannot branch on z for an integral instance")
     y_index = np.unravel_index(np.argmax(res, axis=None), res.shape)
     self.ypivot = self.zpivot = y_index
     self.ypivot_val = yc[y_index]
     self.zpivot_val = zc[y_index]
+    self.type = MscBranch.vio
+  
+  def simple_bls_branch(self, x, y, z, yc, zc, res, relax=False, bound=None):
+    """
+    simply create a disjunctive, by ``balancing''
+      z <= (l+u)/2 or z >= (l+u)/2
+    may be unable to cut off x*
+    """
+    if not relax:
+      raise ValueError(f"cannot branch on z for an integral instance")
+    y_index = np.unravel_index(np.argmax(res, axis=None), res.shape)
+    self.ypivot = self.zpivot = y_index
+    
+    self.zpivot_val = bound.zlb[y_index] / 2 + bound.zub[y_index] / 2
+    
     self.type = MscBranch.vio
   
   def simple_bound_branch(self, x, y, bound, relax=True):
@@ -73,7 +89,7 @@ class MscBranch(Branch):
     newbl = MscBounds(**bounds.__dict__)
     if target == 'zvar':
       _lb_arr, _ub_arr = newbl.zlb, newbl.zub
-      _lb, _ub = _lb_arr[(*_pivot, 0)], _ub_arr[(*_pivot, 0)]
+      _lb, _ub = _lb_arr[_pivot], _ub_arr[_pivot]
     elif target == 'xvar':
       _lb_arr, _ub_arr = newbl.xlb, newbl.xub
       _lb, _ub = _lb_arr[_pivot], _ub_arr[_pivot]
@@ -97,8 +113,7 @@ class MscBranch(Branch):
     :param bounds:
     :return:
     """
-    n, m = self.ypivot
-    _pivot = (m, n)
+    _pivot = n, m = self.ypivot
     _val = self.ypivot_val
     _zval = self.zpivot_val
     
@@ -162,8 +177,10 @@ class MscRLTForX(RLTCuttingPlane):
 
 
 def add_rlt_cuts(branch, bounds):
-  n, m = branch.zpivot
-  u_i, l_i = bounds.zub[m, n, 0], bounds.zlb[m, n, 0]
+  n, d = branch.zpivot
+  # todo do not need m
+  m = 0
+  u_i, l_i = bounds.zub[n, d], bounds.zlb[n, d]
   return MscRLT((m, n, u_i, l_i))
 
 
@@ -259,7 +276,7 @@ def bb_box(
   primal_func = kwargs.get('primal_func')
   primal_name = params.primal_backend
   bool_use_primal = kwargs.get("use_primal", True)
-  logging_interval = params.logging_interval
+  interval_logging = params.interval_logging
   
   admmparams = ADMMParams()
   
@@ -272,7 +289,7 @@ def bb_box(
     else:
       raise ValueError("not implemented")
   # choose backend
-  primal_interval = params.primal_interval
+  interval_primal = params.interval_primal
   if primal_func is None and bool_use_primal:
     if primal_name == 'admm':
       primal_func = bg_msk_msc_admm.msc_admm
@@ -281,9 +298,9 @@ def bb_box(
       # more expensive
       primal_func = bg_msk_norm_admm.msc_admm
       admmparams.max_iteration = 200
-      primal_interval = params.primal_interval * 10
+      interval_primal = params.interval_primal * 10
     else:
-      primal_interval = 1
+      interval_primal = 1
   
   # problems
   k = 0
@@ -345,7 +362,7 @@ def bb_box(
     
     if r.relax_obj < lb:
       # prune this tree
-      if k % logging_interval == 0:
+      if k % interval_logging == 0:
         print(f"prune #{item.node_id} @{r.relax_obj :.4f} by bound")
       continue
     
@@ -372,7 +389,7 @@ def bb_box(
     ##########################
     bool_pass_primal = False
     bool_has_primal = primal_func is not None
-    bool_start_primal = k % primal_interval == 0
+    bool_start_primal = k % interval_primal == 0
     if bool_has_primal and k > 0:
       if bool_start_primal:
         _parent_primal_id = feasible_node_id[item.parent_id]
@@ -400,6 +417,7 @@ def bb_box(
           counter_primal_improv += 1
       except Exception as e:
         print(f"primal {primal_func.__name__} failed ")
+        print(e.__traceback__.format_exec())
     
     if bool_pass_primal:
       # do not need to start primal
@@ -414,7 +432,7 @@ def bb_box(
     gap = (ub - lb) / (abs(ub) + 1e-3)
     gap_primal = abs(r.true_obj - r.relax_obj) / (abs(r.relax_obj) + 1e-3)
     
-    if k % logging_interval == 0:
+    if k % interval_logging == 0:
       print(
         f"time: {r.solve_time:.2e} #{item.node_id:.2e}, "
         f"depth: {item.depth:.2e}, "
@@ -448,9 +466,10 @@ def bb_box(
       ub_dict[next_item.node_id] = r.relax_obj
     #
     k += 1
-  
+
   best_r.nodes = counter_solved_nodes
-  best_r.relax_obj = min([best_r.relax_obj, *ub_dict.values()])
+  max_left = max(*ub_dict.values()) if ub_dict.__len__() > 0 else 1e6
+  best_r.bound = min(best_r.relax_obj, max_left)
   best_r.solve_time = time.time() - start_time
   print(f"//finished with {best_r.solve_time: .3f} s \n"
         f"//primal improvement {counter_primal_improv} \n"

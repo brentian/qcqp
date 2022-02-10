@@ -22,11 +22,11 @@ def generate(n, m, problem_dtls: str):
   Q = Rp @ Rp.T - Rn @ Rn.T
   
   Ga = np.random.randint(-5, 5, (m, r))
-  Rr = np.empty((m, r, r))
+  Rr = np.zeros((m, r, r))
   for i in range(m):
     np.fill_diagonal(Rr[i], np.diag(Ga[i]))
   
-  Arp = np.random.randint(-5, 5, (m, n, r))
+  Arp = np.random.uniform(0, 1, (m, n, r))
   
   Arn = np.random.randint(0, 5, (m, n, n))
   

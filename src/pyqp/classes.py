@@ -86,8 +86,8 @@ class BCParams(Params):
   feas_eps = 1e-5
   opt_eps = 1e-4
   time_limit = 200
-  logging_interval = 1
-  primal_interval = 30
+  interval_logging = 5
+  interval_primal = 30
   verbose = False
   relax = True  # todo fix this
   dual_backend = 'msk'
@@ -255,34 +255,46 @@ class MscBounds(Bounds):
       qpos, qipos = qp.Qpos
       qneg, qineg = qp.Qneg
       
-      zub.append(
-        (
-            (qpos.T * (qpos.T > 0)).sum(axis=1) + (qneg.T *
-                                                   (qneg.T > 0)).sum(axis=1)
-        ).reshape(qp.q.shape)
-      )
-      zlb.append(
-        (
-            (qpos.T * (qpos.T < 0)).sum(axis=1) + (qneg.T *
-                                                   (qneg.T < 0)).sum(axis=1)
-        ).reshape(qp.q.shape)
-      )
+      ################################
+      # not needed
+      ################################
+      # zub.append(
+      #   (
+      #       (qpos.T * (qpos.T > 0)).sum(axis=1) + (qneg.T *
+      #                                              (qneg.T > 0)).sum(axis=1)
+      #   ).reshape(qp.q.shape)
+      # )
+      # zlb.append(
+      #   (
+      #       (qpos.T * (qpos.T < 0)).sum(axis=1) + (qneg.T *
+      #                                              (qneg.T < 0)).sum(axis=1)
+      #   ).reshape(qp.q.shape)
+      # )
+      # for i in range(qp.a.shape[0]):
+      #   apos, ipos = qp.Apos[i]
+      #   aneg, ineg = qp.Aneg[i]
+      #   zub.append(
+      #     (
+      #         (apos.T * (apos.T > 0)).sum(axis=1) + (aneg.T *
+      #                                                (aneg.T > 0)).sum(axis=1)
+      #     ).reshape(qp.q.shape)
+      #   )
+      #   zlb.append(
+      #     (
+      #         (apos.T * (apos.T < 0)).sum(axis=1) + (aneg.T *
+      #                                                (aneg.T < 0)).sum(axis=1)
+      #     ).reshape(qp.q.shape)
+      #   )
+      zub = (
+          (qpos.T * (qpos.T > 0)).sum(axis=1) + (qneg.T *
+                                                 (qneg.T > 0)).sum(axis=1)
+      ).reshape(qp.q.shape)
       
-      for i in range(qp.a.shape[0]):
-        apos, ipos = qp.Apos[i]
-        aneg, ineg = qp.Aneg[i]
-        zub.append(
-          (
-              (apos.T * (apos.T > 0)).sum(axis=1) + (aneg.T *
-                                                     (aneg.T > 0)).sum(axis=1)
-          ).reshape(qp.q.shape)
-        )
-        zlb.append(
-          (
-              (apos.T * (apos.T < 0)).sum(axis=1) + (aneg.T *
-                                                     (aneg.T < 0)).sum(axis=1)
-          ).reshape(qp.q.shape)
-        )
+      zlb = (
+          (qpos.T * (qpos.T < 0)).sum(axis=1) + (qneg.T *
+                                                 (qneg.T < 0)).sum(axis=1)
+      ).reshape(qp.q.shape)
+      
       self.zlb, self.zub = np.array(zlb).round(self.PRECISION), np.array(zub).round(self.PRECISION)
   
   def unpack(self):

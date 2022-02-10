@@ -94,10 +94,10 @@ parser.add_argument(
   "--verbose", default=0, type=int, help="if verbose"
 )
 parser.add_argument(
-  "--bg", default='msk', type=str, help="backend used"
+  "--bg", default='msk', type=str, help="backend used, e.g., mosek."
 )
 parser.add_argument(
-  "--bg_pr", default=None, type=str, help="backend used, rank reduction"
+  "--bg_pr", default=None, type=str, help="backend used, primal method"
 )
 parser.add_argument(
   "--problem_type", type=int, help=f"if randomly generated, what is the problem type?\n{QP_RANDOM_INSTANCE_TYPE}",

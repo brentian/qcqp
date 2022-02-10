@@ -243,7 +243,6 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     if r.relax_obj < lb:
       # prune this tree
       print(f"prune #{item.node_id} by bound")
-      ub_dict.pop(item.node_id)
       continue
     
     if r.true_obj > lb:

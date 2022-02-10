@@ -204,9 +204,9 @@ class QP(object):
     As = A + l * np.eye(n)
     try:
       R = np.linalg.cholesky(As)
-    except:
-      print(np.linalg.eigvalsh(As))
-      print(As)
+    except Exception as e:
+      print(np.linalg.eigvalsh(As).min())
+      print(e.__traceback__.format_exc())
     return l, R
   
   def _decompose_matrix(self, A):
