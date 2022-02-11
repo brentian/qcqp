@@ -295,7 +295,7 @@ class QP(object):
     import json
     import os
     import time
-    stamp = int(time.time())
+    stamp = time.time()
     
     fname = os.path.join(wdir, f"{self.n}_{self.m}.{stamp}.json")
     data = {}

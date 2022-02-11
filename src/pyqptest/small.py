@@ -21,49 +21,59 @@
 #  SOFTWARE.
 
 from .helpers import *
+from pympler import tracker
 
+tr = tracker.SummaryTracker()
 if __name__ == '__main__':
-
+  
+  parser.print_usage()
+  args = parser.parse_args()
   params = BCParams()
   admmparams = ADMMParams()
-  kwargs, r_methods = params.produce_args(parser, METHOD_CODES)
-  _ = admmparams.produce_args(parser, METHOD_CODES)
-
+  params.produce_args(parser, METHOD_CODES)
+  
   qp = QP.read(params.fpath)
-
+  
   n, m = qp.n, qp.m
   # problem
   problem_id = qp.name if qp.name else f"{n}:{m}:{0}"
+  
   # start
   bd = Bounds(xlb=qp.vl, xub=qp.vu)
-
+  
   evals = []
   results = {}
+  
   # run methods
-  for k in r_methods:
+  for k in params.selected_methods:
     func = METHODS[k]
-    qp1 = copy.deepcopy(QP)
-    if qp.Qpos is None:
-      qp1.decompose(**QP_SPECIAL_PARAMS.get(k, {}))
+    
+    qp1 = copy.deepcopy(qp)
+    special_params = QP_SPECIAL_PARAMS.get(k, {})
+    if qp1.Qpos is None or special_params.get("force_decomp", True):
+      qp1.decompose(**special_params)
+      print(f"redecomposition with method {special_params}")
     try:
-      r = func(qp1, bd, params=params, admmparams=admmparams)
+      r = func(qp1, bd, params=params, admmparams=admmparams, **special_params)
+      reval = r.eval(problem_id)
+      evals.append({**reval.__dict__, "method": k})
+      results[k] = r
     except Exception as e:
       print(f"method {k} failed")
-    reval = r.eval(problem_id)
-    evals.append({**reval.__dict__, "method": k})
-    results[k] = r
-
+      import logging
+      
+      logging.exception(e)
   for k, r in results.items():
     print(f"{k} benchmark @{r.relax_obj}")
-    print(f"{k} benchmark x\n" f"{r.xval.round(PRECISION_OBJVAL)}")
     r.check(qp)
-
+    print(r.xval[r.xval > 0])
+  
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)
-  print(r.xval)
   print(
     df_eval[[
       'prob_num', 'solve_time', 'best_bound', 'best_obj', 'node_time', 'nodes',
       'method'
     ]].to_latex()
   )
+  tr.print_diff()

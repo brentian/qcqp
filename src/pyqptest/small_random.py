@@ -25,6 +25,9 @@ from pyqptest.helpers import *
 import pyqptest.gen_dnn as gen_dnn
 import pyqptest.gen_low_rank as gen_ncvx_fixed
 import pyqptest.gen_bqp as gen_bqp
+from pympler import tracker
+
+tr = tracker.SummaryTracker()
 
 parser.add_argument(
   "--seed",
@@ -60,7 +63,12 @@ if __name__ == '__main__':
   if btype == 0:
     bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
   else:
-    bd = Bounds(shape=(n, 1), s=n/10)
+    bd = Bounds(shape=(n, 1), s=n / 10)
+  
+  ########################
+  # collect results
+  ########################
+  
   evals = []
   results = {}
   # run methods
