@@ -144,14 +144,13 @@ class Cuts(object):
 
 @dataclass(order=True)
 class BBItem(object):
-  def __init__(self, qp, depth, node_id, parent_id, parent_bound, result, bound: Bounds, cuts: Cuts):
+  def __init__(self, depth, node_id, parent_id, parent_bound, result, bound: Bounds, cuts: Cuts):
     self.priority = 0
     self.depth = depth
     self.node_id = node_id
     self.parent_id = parent_id
     self.parent_bound = parent_bound
     self.result = result
-    self.qp = qp
     self.cuts = cuts
     if bound is None:
       self.bound = Bounds()

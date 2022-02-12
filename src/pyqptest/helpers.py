@@ -22,6 +22,7 @@ from pyqp import bg_msk_mix
 from pyqp import bb, bb_diag, bb_nmsc, bb_mix
 # helper, utilities, et cetera.
 from pyqp.classes import QP, QPI, Bounds, BCParams, ADMMParams
+from pyqp.classes import ctr, tr, DEBUG_BB
 
 METHODS = collections.OrderedDict(
   [

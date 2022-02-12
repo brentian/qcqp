@@ -61,6 +61,10 @@ class MSKMscResult(MSKResult):
     self.solved = True
     self.unit_time = self.problem.getSolverDoubleInfo("optimizerTime")
     self.solve_time = round(end_time - start_time, 3)
+    self.release()
+  
+  def release(self):
+    self.problem.dispose()
 
 
 def msc_diag(
@@ -77,7 +81,8 @@ def msc_diag(
   Returns
   -------
   """
-  _unused = kwargs
+  _unused_args = args
+  _unused_kwargs = kwargs
   Q, q, A, a, b, sign, *_ = qp.unpack()
   
   m, n, dim = a.shape

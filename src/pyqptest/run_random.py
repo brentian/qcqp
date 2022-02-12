@@ -22,9 +22,10 @@
 import copy
 
 from pyqptest.helpers import *
-import pyqptest.gen_dnn as gen_dnn
+from pyqptest import run
 import pyqptest.gen_low_rank as gen_ncvx_fixed
 import pyqptest.gen_bqp as gen_bqp
+
 from pympler import tracker
 
 tr = tracker.SummaryTracker()
@@ -65,6 +66,7 @@ if __name__ == '__main__':
   else:
     bd = Bounds(shape=(n, 1), s=n / 10)
   
+  qp.name = problem_id
   ########################
   # collect results
   ########################
@@ -72,28 +74,7 @@ if __name__ == '__main__':
   evals = []
   results = {}
   # run methods
-  for k in params.selected_methods:
-    func = METHODS[k]
-    
-    qp1 = copy.deepcopy(qp)
-    special_params = QP_SPECIAL_PARAMS.get(k, {})
-    if qp1.Qpos is None or special_params.get("force_decomp", True):
-      qp1.decompose(**special_params)
-      print(f"redecomposition with method {special_params}")
-    try:
-      r = func(qp1, bd, params=params, admmparams=admmparams, **special_params)
-      reval = r.eval(problem_id)
-      evals.append({**reval.__dict__, "method": k})
-      results[k] = r
-    except Exception as e:
-      print(f"method {k} failed")
-      import logging
-      
-      logging.exception(e)
-  for k, r in results.items():
-    print(f"{k} benchmark @{r.relax_obj}")
-    r.check(qp)
-    print(r.xval[r.xval > 0])
+  run.run_single_instance(qp, bd, evals, results, params, admmparams)
   
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)

@@ -39,7 +39,6 @@ def qp_gurobi(
   ######################
   # === extra params
   ######################
-  time_limit = params.time_limit
   import gurobipy as grb
   st_time = time.time()
   Q, q, A, a, b, sign, al, au = qp.unpack()
@@ -91,7 +90,8 @@ def qp_gurobi(
         >= al[constr_num])
   
   model.setParam(grb.GRB.Param.NonConvex, 2)
-  model.setParam(grb.GRB.Param.TimeLimit, time_limit)
+  model.setParam(grb.GRB.Param.TimeLimit,  params.time_limit)
+  model.setParam(grb.GRB.Param.MIPGap, params.opt_eps)
   model.setObjective(obj_expr, sense=(grb.GRB.MAXIMIZE if sense == 'max' else grb.GRB.MINIMIZE))
   model.optimize()
   r = Result()

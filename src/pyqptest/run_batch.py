@@ -20,10 +20,15 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
 
-from .helpers import *
+import os
+
 from pympler import tracker
 
+from pyqptest import run
+from pyqptest.helpers import *
+
 tr = tracker.SummaryTracker()
+
 if __name__ == '__main__':
   
   parser.print_usage()
@@ -32,41 +37,31 @@ if __name__ == '__main__':
   admmparams = ADMMParams()
   params.produce_args(parser, METHOD_CODES)
   
-  qp = QP.read(params.fpath)
-  
-  n, m = qp.n, qp.m
-  # problem
-  problem_id = qp.name if qp.name else f"{n}:{m}:{0}"
-  
-  # start
-  bd = Bounds(xlb=qp.vl, xub=qp.vu)
-  
   evals = []
-  results = {}
   
-  # run methods
-  for k in params.selected_methods:
-    func = METHODS[k]
+  if not os.path.isdir(params.fpath):
+    raise ValueError(f"{params.fpath} is not a directory, cannot run batch mode")
+  
+  for ff in os.listdir(params.fpath):
+    if not ff.endswith('json'):
+      continue
+    abs_path = os.path.join(params.fpath, ff)
+    qp = QP.read(abs_path)
     
-    qp1 = copy.deepcopy(qp)
-    special_params = QP_SPECIAL_PARAMS.get(k, {})
-    if qp1.Qpos is None or special_params.get("force_decomp", True):
-      qp1.decompose(**special_params)
-      print(f"redecomposition with method {special_params}")
-    try:
-      r = func(qp1, bd, params=params, admmparams=admmparams, **special_params)
-      reval = r.eval(problem_id)
-      evals.append({**reval.__dict__, "method": k})
-      results[k] = r
-    except Exception as e:
-      print(f"method {k} failed")
-      import logging
-      
-      logging.exception(e)
-  for k, r in results.items():
-    print(f"{k} benchmark @{r.relax_obj}")
-    r.check(qp)
-    print(r.xval[r.xval > 0])
+    n, m = qp.n, qp.m
+    # problem
+    problem_id = qp.name if qp.name else f"{n}:{m}:{0}"
+    
+    # start
+    bd = Bounds(xlb=qp.vl, xub=qp.vu)
+    
+    results = {}
+    
+    # run methods
+    run.run_single_instance(qp, bd, evals, results, params, admmparams)
+    
+    if DEBUG_BB:
+      tr.print_diff()
   
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)
@@ -76,4 +71,3 @@ if __name__ == '__main__':
       'method'
     ]].to_latex()
   )
-  tr.print_diff()

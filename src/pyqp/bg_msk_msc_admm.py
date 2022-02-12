@@ -33,6 +33,10 @@ class MSKResultXi(MSKMscResult):
         self.problem.writeTask("/tmp/dump.mps")
     self.solved = True
     self.solve_time = round(end_time - start_time, 3)
+    self.release()
+  
+  def release(self):
+    self.problem.dispose()
   
   def check(self, qp: QP):
     pass
@@ -96,9 +100,13 @@ class MSKResultX(MSKMscResult):
     
     self.solved = True
     self.solve_time = round(end_time - start_time, 3)
+    self.release()
     
-    def check(self, qp: QP):
-      pass
+  def release(self):
+    self.problem.dispose()
+  
+  def check(self, qp: QP):
+    pass
 
 
 def msc_admm(
@@ -106,7 +114,7 @@ def msc_admm(
     bounds: MscBounds = None,
     verbose=True,
     admmparams: ADMMParams = ADMMParams(),
-    ws_result = None,
+    ws_result=None,
     *args,
     **kwargs
 ):
@@ -138,7 +146,7 @@ def msc_admm(
     xval = r.xval
     zval = r.zval
     yval = r.yval
-
+    
     r_xi = msc_subproblem_xi(
       yval, zval, mu, rho, qp, bounds, solve=False, verbose=False
     )
@@ -218,7 +226,7 @@ def msc_subproblem_x(  # follows the args
   model.constraint(expr.sub(expr.mul(qp.U[0].T, x), z), dom.equalsTo(0))
   if hasattr(bounds, 'zlb'):
     model.constraint(z, dom.inRange(bounds.zlb, bounds.zub))
-
+  
   for i in range(m):
     quad_expr = expr.dot(a[i], x)
     Ai = qp.A[i]
@@ -229,17 +237,17 @@ def msc_subproblem_x(  # follows the args
       )
       quad_expr = expr.add(quad_expr, s.index(i))
       quad_expr = expr.sub(quad_expr, expr.dot(qp.l[i] * np.ones((n, 1)), y))
-  
+    
     if qp.sign is not None:
       # unilateral case
       quad_dom = dom.equalsTo(b[i]) if sign[i] == 0 else dom.lessThan(b[i])
-  
+    
     else:
       # bilateral case
       # todo, fix this
       # quad_dom = dom.inRange(qp.al[i], qp.au[i])
       quad_dom = dom.lessThan(qp.au[i])
-  
+    
     model.constraint(quad_expr, quad_dom)
   
   ###################

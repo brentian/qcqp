@@ -15,8 +15,19 @@ PRECISION_OBJVAL = 4
 PRECISION_SOL = 6
 PRECISION_TIME = 3
 
-
 ###########
+
+#######################
+# MEMORY DEBUGGING
+#######################
+DEBUG_BB = True
+if DEBUG_BB:
+  from pympler import tracker, classtracker
+  
+  tr = tracker.SummaryTracker()
+  ctr = classtracker.ClassTracker()
+  ctr.create_snapshot()
+
 
 class Eval(object):
   

@@ -11,12 +11,18 @@ from queue import PriorityQueue
 import numpy as np
 import time
 
-import pyqp.bg_msk_msc
 from . import bg_msk, bg_cvx, bg_msk_msc, bg_msk_msc_admm, bg_msk_norm_admm
+from .bg_msk_msc import mf, MSKMscResult
 from .bb import BCParams, BBItem, Cuts, RLTCuttingPlane
 from .classes import MscBounds, Branch, Bounds, ADMMParams
 from .classes import QP, qp_obj_func, Result
 from .classes import PRECISION_OBJVAL, PRECISION_SOL
+from .classes import DEBUG_BB, ctr, tr
+
+if DEBUG_BB:
+  ctr.track_class(mf.Model)
+  ctr.track_class(MscBounds)
+  ctr.track_class(MSKMscResult)
 
 
 class MscBranch(Branch):
@@ -144,7 +150,20 @@ class MscBranch(Branch):
 
 
 class MscBBItem(BBItem):
-  pass
+  def __init__(
+      self, depth, node_id, parent_id, parent_bound, result,
+      bound: Bounds = None, cuts: Cuts = None,
+      backend_func=None, result_args=None
+  ):
+    super().__init__(depth, node_id, parent_id, parent_bound, result, bound, cuts)
+    self.bool_model_init = False
+    self.backend_func = backend_func
+    self.result_args = result_args
+  
+  def create_model(self, qp: QP):
+    self.result = self.backend_func(qp, self.bound, **self.result_args)
+    self.cuts.add_cuts(self.result, self.result_args['backend_name'])
+    self.bool_model_init = True
 
 
 class MscRLT(RLTCuttingPlane):
@@ -239,13 +258,13 @@ class BCInfo(object):
 
 
 def generate_child_items(
-    total_nodes, parent: MscBBItem, branch: MscBranch,
+    total_nodes, qp: QP, parent: MscBBItem, branch: MscBranch,
     verbose=False, backend_name='msk',
     backend_func=None, sdp_solver="MOSEK",
     with_shor: Result = None
 ):
   # left <=
-  _ = branch.imply_all_bounds(parent.qp, parent.bound)
+  _ = branch.imply_all_bounds(qp, parent.bound)
   if verbose:
     print(branch.__dict__)
   _current_node = total_nodes
@@ -254,19 +273,36 @@ def generate_child_items(
     if not _succ:
       # problem is infeasible:
       _r = Result()
+      
       _r.solved = True
       _r.relax_obj = -1e6
       _cuts = MscCuts()
+      _item = MscBBItem(
+        parent.depth + 1, _current_node,
+        parent.node_id, parent.result.relax_obj,
+        _r,  # result set to null
+      )
+      _item.bool_model_init = True
     else:
-      _r = backend_func(parent.qp, bounds=_bounds, solver=sdp_solver, verbose=verbose, solve=False,
-                        with_shor=with_shor, constr_d=False, rlt=True)
+      _result_args = dict(
+        solver=sdp_solver,
+        verbose=verbose,
+        solve=False,
+        backend_name=backend_name
+      )
       # add cuts to cut off
       _cuts = parent.cuts.generate_cuts(branch, _bounds, scope=_scope)
-      _cuts.add_cuts(_r, backend_name)
-    
-    _item = MscBBItem(parent.qp, parent.depth + 1, _current_node,
-                      parent.node_id, parent.result.relax_obj,
-                      _r, _bounds, _cuts)
+      
+      _item = MscBBItem(
+        parent.depth + 1,
+        _current_node,
+        parent.node_id,
+        parent.result.relax_obj,
+        None,  # result set to null
+        _bounds,
+        _cuts,
+        backend_func, _result_args  # func, arg to create result
+      )
     _current_node += 1
     yield _item
 
@@ -294,8 +330,6 @@ def bb_box(
   if backend_func is None:
     if backend_name == 'msk':
       backend_func = bg_msk_msc.msc_diag
-    elif backend_name == 'cvx':
-      backend_func = bg_cvx.msc_relaxation
     else:
       raise ValueError("not implemented")
   # choose backend
@@ -331,7 +365,8 @@ def bb_box(
   
   # global cuts
   glc = MscCuts()
-  root = MscBBItem(qp, 0, 0, -1, 1e8, result=root_r, bound=root_bound, cuts=glc)
+  root = MscBBItem(0, 0, -1, 1e8, result=root_r, bound=root_bound, cuts=glc)
+  root.bool_model_init = True
   bcinfo.ub = ub = root_r.relax_obj
   bcinfo.lb = -1e6
   
@@ -345,7 +380,7 @@ def bb_box(
     """
     :rtype: int
     """
-    r = item.result
+    
     parent_sdp_val = item.parent_bound
     ub = max(ub_dict.values())
     ub_dict.pop(item.node_id)
@@ -355,6 +390,11 @@ def bb_box(
       # prune this tree
       print(f"prune #{item.node_id} since parent pruned")
       return -1
+    
+    if not item.bool_model_init:
+      item.create_model(qp)
+    
+    r = item.result
     
     if not r.solved:
       r.solve(verbose=verbose, qp=qp)
@@ -450,7 +490,7 @@ def bb_box(
       return -1
     
     _ = generate_child_items(
-      bcinfo.counter_total_nodes, item, br,
+      bcinfo.counter_total_nodes, qp, item, br,
       sdp_solver=params.dual_backend,
       verbose=verbose,
       backend_name=backend_name,
@@ -469,20 +509,26 @@ def bb_box(
     k += 1
     
     priority, item = queue.get()
-    
     info = _process_item(item)
+    queue.task_done()
     if info == 1:
       break
-    
-    queue.task_done()
   
   bcinfo.best_r.nodes = bcinfo.counter_solved_nodes
   max_left = max(*ub_dict.values()) if ub_dict.__len__() > 0 else 1e6
   bcinfo.best_r.bound = min(bcinfo.best_r.relax_obj, max_left)
   bcinfo.best_r.solve_time = time.time() - start_time
+  
   print(f"//finished with {bcinfo.best_r.solve_time: .3f} s \n"
         f"//primal improvement {bcinfo.counter_primal_improv} \n"
-        f"//primal invocation {bcinfo.counter_primal_invoke}")
+        f"//primal invocation {bcinfo.counter_primal_invoke} \n"
+        f"//total nodes: {bcinfo.counter_total_nodes} \n"
+        f"//search nodes: {bcinfo.counter_solved_nodes} \n"
+        f"//unexpr nodes: {len(queue.queue)}")
+  
+  if DEBUG_BB:
+    ctr.create_snapshot()
+    ctr.stats.print_summary()
   
   with queue.mutex:
     queue.unfinished_tasks = 0
