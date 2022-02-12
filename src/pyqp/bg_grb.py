@@ -39,25 +39,23 @@ def qp_gurobi(
   ######################
   # === extra params
   ######################
-  time_limit = params.time_limit
   import gurobipy as grb
   st_time = time.time()
   Q, q, A, a, b, sign, al, au = qp.unpack()
-  lb, ub, ylb, yub = bounds.unpack()
+  lb, ub, ylb, yub, s = bounds.unpack()
   m, n, d = a.shape
   model = grb.Model()
   model.setParam(grb.GRB.Param.OutputFlag, verbose)
   
   indices = range(q.shape[0])
+  vtype = 'C' if relax else 'I'
+  x = model.addVars(indices, lb=-grb.GRB.INFINITY, vtype=vtype)
+  if lb is not None:
+    model.setAttr('lb', x, lb.flatten())
+    model.setAttr('ub', x, ub.flatten())
+  if s:
+    model.addConstr(grb.quicksum(xx * xx for xx in x.values()) <= bounds.sphere ** 2)
   
-  if relax:
-    x = model.addVars(indices, lb=lb.flatten(), ub=ub.flatten())
-  else:
-    x = model.addVars(indices, lb=lb.flatten(), ub=ub.flatten(), vtype=grb.GRB.INTEGER)
-  
-  if bounds.sphere:
-    model.addConstr(grb.quicksum(xx * xx for xx in x.values()) <= bounds.sphere)
-    
   obj_expr = grb.quicksum(Q[i][j] * x[i] * x[j] for i, j in itertools.product(indices, indices)) \
              + grb.quicksum(q[i][0] * x[i] for i in indices)
   if sign is not None:
@@ -92,10 +90,8 @@ def qp_gurobi(
         >= al[constr_num])
   
   model.setParam(grb.GRB.Param.NonConvex, 2)
-  model.setParam(grb.GRB.Param.TimeLimit, time_limit)
-  # model.setParam(grb.GRB.Param.Threads, 1)
-  # model.setParam(grb.GRB.Param.Cuts, 0)
-  
+  model.setParam(grb.GRB.Param.TimeLimit,  params.time_limit)
+  model.setParam(grb.GRB.Param.MIPGap, params.opt_eps)
   model.setObjective(obj_expr, sense=(grb.GRB.MAXIMIZE if sense == 'max' else grb.GRB.MINIMIZE))
   model.optimize()
   r = Result()
@@ -108,6 +104,6 @@ def qp_gurobi(
     r.relax_obj = model.ObjBoundC
     r.true_obj = model.ObjVal
     r.nodes = model.NodeCount
-  r.xval = np.array([i.x for i in x.values()]).reshape(q.shape).round(4)
+  r.xval = np.array([i.x for i in x.values()]).reshape(q.shape).round(6)
   
   return r

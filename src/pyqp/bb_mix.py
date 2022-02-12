@@ -13,9 +13,9 @@ from queue import PriorityQueue
 import numpy as np
 import time
 
-from . import bg_msk_mc, bg_msk, bg_msk_norm
+from . import bg_msk_mix, bg_msk, bg_msk_norm
 from .classes import qp_obj_func, QP, BCParams, Result, Bounds, Branch, CuttingPlane
-
+from .classes import PRECISION_OBJVAL, PRECISION_SOL
 
 cutting_method = {
   # 'rlt': add_rlt_cuts not needed in this case
@@ -24,7 +24,7 @@ cutting_method = {
 
 
 class MMSCBranch(Branch):
-  PRECISION = 6
+  PRECISION = PRECISION_SOL
   
   def __init__(self, res):
     self.xpivot = None
@@ -162,7 +162,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: MMSCBranch, verbos
 def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   print(json.dumps(params.__dict__(), indent=2))
   backend_func = kwargs.get('func')
-  backend_name = params.sdp_solver_backend
+  backend_name = params.dual_backend
   if backend_func is None:
     if backend_name == 'msk':
       backend_func = bg_msk_mc.socp
@@ -177,7 +177,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   k = 0
   start_time = time.time()
   print("solving root node")
-  root_r = backend_func(qp, root_bound, solver=params.sdp_solver_backend, verbose=True, solve=True)
+  root_r = backend_func(qp, root_bound, solver=params.dual_backend, verbose=True, solve=True)
   best_r = root_r
   
   # global cuts
@@ -248,14 +248,14 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     br.simple_vio_branch(x, rho, res, item.bound)
     br.generate_edges(r)
     left_item, right_item = generate_child_items(
-      total_nodes, item, br, sdp_solver=params.sdp_solver_backend, verbose=verbose, backend_name=backend_name,
+      total_nodes, item, br, sdp_solver=params.dual_backend, verbose=verbose, backend_name=backend_name,
       backend_func=backend_func)
     total_nodes += 2
-    next_priority = - r.relax_obj.round(3)
+    next_priority = - r.relax_obj.round(PRECISION_OBJVAL)
     queue.put((next_priority, right_item))
     queue.put((next_priority, left_item))
-    ub_dict[left_item.node_id] = r.relax_obj.round(3)
-    ub_dict[right_item.node_id] = r.relax_obj.round(3)
+    ub_dict[left_item.node_id] = r.relax_obj.round(PRECISION_OBJVAL)
+    ub_dict[right_item.node_id] = r.relax_obj.round(PRECISION_OBJVAL)
     #
     
     k += 1

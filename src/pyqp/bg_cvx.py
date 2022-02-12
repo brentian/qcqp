@@ -39,11 +39,11 @@ class CVXMscResult(CVXResult):
         except cvx.error.SolverError as e:
             status = 'failed'
         if status == 'optimal':
-            self.xval = self.xvar.value.round(4)
-            self.yval = self.yvar.value.round(4)
-            self.zval = self.zvar.value.round(4)
-            self.Yval = np.hstack([xx.value.round(4) for xx in self.Yvar])
-            self.Zval = np.hstack([xx.value.round(4) for xx in self.Zvar])
+            self.xval = self.xvar.value.round(6)
+            self.yval = self.yvar.value.round(6)
+            self.zval = self.zvar.value.round(6)
+            self.Yval = np.hstack([xx.value.round(6) for xx in self.Yvar])
+            self.Zval = np.hstack([xx.value.round(6) for xx in self.Zvar])
             self.relax_obj = self.obj_expr.value
         else:  # infeasible
             self.relax_obj = -1e6

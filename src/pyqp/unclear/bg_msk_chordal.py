@@ -13,7 +13,7 @@ from .classes import MscBounds
 
 class MSKChordalResult(MSKResult):
   extract_arr_of_vars = \
-    lambda self, x_arr: [xx.level().reshape(xx.getShape()).round(4) for xx in x_arr]
+    lambda self, x_arr: [xx.level().reshape(xx.getShape()).round(6) for xx in x_arr]
   
   def __init__(self, qp: QP, problem: mf.Model):
     super().__init__(qp, problem)
@@ -645,7 +645,7 @@ def msc_part_relaxation(
   # with shor results
   if with_shor is not None:
     # use shor as ub
-    shor_ub = with_shor.relax_obj.round(4)
+    shor_ub = with_shor.relax_obj.round(6)
     model.constraint(
       true_obj_expr, dom.lessThan(shor_ub)
     )

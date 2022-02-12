@@ -173,7 +173,7 @@ def generate_child_items(
 
 def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr_d=False, rlt=True, **kwargs):
   print(json.dumps(params.__dict__(), indent=2))
-  backend_name = params.sdp_solver_backend
+  backend_name = params.dual_backend
   if backend_name == 'msk':
     backend_func = pyqp.bg_msk_msc.msc
   elif backend_name == 'cvx':
@@ -285,7 +285,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
       with_shor=r_shor,
     )
     total_nodes += 2
-    next_priority = - r.relax_obj.round(3)
+    next_priority = - r.relax_obj.round(PRECISION_OBJVAL)
     queue.put((next_priority, right_item))
     queue.put((next_priority, left_item))
     #

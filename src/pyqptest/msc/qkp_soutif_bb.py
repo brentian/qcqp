@@ -45,7 +45,7 @@ if __name__ == '__main__':
   
   # global args
   params = bb_msc.BCParams()
-  params.sdp_solver_backend = 'msk'
+  params.dual_backend = 'msk'
   params.relax = relax
   params.time_limit = 30
   params.opt_eps = 1e-2
@@ -89,7 +89,7 @@ if __name__ == '__main__':
   for k, r in results.items():
     print(f"{k} benchmark @{r.true_obj}")
     print(f"{k} benchmark x\n"
-          f"{r.xval.round(3)}")
+          f"{r.xval.round(PRECISION_OBJVAL)}")
     r.check(qp)
   
   df_eval = pd.DataFrame.from_records(evals)

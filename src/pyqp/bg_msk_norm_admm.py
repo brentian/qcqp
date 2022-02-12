@@ -1,15 +1,15 @@
-from pyqp.classes import BCParams
+"""
+admm based on the norm constrained formulations,
+using bilinear term:
+- ξ · x = ρ · e
+- ρ = (ξ ◦ x)
+"""
 from .bg_msk_msc import *
 import time
 
+from .classes import ADMMParams
 
-class ADMMParams(BCParams):
-  max_iteration = 10000
-  logging_interval = 1
-  time_limit = 60
-  obj_gap = 1e-8
-  res_gap = 1e-8
-  
+
 class MSKResultXi(MSKMscResult):
   """Result keeper for ADMM subproblem
   for (xi)
@@ -64,21 +64,21 @@ class MSKResultX(MSKMscResult):
       status = 'failed'
     end_time = time.time()
     if status == mf.ProblemStatus.PrimalAndDualFeasible:
-      self.xval = self.xvar.level().reshape(self.xvar.getShape()).round(4)
-      self.zval = self.zvar.level().reshape(self.zvar.getShape()).round(4)
+      self.xval = self.xvar.level().reshape(self.xvar.getShape()).round(6)
+      self.zval = self.zvar.level().reshape(self.zvar.getShape()).round(6)
       self.Zval = np.hstack(
         [
-          xx.level().reshape(self.xvar.getShape()).round(4)
+          xx.level().reshape(self.xvar.getShape()).round(6)
           if xx is not None else np.zeros(self.xvar.getShape())
           for xx in self.Zvar
         ]
       )
       if self.yvar is not None:
-        self.yval = self.yvar.level().reshape(self.yvar.getShape()).round(4)
+        self.yval = self.yvar.level().reshape(self.yvar.getShape()).round(6)
       if self.Yvar is not None:
         self.Yval = np.hstack(
           [
-            xx.level().reshape(self.xvar.getShape()).round(4)
+            xx.level().reshape(self.xvar.getShape()).round(6)
             if xx is not None else np.zeros(self.xvar.getShape())
             for xx in self.Yvar
           ]
@@ -87,7 +87,7 @@ class MSKResultX(MSKMscResult):
       if self.Dvar is not None:
         self.Dval = np.hstack(
           [
-            xx.level().reshape((2, 1)).round(4) if xx is not None else np.zeros(
+            xx.level().reshape((2, 1)).round(6) if xx is not None else np.zeros(
               (2, 1)
             ) for xx in self.Dvar
           ]
@@ -112,10 +112,9 @@ class MSKResultX(MSKMscResult):
 def msc_admm(
   qp: QP,  # the QP instance, must be decomposed by method II
   bounds: MscBounds = None,
-  sense="max",
   verbose=False,
-  solve=True,
   admmparams: ADMMParams = ADMMParams(),
+  ws_result = None,
   *args,
   **kwargs
 ):
@@ -128,7 +127,10 @@ def msc_admm(
   ########################
   # initialization
   ########################
-  xval = np.ones((n, dim))
+  if ws_result is None:
+    xval = np.ones((n, dim))
+  else:
+    xval = ws_result.xval
   sval = (xval.T @ xval).trace()
   rho = 1
   kappa = 0
@@ -140,13 +142,13 @@ def msc_admm(
   start_time = time.time()
   while _iter < admmparams.max_iteration:
     r = msc_subproblem_x(
-      sval, xival, kappa, mu, rho, qp, bounds, solve=False, verbose=verbose
+      sval, xival, kappa, mu, rho, qp, bounds, solve=False, verbose=False
     )
     r.solve()
     xval = r.xval
     tval = r.tval
     r_xi = msc_subproblem_xi(
-      xval, tval, kappa, mu, rho, qp, bounds, solve=False, verbose=verbose
+      xval, tval, kappa, mu, rho, qp, bounds, solve=False, verbose=False
     )
     r_xi.solve()
     sval = r_xi.sval
@@ -157,11 +159,14 @@ def msc_admm(
     gap = abs((r.bound - r.relax_obj) / (r.bound + 1e-2))
     curr_time = time.time()
     adm_time = curr_time - start_time
-    if _iter % admmparams.logging_interval == 0:
+    if verbose and _iter % admmparams.logging_interval == 0:
       print(
         f"//{curr_time - start_time: .2f}, @{_iter} # alm: {r.relax_obj: .4f} gap: {gap:.3%} norm t - s: {residual_ts: .4e}, 𝜉x - t: {residual_xix: .4e}"
       )
-    if (gap < admmparams.obj_gap) or (max(abs(residual_ts), abs(residual_xix)) < admmparams.res_gap):
+    if (gap < admmparams.obj_gap) and (max(abs(residual_ts), abs(residual_xix)) < admmparams.res_gap):
+      print(
+        f"//{curr_time - start_time: .2f}, @{_iter} # alm: {r.relax_obj: .4f} gap: {gap:.3%} norm t - s: {residual_ts: .4e}, 𝜉x - t: {residual_xix: .4e}"
+      )
       print(f"terminited by gap")
       break
     if adm_time >= admmparams.time_limit:
@@ -190,7 +195,6 @@ def msc_subproblem_x(  # follows the args
     *args,
     **kwargs):
   """
-  The many-small-cone approach
   Returns
   -------
   """

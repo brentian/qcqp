@@ -20,50 +20,54 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
 
-from .helpers import *
+import os
+
+from pympler import tracker
+
+from pyqptest import run
+from pyqptest.helpers import *
+
+tr = tracker.SummaryTracker()
 
 if __name__ == '__main__':
-
+  
+  parser.print_usage()
+  args = parser.parse_args()
   params = BCParams()
   admmparams = ADMMParams()
-  kwargs, r_methods = params.produce_args(parser, METHOD_CODES)
-  _ = admmparams.produce_args(parser, METHOD_CODES)
-
-  qp = QP.read(params.fpath)
-
-  n, m = qp.n, qp.m
-  # problem
-  problem_id = qp.name if qp.name else f"{n}:{m}:{0}"
-  # start
-  bd = Bounds(xlb=qp.vl, xub=qp.vu)
-
+  params.produce_args(parser, METHOD_CODES)
+  
   evals = []
-  results = {}
-  # run methods
-  for k in r_methods:
-    func = METHODS[k]
-    qp1 = copy.deepcopy(QP)
-    if qp.Qpos is None:
-      qp1.decompose(**QP_SPECIAL_PARAMS.get(k, {}))
-    try:
-      r = func(qp1, bd, params=params, admmparams=admmparams)
-    except Exception as e:
-      print(f"method {k} failed")
-    reval = r.eval(problem_id)
-    evals.append({**reval.__dict__, "method": k})
-    results[k] = r
-
-  for k, r in results.items():
-    print(f"{k} benchmark @{r.relax_obj}")
-    print(f"{k} benchmark x\n" f"{r.xval.round(3)}")
-    r.check(qp)
-
+  
+  if not os.path.isdir(params.fpath):
+    raise ValueError(f"{params.fpath} is not a directory, cannot run batch mode")
+  
+  for ff in os.listdir(params.fpath):
+    if not ff.endswith('json'):
+      continue
+    abs_path = os.path.join(params.fpath, ff)
+    qp = QP.read(abs_path)
+    
+    n, m = qp.n, qp.m
+    # problem
+    problem_id = qp.name if qp.name else f"{n}:{m}:{0}"
+    
+    # start
+    bd = Bounds(xlb=qp.vl, xub=qp.vu)
+    
+    results = {}
+    
+    # run methods
+    run.run_single_instance(qp, bd, evals, results, params, admmparams)
+    
+    if DEBUG_BB:
+      tr.print_diff()
+  
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)
-  print(r.xval)
   print(
     df_eval[[
-      'prob_num', 'solve_time', 'best_bound', 'best_obj', 'relax_obj', 'nodes',
+      'prob_num', 'solve_time', 'best_bound', 'best_obj', 'node_time', 'nodes',
       'method'
     ]].to_latex()
   )

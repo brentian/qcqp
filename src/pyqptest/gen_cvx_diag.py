@@ -1,12 +1,12 @@
 """
 Construct D.C. matrices,
- By Q = Q+ + D
-  xQx = xQ+x + D•X
- Q+ is psd and D is diagonal
+ By Q = D - Q-
+  xQx = - xQ-x + D•X
+ Q- is psd and D is diagonal
 """
 import numpy as np
 from pyqp.bg_grb import *
-from pyqp.bg_msk_mc import *
+from pyqp.bg_msk_mix import *
 from pyqp.instances import QPInstanceUtils
 
 
@@ -92,8 +92,8 @@ def sdp(qp):
   model.objective(mf.ObjectiveSense.Maximize, obj_expr)
   model.solve()
   xx = x.level()
-  print(x.level().reshape((n, 1)).round(4))
-  print(Z.level().reshape((n + 1, n + 1)).round(4))
+  print(x.level().reshape((n, 1)).round(6))
+  print(Z.level().reshape((n + 1, n + 1)).round(6))
   print(y.level()[0] - xx@Qneg @ Qneg.T @ xx)
 
 if __name__ == '__main__':

@@ -38,7 +38,7 @@ class SOCPBranch(Branch):
     _succeed = False
     n, m = self.zpivot
     _pivot = (m, n)
-    _val = self.zpivot_val.round(4)
+    _val = self.zpivot_val.round(self.PRECISION)
     newbl = MscBounds(*bounds.unpack())
     _lb, _ub = newbl.zlb[(*_pivot, 0)], newbl.zub[(*_pivot, 0)]
     if left and _val <= _ub:
@@ -183,7 +183,7 @@ def generate_child_items(
 
 def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr_d=False, rlt=True, **kwargs):
   print(json.dumps(params.__dict__(), indent=2))
-  backend_name = params.sdp_solver_backend
+  backend_name = params.dual_backend
   if backend_name == 'msk':
     backend_func = pyqp.bg_msk_msc.socp_relaxation
   else:
@@ -298,7 +298,7 @@ def bb_box(qp: QP, verbose=False, params=BCParams(), bool_use_shor=False, constr
     )
     for next_item in _:
       total_nodes += 1
-      next_priority = - r.relax_obj.round(3)
+      next_priority = - r.relax_obj.round(PRECISION_OBJVAL)
       queue.put((next_priority, next_item))
       ub_dict[next_item.node_id] = r.relax_obj
     #

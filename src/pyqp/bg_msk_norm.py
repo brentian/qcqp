@@ -52,7 +52,7 @@ class MSKNMscResult(MSKResult):
       self.rhoval = self.rhovar.level().reshape(self.rhovar.getShape())
       
       # other regular MSC results
-      self.xval = self.xvar.level().reshape(self.xvar.getShape()).round(4)
+      self.xval = self.xvar.level().reshape(self.xvar.getShape()).round(self.PRECISION)
       self.bound = self.relax_obj = self.problem.primalObjValue()
       if qp is not None:
         self.true_obj = qp_obj_func(qp.Q, qp.q, self.xval)
@@ -106,8 +106,8 @@ class MSKSocpResult(MSKResult):
         self.tval = self.tvar.level()[0]
       self.rhoval = self.rhovar.level().reshape(self.rhovar.getShape())
       # other SOCP results
-      self.xval = self.xvar.level().reshape(self.xvar.getShape()).round(4)
-      self.yval = self.yvar.level().reshape(self.yvar.getShape()).round(4)
+      self.xval = self.xvar.level().reshape(self.xvar.getShape()).round(self.PRECISION)
+      self.yval = self.yvar.level().reshape(self.yvar.getShape()).round(self.PRECISION)
       self.bound = self.relax_obj = self.problem.primalObjValue()
       if qp is not None:
         self.true_obj = qp_obj_func(qp.Q, qp.q, self.xval)
@@ -142,7 +142,7 @@ def msc_diag(
     raise ValueError(f"cannot use {qp.decom_method}")
   m, n, dim = a.shape
   xshape = (n, dim)
-  model = mf.Model('many_small_cone_msk')
+  model = mf.Model('msc_diagonal_msk')
   
   if verbose:
     model.setLogHandler(sys.stdout)
@@ -320,14 +320,23 @@ def socp(
   rho = qcones.slice([1, 0], [2, n]).reshape(n, 1)
   x = qcones.slice([2, 0], [3, n]).reshape(n, 1)
   model.constraint(ones, dom.equalsTo(0.5))
-  model.constraint(x, dom.inRange(bounds.xlb, bounds.xub))
-  # s = x^Tx
-  s = model.variable("s")
+  if bounds.xlb is not None:
+    model.constraint(x, dom.inRange(bounds.xlb, bounds.xub))
+    # s = x^Tx
+    s = model.variable("s", dom.lessThan(bounds.sphere ** 2))
+  else:
+    raise ValueError("did not defined bounds properly")
   # y = x^TRR^Tx
   y = model.variable("y", [m + 1])
   # s = rho^Te
   model.constraint(
     expr.sub(expr.sum(rho), s), dom.equalsTo(0)
+  )
+  
+  # RLT for ρ = (ξ ◦ x)
+  model.constraint(
+    expr.sub(rho, expr.mulElm(bounds.xub + bounds.xlb, x)),
+    dom.lessThan(-bounds.xlb * bounds.xub)
   )
   
   # R.T x = Z
@@ -353,19 +362,6 @@ def socp(
       ]),
       dom.lessThan(0)
     )
-  
-  # RLT for ρ = (ξ ◦ x)
-  model.constraint(
-    expr.sub(rho, expr.mulElm(bounds.xub + bounds.xlb, x)),
-    dom.lessThan(-bounds.xlb * bounds.xub)
-  )
-  #####################
-  # as a whole instead of separate
-  #####################
-  # model.constraint(
-  #   expr.sum(expr.sub(rho, expr.mulElm(bounds.xub + bounds.xlb, x))),
-  #   dom.lessThan((-bounds.xlb * bounds.xub).sum())
-  # )
   
   for i in range(m):
     

@@ -37,7 +37,7 @@ if __name__ == '__main__':
     verbose = False
     evals = []
     params = BCParams()
-    params.sdp_solver_backend = backend
+    params.dual_backend = backend
     for n in [20, 50, 80]:
         for m in [5, 10, 20]:
             for i in range(int(instances)):
@@ -57,12 +57,12 @@ if __name__ == '__main__':
 
                 print(f"gurobi benchmark @{r_grb_relax.true_obj}")
                 print(f"gurobi benchmark x\n"
-                      f"{r_grb_relax.xval.round(3)}")
+                      f"{r_grb_relax.xval.round(PRECISION_OBJVAL)}")
 
                 r_grb_relax.check(qp)
                 print(f"branch-and-cut @{r_bb.true_obj}")
                 print(f"branch-and-cut x\n"
-                      f"{r_bb.xval.round(3)}")
+                      f"{r_bb.xval.round(PRECISION_OBJVAL)}")
                 r_bb.check(qp)
 
                 eval_bb = r_bb.eval(problem_id)

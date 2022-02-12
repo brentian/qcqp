@@ -15,26 +15,8 @@ import time
 
 from . import bg_msk, bg_cvx, bg_msk_norm
 from .classes import qp_obj_func, QP, BCParams, Result, Bounds, Branch, CuttingPlane
-
-
-class SDPSmallCone(CuttingPlane):
-  def __init__(self, data):
-    self.data = data
-  
-  def serialize_to_msk(self, *args, **kwargs):
-    pass
-  
-  @staticmethod
-  def apply(branch, bounds):
-    # todo, find a way to implement this
-    # or to show it is not valid.
-    raise ValueError("not finished!")
-    i = branch.xpivot
-    j = branch.xminor
-    u_i, l_i = bounds.xub[i, 0], bounds.xlb[i, 0]
-    u_j, l_j = bounds.xub[j, 0], bounds.xlb[j, 0]
-    return SDPSmallCone((i, j, u_i, l_i, u_j, l_j))
-
+from .ex_structure import Disjunctions, DisjunctionCuttingPlane
+from .classes import PRECISION_OBJVAL, PRECISION_SOL
 
 cutting_method = {
   # 'rlt': add_rlt_cuts not needed in this case
@@ -43,7 +25,6 @@ cutting_method = {
 
 
 class NMSCBranch(Branch):
-  PRECISION = 6
   
   def __init__(self, res):
     self.xpivot = None
@@ -76,6 +57,7 @@ class NMSCBranch(Branch):
 class Cuts(object):
   
   def __init__(self):
+    # type -> iterable
     self.cuts = {}
   
   def generate_cuts(self, branch: Branch, bounds: Bounds, scope=None):
@@ -86,15 +68,13 @@ class Cuts(object):
     new_cuts = Cuts()
     for k, v in scope.items():
       val = v(branch, bounds)
+      # add parent cut
       new_cuts.cuts[k] = self.cuts.get(k, []) + [val]
     
     return new_cuts
   
   def add_cuts(self, r: Result, backend_name):
-    if backend_name == 'cvx':
-      assert isinstance(r, bg_cvx.CVXResult)
-      self.add_cuts_to_cvx(r)
-    elif backend_name == 'msk':
+    if backend_name == 'msk':
       assert isinstance(r, bg_msk.MSKResult)
       self.add_cuts_to_msk(r)
     else:
@@ -135,7 +115,6 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
   left_bounds = Bounds(*parent.bound.unpack())
   left_succ = left_bounds.update_bounds_from_branch(branch, left=True)
   
-  # left_r = backend_func(parent.qp, left_bounds, solver=sdp_solver, verbose=verbose, solve=False)
   left_r = backend_func(parent.qp, left_bounds, solver=sdp_solver, verbose=verbose, solve=False, r_parent=parent.result)
   if not left_succ:
     # problem is infeasible:
@@ -145,6 +124,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
   else:
     # add cuts to cut off
     left_cuts = parent.cuts.generate_cuts(branch, left_bounds)
+    left_cuts.cuts['disjunction'] = parent.cuts.cuts['disjunction']
     left_cuts.add_cuts(left_r, backend_name)
   
   left_item = BBItem(parent.qp, parent.depth + 1, total_nodes, parent.node_id, parent.result.relax_obj, left_r,
@@ -165,6 +145,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
   else:
     # add cuts to cut off
     right_cuts = parent.cuts.generate_cuts(branch, right_bounds)
+    right_cuts.cuts['disjunction'] = parent.cuts.cuts['disjunction']
     right_cuts.add_cuts(right_r, backend_name)
   
   right_item = BBItem(parent.qp, parent.depth + 1, total_nodes + 1, parent.node_id, parent.result.relax_obj, right_r,
@@ -175,7 +156,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
 def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   print(json.dumps(params.__dict__(), indent=2))
   backend_func = kwargs.get('func')
-  backend_name = params.sdp_solver_backend
+  backend_name = params.dual_backend
   if backend_func is None:
     if backend_name == 'msk':
       backend_func = bg_msk_norm.msc_diag
@@ -190,21 +171,55 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   k = 0
   start_time = time.time()
   print("solving root node")
-  root_r = backend_func(qp, root_bound, solver=params.sdp_solver_backend, verbose=True, solve=True)
-  best_r = root_r
+  #################################
+  # we can split root node again
+  #   by structural disjunctions...
+  #################################
   
-  # global cuts
-  glc = Cuts()
-  
-  root = BBItem(qp, 0, 0, -1, 1e8, result=root_r, bound=root_bound, cuts=glc)
+  root_num = 0
   total_nodes = 1
-  ub = root_r.relax_obj
+  ub = 1e8
   lb = -1e6
-  
-  ub_dict = {0: ub}
-  queue = PriorityQueue()
-  queue.put((-ub, root))
+  ub_dict = {}
   feasible = {}
+  queue = PriorityQueue()
+  
+  struct = Disjunctions(qp)
+  struct.create_disjunctions()
+  if struct.bool_created:
+    for ct in struct.disjunctions:
+      root_r = backend_func(qp, root_bound, solver=params.dual_backend, verbose=False, solve=False)
+      best_r = root_r
+      
+      # global cuts
+      glc = Cuts()
+      glc.cuts['disjunction'] = [ct]
+      
+      glc.add_cuts(root_r, backend_name)
+      root = BBItem(qp, depth=0, node_id=root_num, parent_id=-1, parent_bound=ub, result=root_r, bound=root_bound,
+                    cuts=glc)
+      
+      ub_dict[root_num] = ub
+      root_num += 1
+      total_nodes += 1
+      queue.put((-ub, root))
+  
+  else:
+    print(f"no global disjunctions defined")
+    root_r = backend_func(qp, root_bound, solver=params.dual_backend, verbose=False, solve=False)
+    best_r = root_r
+    
+    # global cuts
+    glc = Cuts()
+    glc.cuts['disjunction'] = []
+    
+    root = BBItem(qp, depth=0, node_id=root_num, parent_id=-1, parent_bound=ub, result=root_r, bound=root_bound,
+                  cuts=glc)
+    queue.put((-ub, root))
+    ub_dict[root_num] = ub
+    
+    root_num += 1
+    total_nodes += 1
   
   while not queue.empty():
     priority, item = queue.get()
@@ -213,10 +228,12 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     
     parent_sdp_val = item.parent_bound
     
+    ub = max(ub_dict.values())
+    ub_dict.pop(item.node_id)
+    
     if parent_sdp_val < lb:
       # prune this tree
       print(f"prune #{item.node_id} since parent pruned")
-      ub_dict.pop(item.node_id)
       continue
     
     if not r.solved:
@@ -226,11 +243,8 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     if r.relax_obj < lb:
       # prune this tree
       print(f"prune #{item.node_id} by bound")
-      ub_dict.pop(item.node_id)
       continue
     
-    ub = max(ub_dict.values())
-    ub_dict.pop(item.node_id)
     if r.true_obj > lb:
       best_r = r
       lb = r.true_obj
@@ -260,14 +274,14 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     br = NMSCBranch(res)
     br.simple_vio_branch(x, rho, res, item.bound)
     left_item, right_item = generate_child_items(
-      total_nodes, item, br, sdp_solver=params.sdp_solver_backend, verbose=verbose, backend_name=backend_name,
+      total_nodes, item, br, sdp_solver=params.dual_backend, verbose=verbose, backend_name=backend_name,
       backend_func=backend_func)
     total_nodes += 2
-    next_priority = - r.relax_obj.round(3)
+    next_priority = - r.relax_obj.round(PRECISION_OBJVAL)
     queue.put((next_priority, right_item))
     queue.put((next_priority, left_item))
-    ub_dict[left_item.node_id] = r.relax_obj.round(3)
-    ub_dict[right_item.node_id] = r.relax_obj.round(3)
+    ub_dict[left_item.node_id] = r.relax_obj.round(PRECISION_OBJVAL)
+    ub_dict[right_item.node_id] = r.relax_obj.round(PRECISION_OBJVAL)
     #
     
     k += 1

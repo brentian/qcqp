@@ -9,13 +9,13 @@ from .primal_rd import PRIMAL_METHOD_ID
 
 try:
   import mosek.fusion as mf
-
+  
   expr = mf.Expr
   dom = mf.Domain
   mat = mf.Matrix
 except Exception as e:
   import logging
-
+  
   logging.exception(e)
 
 from .classes import Result, qp_obj_func, QP, Bounds
@@ -40,15 +40,15 @@ class MSKResult(Result):
     self.res = 0
     self.res_norm = 0
     self.solved = False
-
+  
   def solve(self, primal=0, feas_eps=1e-4):
     self.problem.solve()
     self.xval = self.xvar.level().reshape(self.xvar.getShape())
     self.yval = self.yvar.level().reshape(self.yvar.getShape())
-    self.relax_obj = self.problem.primalObjValue()
+    self.relax_obj = self.bound = self.problem.primalObjValue()
     self.solved = True
-    self.solve_time = self.problem.getSolverDoubleInfo("optimizerTime")
-    self.total_time = time.time() - self.start_time
+    self.unit_time = self.problem.getSolverDoubleInfo("optimizerTime")
+    self.solve_time = time.time() - self.start_time
     self.res = np.abs(self.yval - self.xval @ self.xval.T)
     self.res_norm = self.res.max()
     # derive primal solution
@@ -83,22 +83,24 @@ def shor(qp: QP,
   _unused = kwargs
   st_time = time.time()
   Q, q, A, a, b, sign, *_ = qp.unpack()
-  lb, ub, ylb, yub = bounds.unpack()
+  lb, ub, ylb, yub, *_ = bounds.unpack()
   m, n, d = a.shape
   xshape = (n, d)
   model = mf.Model('shor_msk')
-
+  
   if verbose:
     model.setLogHandler(sys.stdout)
-
+  
   Z = model.variable("Z", dom.inPSDCone(n + 1))
   Y = Z.slice([0, 0], [n, n])
   x = Z.slice([0, n], [n, n + 1])
-
+  
   # bounds
-  model.constraint(expr.sub(Y.diag(), x), dom.lessThan(0))
+  model.constraint(expr.sub(Y.diag(), expr.mulElm(ub.flatten(), expr.flatten(x))), dom.lessThan(0))
   model.constraint(Z.index(n, n), dom.equalsTo(1.))
-
+  if bounds.sphere:
+    model.constraint(expr.sum(Y.diag()), dom.lessThan(bounds.sphere**2))
+  
   for i in range(m):
     if sign[i] == 0:
       model.constraint(
@@ -127,7 +129,7 @@ def shor(qp: QP,
   r.solve()
   if verbose:
     print(r.build_time, r.total_time, r.solve_time)
-
+  
   return r
 
 
@@ -153,40 +155,40 @@ def dshor(qp: QP,
   m, n, d = a.shape
   xshape = (n, d)
   model = mf.Model('shor_msk')
-
+  
   if verbose:
     model.setLogHandler(sys.stdout)
-
+  
   Z = model.variable("Z", dom.inPSDCone(n + 1))
   Y = Z.slice([0, 0], [n, n])
   y = Z.slice([0, n], [n, n + 1])
-
+  
   # lambda, mu, v
   l = model.variable("l", [m], dom.greaterThan(0))
   mu = model.variable("m", [n], dom.greaterThan(0))
   v = model.variable("v", [n], dom.greaterThan(0))
   V = model.variable("V", [n, n], dom.greaterThan(0))
   model.constraint(expr.sub(V.diag(), v), dom.equalsTo(0))
-
+  
   sumA = 0.0
   suma = np.zeros(q.shape)
   for idx in range(m):
     sumA = expr.add(sumA, expr.mul(A[idx], l.index(idx)))
     suma = expr.add(suma, expr.mul(a[idx], l.index(idx)))
-
+  
   model.constraint(
     expr.add(expr.add(expr.sub(-Q, Y), expr.mulElm(np.eye(n), V)), sumA),
     dom.equalsTo(0))
   sum_temp = expr.sub(expr.sub(mu, expr.mul(2, y)), v)
   model.constraint(expr.add(expr.add(sum_temp, suma), -q), dom.greaterThan(0))
-
+  
   # objectives
   obj_expr = expr.add(expr.add(expr.dot(l, b), Z.index(n, n)), expr.sum(mu))
   # obj_expr = expr.add(1, expr.sum(mu))
   model.objective(
     mf.ObjectiveSense.Minimize
     if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr)
-
+  
   r = MSKResult()
   r.xvar = y
   r.yvar = Y
@@ -194,7 +196,7 @@ def dshor(qp: QP,
   r.problem = model
   if not solve:
     return r
-
+  
   model.solve()
   xval = y.level().reshape(xshape)
   r.yval = Y.level().reshape((n, n))
@@ -203,5 +205,5 @@ def dshor(qp: QP,
   r.true_obj = qp_obj_func(Q, q, xval)
   r.solved = True
   r.solve_time = model.getSolverDoubleInfo("optimizerTime")
-
+  
   return r

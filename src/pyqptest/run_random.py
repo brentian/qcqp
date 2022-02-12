@@ -22,14 +22,13 @@
 import copy
 
 from pyqptest.helpers import *
-from pyqptest.gen_qp_dnn import gen_dnn
+from pyqptest import run
+import pyqptest.gen_low_rank as gen_ncvx_fixed
+import pyqptest.gen_bqp as gen_bqp
 
-parser.add_argument(
-  "--sparsity",
-  type=float,
-  default=0.5,
-  help="sparsity of the problem, 0-1, 1 means the most dense"
-)
+from pympler import tracker
+
+tr = tracker.SummaryTracker()
 
 parser.add_argument(
   "--seed",
@@ -44,51 +43,44 @@ if __name__ == '__main__':
   args = parser.parse_args()
   params = BCParams()
   admmparams = ADMMParams()
-  kwargs, r_methods = params.produce_args(parser, METHOD_CODES)
-  _ = admmparams.produce_args(parser, METHOD_CODES)
+  params.produce_args(parser, METHOD_CODES)
   
   np.random.seed(args.seed)
-  n, m, ptype = args.n, args.m, args.problem_type
+  n, m, ptype, btype = args.n, args.m, args.problem_type, args.bound_type
+  # problem dtls
+  pdtl_str = args.problem_dtls
+  bdtl_str = args.bound_dtls
   # problem
   problem_id = f"{n}:{m}:{0}"
   # start
-  # qp = QPI.block(n, m, r=2, eps=0.5)
   if ptype == 0:
-    qp = QPI.normal(int(n), int(m), rho=args.sparsity)
+    qp = QPI.normal(int(n), int(m), rho=0.5)
+  elif ptype == 1:
+    qp = gen_bqp.generate(int(n), pdtl_str)
+  elif ptype == 2:
+    qp = gen_ncvx_fixed.generate(int(n), int(m), pdtl_str)
   else:
-    qp = gen_dnn(int(n), int(m))
-  bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
-  # bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.random.random((n, 1)))
+    raise ValueError("no such problem type defined")
+  if btype == 0:
+    bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
+  else:
+    bd = Bounds(shape=(n, 1), s=n / 10)
+  
+  qp.name = problem_id
+  ########################
+  # collect results
+  ########################
   
   evals = []
   results = {}
   # run methods
-  for k in r_methods:
-    func = METHODS[k]
-    
-    qp1 = copy.deepcopy(qp)
-    special_params = QP_SPECIAL_PARAMS.get(k, {})
-    if qp1.Qpos is None or special_params.get("force_decomp", True):
-      qp1.decompose(special_params)
-    try:
-      r = func(qp1, bd, params=params, admmparams=admmparams)
-      reval = r.eval(problem_id)
-      evals.append({**reval.__dict__, "method": k})
-      results[k] = r
-    except Exception as e:
-      raise e
-      print(f"method {k} failed")
-  
-  for k, r in results.items():
-    print(f"{k} benchmark @{r.relax_obj}")
-    r.check(qp)
-    print(r.xval)
+  run.run_single_instance(qp, bd, evals, results, params, admmparams)
   
   df_eval = pd.DataFrame.from_records(evals)
   print(df_eval)
   print(
     df_eval[[
-      'prob_num', 'solve_time', 'best_bound', 'best_obj', 'relax_obj', 'nodes',
+      'prob_num', 'solve_time', 'best_bound', 'best_obj', 'node_time', 'nodes',
       'method'
     ]].to_latex()
   )
