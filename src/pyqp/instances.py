@@ -46,6 +46,7 @@ class QP(object):
     self.n, self.d = q.shape
     self.m, *_ = a.shape
     self.eigen()
+    self.precondition()
   
   def __str__(self):
     # todo add a description
@@ -181,14 +182,31 @@ class QP(object):
     # construct convex cones
     for i in range(self.m):
       Ai = self.A[i]
-      if Ai is not None:
+      if not self.bool_zero_mat[i + 1]:
         self.l[i], self.R[i] = self._scaled_cholesky(self.n, Ai)
-    if self.Q is not None:
+      else:
+        self.l[i], self.R[i] = 0, 0
+    if not self.bool_zero_mat[0]:
       l, R = self._scaled_cholesky(self.n, - self.Q)
       self.l[-1] = l
       self.R[-1] = R
-      
+    else:
+      self.l[-1], self.R[-1] = 0, 0
+    
     return 1
+  
+  def precondition(self):
+    self.bool_zero_mat = {}
+    self.bool_zero_mat[0] = self._bool_zero(self.Q)
+    for i in range(self.m):
+      Ai = self.A[i]
+      self.bool_zero_mat[i + 1] = self._bool_zero(Ai)
+  
+  @staticmethod
+  def _bool_zero(_A):
+    if _A is None:
+      return True
+    return (np.abs(_A) <= 1e-5).all()
   
   @staticmethod
   def _scaled_cholesky(n, A):
@@ -200,7 +218,7 @@ class QP(object):
     :return:
     """
     gamma, u = nl.eigh(A)
-    l = (0 if min(gamma) > 0 else - min(gamma)) + 1e-2
+    l = (0 if min(gamma) > 0 else - min(gamma)) + 1e-6
     As = A + l * np.eye(n)
     try:
       R = np.linalg.cholesky(As)
@@ -358,7 +376,7 @@ class QP(object):
       vu = np.ones((n, d))
     instance = cls(Q, q, A, a, b, sign, al=al, au=au)
     instance.vl = vl
-    instance.vu = vu
+    instance.vu = np.ones((n, d))  # vu * (vu <= 1e6) + 1e6 * (vu > 1e6)  # avoid too big RHS
     instance.name = data.get("name")
     return instance
 

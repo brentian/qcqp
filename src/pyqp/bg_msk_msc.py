@@ -92,17 +92,18 @@ def msc_diag(
   if verbose:
     model.setLogHandler(sys.stdout)
   
-  if bounds is None:
-    bounds = MscBounds.construct(qp)
-  
+  # at most n 3-d rotated cones for
+  # (1, y, z = v'x) ∈ Q
   qcones = model.variable("xr", dom.inRotatedQCone(3, n))
   ones = qcones.slice([0, 0], [1, n])
   y = qcones.slice([1, 0], [2, n]).reshape(n, 1)
   z = qcones.slice([2, 0], [3, n]).reshape(n, 1)
   model.constraint(ones, dom.equalsTo(0.5))
+  
+  # second-order cones
   s = model.variable('sqr', [m])
   ##############################
-  # or use PSD cone
+  # or use 2-d PSD cone
   # zcone = model.variable("zc", dom.inPSDCone(2, n))
   # y = zcone.slice([0, 0, 0], [n, 1, 1]).reshape([n, 1])
   # z = zcone.slice([0, 0, 1], [n, 1, 2]).reshape([n, 1])
@@ -123,8 +124,7 @@ def msc_diag(
   
   for i in range(m):
     quad_expr = expr.dot(a[i], x)
-    Ai = qp.A[i]
-    if Ai is not None:
+    if not qp.bool_zero_mat[i + 1]:
       model.constraint(
         expr.vstack(0.5, s.index(i), expr.flatten(expr.mul(qp.R[i].T, x))),
         dom.inRotatedQCone()
@@ -139,8 +139,14 @@ def msc_diag(
     else:
       # bilateral case
       # todo, fix this
-      # quad_dom = dom.inRange(qp.al[i], qp.au[i])
-      quad_dom = dom.lessThan(qp.au[i])
+      _l, _u = qp.al[i], qp.au[i]
+      if _u < 1e6:
+        if _l > -1e6:
+          # bilateral
+          quad_dom = dom.inRange(qp.al[i], qp.au[i])
+        else:
+          # LHS is inf
+          quad_dom = dom.lessThan(qp.au[i])
     
     model.constraint(quad_expr, quad_dom)
   
@@ -150,8 +156,7 @@ def msc_diag(
   
   # obj_expr = true_obj_expr
   model.objective(
-    mf.ObjectiveSense.Minimize
-    if sense == 'min' else mf.ObjectiveSense.Maximize, obj_expr
+    mf.ObjectiveSense.Maximize, obj_expr
   )
   
   r = MSKMscResult()

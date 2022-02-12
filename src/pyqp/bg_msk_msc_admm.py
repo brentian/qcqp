@@ -229,8 +229,7 @@ def msc_subproblem_x(  # follows the args
   
   for i in range(m):
     quad_expr = expr.dot(a[i], x)
-    Ai = qp.A[i]
-    if Ai is not None:
+    if not qp.bool_zero_mat[i + 1]:
       model.constraint(
         expr.vstack(0.5, s.index(i), expr.flatten(expr.mul(qp.R[i].T, x))),
         dom.inRotatedQCone()
