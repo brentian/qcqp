@@ -308,11 +308,10 @@ def generate_child_items(
 
 
 def bb_box(
-    qp_init: QP,
+    qp: QP,
     bounds: Bounds,
     verbose=False,
     params=BCParams(),
-    decompose_method="eig-type2",
     **kwargs
 ):
   print(json.dumps(params.__dict__(), indent=2))
@@ -337,7 +336,7 @@ def bb_box(
   if primal_func is None and bool_use_primal:
     if primal_name == 'admm':
       primal_func = bg_msk_msc_admm.msc_admm
-      admmparams.max_iteration = 20
+      admmparams.max_iteration = 100
     elif primal_name == 'nadmm':
       # more expensive
       primal_func = bg_msk_norm_admm.msc_admm
@@ -350,10 +349,6 @@ def bb_box(
   k = -1
   start_time = time.time()
   
-  # create a copy of QP based on decomposition method
-  qp = QP(*qp_init.unpack())
-  qp.decompose(decompose_method=decompose_method)
-  
   # root
   root_bound = MscBounds(**bounds.__dict__, qp=qp)
   
@@ -361,7 +356,8 @@ def bb_box(
   
   # solution info
   bcinfo = BCInfo()
-  bcinfo.best_r = root_r = backend_func(qp, bounds=root_bound, solver=params.dual_backend, verbose=False, solve=True)
+  bcinfo.best_r = root_r = backend_func(qp, bounds=root_bound, solver=params.dual_backend, verbose=False, solve=False)
+  bcinfo.best_r.solve(True, qp)
   
   # global cuts
   glc = MscCuts()
@@ -444,7 +440,7 @@ def bb_box(
     
     if bool_start_primal and bool_has_primal and not bool_pass_primal:
       try:
-        r_primal = primal_func(qp, item.bound, True, admmparams, r)
+        r_primal = primal_func(qp, item.bound, True, admmparams, r_primal)
         bcinfo.counter_primal_invoke += 1
         if not bool_sol_feasible or r_primal.true_obj > r.true_obj:
           r.xval = r_primal.xval

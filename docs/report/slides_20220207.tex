@@ -1,6 +1,6 @@
 \documentclass[aspectratio=1610, 9pt]{beamer}
 \usepackage[english]{babel}
-\usepackage{amsmath, amsthm, subfiles, bm, hyperref, graphicx}
+\usepackage{amsmath, subfiles, bm, hyperref, graphicx}
 \usepackage{mathrsfs}
 \usepackage{caption, longtable, booktabs}
 \usepackage{cancel}
@@ -9,10 +9,10 @@
 %%%%%%%%%%%%%%%%
 % start my commands
 %%%%%%%%%%%%%%%%
-\newcommand{\lm}{\lambda_\textrm{max}}
-\newcommand{\trace}{\mathbf{trace}}
-\newcommand{\diag}{\mathbf{diag}}
-\newcommand{\rank}{\mathbf{rank}}
+\newcommand{\lm}{\lambda_\textbf{max}}
+\newcommand{\trace}{\textbf{trace}}
+\newcommand{\diag}{\textbf{diag}}
+\newcommand{\rank}{\textbf{rank}}
 \newcommand{\model}[1]{(\textbf{#1})}
 \newcommand{\mx}{\mathbf{\max}\;}
 \newcommand{\mn}{\mathbf{\min}\;}
@@ -35,8 +35,8 @@
 \newcommand{\redsf}[1]{\textcolor{red}{\textsf{#1}}}
 \newcommand{\real}{\mathbb{R}}
 \usefonttheme[onlymath]{serif}
+
 \setbeamertemplate{theorems}[numbered]
-\newtheorem{proposition}{Proposition}
 %%%%%%%%%%%%%%%%
 % finish my commands
 %%%%%%%%%%%%%%%%
@@ -119,6 +119,7 @@
 }
 \maketitle
 
+
 \begin{frame}{The QCQP}
   We consider the QCQP,
   \begin{equation}
@@ -129,6 +130,7 @@
     \end{aligned}
   \end{equation}
 \end{frame}
+\section{Improving the MSC relaxation}
 \begin{frame}[allowframebreaks]{Rank-\(r\) Indefiniteness}
 
   Formally, a quadratic inequality induced by a symmetric matrix \(A\) can be expressed as the following,
@@ -161,13 +163,13 @@
   \begin{equation}\label{eq:qp_unc_rr_conic}
     \begin{aligned}
       \mx \quad & \sum_{j\in J_+} \lambda_j y_j - x^TQ_-x  + q^Tx \\
-      \st \quad & y_j \ge (x_j^T v_j)^2, j= 1, ..., n
+      \st \quad & y_j \ge (x_j^T v_j)^2, j= 1, ..., \red{r}
     \end{aligned}
   \end{equation}
 
   In the ball-constrained case, one can bound \(y\) by,
   \begin{equation}
-    y^Te = \|x\|^2 \le \delta^2
+    y^Te \le \|x\|^2 \le \delta^2
   \end{equation}
 \end{frame}
 
@@ -176,7 +178,7 @@
   \begin{align*}
     Q = V_0\Lambda_0V_0^T, A_i = V_i\Lambda_iV_i^T
   \end{align*}
-  The MSC formulation is the following,
+  The old MSC formulation is the following,
   \begin{align}
     \nonumber \mathrm{Maximize}\quad & y_0 ^T\diag(\Lambda_0) + q^Tx                         \\
     \mathrm{s.t.} \quad              & V_i^T x = z_i                             & i=0,...,m \\
@@ -201,7 +203,7 @@
   \[\tilde {\mathcal  A} =  \{x \mid x^T\left(A + V\red{\Gamma}V^T\right )x + a^Tx \le b +\diag(\Gamma)^T y\}\]
 
 
-  \(\tilde {\mathcal  A}\) is convex iff. \(A + V\red{\Gamma}V^T \succeq 0\). \red{What is the condition for \(Q, V\) to make this possible?} Desired property,
+  \(\tilde {\mathcal  A}\) is convex iff. \(A + V\red{\Gamma}V^T \succeq 0\). \red{What is the condition for \(V\) to make this possible?} Desired property,
   \begin{enumerate}
     \item \(V\) is low-rank
     \item \(V\) is orthonormal (not necessary)
@@ -210,7 +212,7 @@
 \end{frame}
 \begin{frame}[allowframebreaks]{Find \(V\) with lowest rank: from \(Q\) or \(\{A_j\}\)}
 
-  We first consider using eigenvectors. Let \(v_1, ..., v_r, r \le n\) be columns of \(V\),
+  We first consider using eigenvectors (e.g. of \(Q\)). Let \(v_1, ..., v_r, r \le n\) be columns of \(V\),
 
   \begin{itemize}
     \item if \(V\) is nonsingular (\(r = n\)), we use \(n\) basic vectors, it is always possible to find such \(\Gamma\). For example, let \(\sigma = - \lambda_{\min} (A)\), then
@@ -233,9 +235,12 @@
 
   \framebreak
 
-  Next consider if we can do simultaneous convexification, i.e., for matrices \(\{Q, A_i\}\), find a mutual \(V\) with columns \(v_1, \dots, v_r\) and diagonal matrices \(\{\Lambda_j\}_{j=0}^m\) allow the \red{simultaneous convexification} such that,
+  The above question can be written as the following problem:
+
+  For matrices \(\{Q, A_i\}\), find a mutual \(V\) with columns \(v_1, \dots, v_r\) and diagonal matrices \(\{\Lambda_j\}_{j=0}^m\) allow the \red{simultaneous convexification} such that,
   \begin{equation}\label{eq.simul.conv}
     \begin{aligned}
+      \mn & \rank\left(V\right)         \\
       - Q & +  V\Lambda_0 V^T \succeq 0 \\
       A_1 & +  V\Lambda_1 V^T \succeq 0 \\
       ...                               \\
@@ -249,53 +254,55 @@
   \end{align*}
 
   \begin{itemize}
-    \item This is a low rank matrix optimization problem.
     \item In the worst case, \(r=n\) columns (consider using a random normal basis).
     \item Some ideas, S-lemma, \cite{burer_nonlinear_2003}, solve \(X\succeq 0 \Leftrightarrow X= RR^T \)
   \end{itemize}
 
   \framebreak
+  The fact below produces a \redsf{feasible} solution of \eqref{eq.simul.conv}
+  \begin{theorem}
+    \label{pp.simul.conv.cond1}
+    Allow rank-1 decomposition, \(Q = R_0 R_0^T - \hat{Q} , A_j = \hat{A_j}- R_j R_j^T, \red{R_j\in \real^{n\times r_j}}\), assume,
 
-  \begin{proposition}\label{pp.simul.conv.cond1}
-    Let \(V_j \in \real^{n\times r_j}\) be eigenvectors of the nonconvex part, if \(\exists P_j \in \real^{r\times r_j}, j = 0,...,m\), such that \(V_j = V \cdot P_j\), Assume,
+    \[\tilde R = \left [R_0 \mid R_1 \mid ... \mid R_m \right ]   \in \real^{n \times (\sum_j r_j)}\]
 
-    \[\tilde V = \left [V_0 \mid V_1 \mid ... \mid V_m \right ]   \in \real^{n \times (\sum_j r_j)}\]
+    There exists orthonormal matrix \(V \in \real^{n\times r}\) to solve \eqref{eq.simul.conv}, furthermore,
 
-    There exists \(V \in \real^{n\times r}\) to be the solution to \eqref{eq.simul.conv}, furthermore,
-    \[ r= \rank (\tilde{V})\]
-  \end{proposition}
+    \begin{enumerate}
+      \item \(r= \rank (\tilde{R})\)
+      \item There exists \(P_j \in \real^{r\times r_j}\) such that,
+            \[ R_j = V P_j\]
+    \end{enumerate}
+  \end{theorem}
 
-  Solve,
-
-  \begin{equation}\label{eq.simul.conv1}
-    \begin{aligned}
-      \tilde V & = \left [V_0 \mid V_1 \mid ... \mid V_m \right ]   \in \real^{n \times (\sum_j r_j)} \\
-      \tilde V & \doteq \red{V} \cdot P, V\in \real^{n\times r}, P\in \real^{r\times (\sum_j r_j)}
-    \end{aligned}
-  \end{equation}
-
-
-
+  \begin{proof}
+    Compute QR factorization for \(\tilde R \doteq V\cdot R\), truncate orthogonal matrix \(V\) to its rank \(r\). Then \(V\) is the desired bases.
+    A feasible choice could be \eqref{eq.simul.conv} \(\Lambda_j = \lambda_j I\) according to the eigenvalues.
+  \end{proof}
 
 \end{frame}
 
-\begin{frame}{ADMM using improved MSC}
+
+\section{The ALM Using Revised MSC}
+\begin{frame}{Bilinear Approximation}
   \begin{align}
     \model{MSC} \quad \mx \quad & y ^T\lambda_0                                       \\
     \mathrm{s.t.} \quad         & (y,z,x) \in \Omega                                  \\
     ( \mu_i)    \quad           & \xi_i \cdot (v_i^Tx) = y_i           & \red{i\in I} \\
                                 & \xi_i^2 \le y_i,  (v_i^Tx)^2 \le y_i
   \end{align}
-  The ADMM,
+  The augmented Lagrangian can be written corresponding to multiplier \(\mu\),
 
   \begin{equation}
     \mathcal L = y^T\lambda + \sum_{i \in I} \mu_i \left [\xi_i \cdot(v_i^Tx) - y_i\right] + \frac{\rho}{2}\sum_{i \in I} (\xi_i \cdot (v_i^Tx) - y_i)^2
   \end{equation}
 
+  where dimension of \(\mu\) is decided by the number of basis introduced in the relaxation.
+
   At iteration \(k\),
 
   \begin{align*}
-    (x,y,z,t)^{k+1} & = {\arg\min}_{(x,y,z)\in\Omega, t\ge 0} L\left(x,y,z,\xi^k,s^k,\kappa^k,\mu^k\right)    \\
+    (x,y,z,t)^{k+1} & = {\arg\min}_{(x,y)\in\Omega, t\ge 0} L\left(x,y,z,\xi^k,s^k,\kappa^k,\mu^k\right)      \\
     (\xi)^{k+1}     & = {\arg\min}_{(\xi)\in\mathscr{Q}} L\left((x,y,z,t)^{k+1},\xi,s, \kappa^k, \mu^k\right) \\
     \kappa^{k+1}    & = \kappa^k + \rho\left(t^{k+1}-s^{k+1}\right)                                           \\
     \mu^{k+1}       & = \mu^k + \rho\left( \langle\xi^{k+1}, x^{k+1}\rangle - s^{k+1}\right)
@@ -304,6 +311,8 @@
   As a comparison, see the \hyperlink{oldad}{ADMM in original \(x\)}.
 \end{frame}
 
+
+\section{Computational Results}
 \setlength\pdfpagewidth{16.00cm}%
 \setlength\pdfpageheight{20.00cm}%
 \begin{frame}[standout]{Box QP}

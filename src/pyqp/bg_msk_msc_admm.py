@@ -101,7 +101,7 @@ class MSKResultX(MSKMscResult):
     self.solved = True
     self.solve_time = round(end_time - start_time, 3)
     self.release()
-    
+  
   def release(self):
     self.problem.dispose()
   
@@ -127,12 +127,16 @@ def msc_admm(
   ########################
   # initialization
   ########################
-  if ws_result.zval is None:
+  if ws_result is None or ws_result.zval is None :
     zval = np.ones((n, dim))
-  
-  mu = np.zeros((n, dim))
+    mu = np.zeros((n, dim))
+  else:
+    zval = ws_result.zval
+    mu = ws_result.mu
+    
   rho = 2
-  xival = ws_result.zval
+  xival = zval
+  
   # test run
   
   _iter = 0
@@ -151,28 +155,36 @@ def msc_admm(
       yval, zval, mu, rho, qp, bounds, solve=False, verbose=False
     )
     r_xi.solve()
+    # compute residual. then update
+    xival_res = r_xi.xival - xival
     xival = r_xi.xival
+    
+    # primal feasibility
     residual_xix = yval - (xival * zval)
     residual_xix_sum = np.abs(residual_xix).sum()
+    # dual feasibility
+    residual_dual = np.abs(zval * xival_res).sum()
+    
     r.bound = (r.yval.T @ qp.Qmul).trace() + (qp.q.T @ xval).trace()
     gap = abs((r.bound - r.relax_obj) / (r.bound + 1e-2))
     curr_time = time.time()
     adm_time = curr_time - start_time
     if verbose and _iter % admmparams.logging_interval == 0:
       print(
-        f"//{curr_time - start_time: .2f}, @{_iter} # alm: {r.relax_obj: .4f} gap: {gap:.3%}, 𝜉x - y: {residual_xix_sum: .4e}"
+        f"//{curr_time - start_time: .2f}, @{_iter}  #alm: {r.relax_obj:.4f} primal_eps (𝜉z - y): {residual_xix_sum:.4e}, dual_eps: {residual_dual:.4e}"
       )
-    if (gap < admmparams.obj_gap) and (residual_xix_sum < admmparams.res_gap):
+
+    if residual_xix_sum < admmparams.res_gap and residual_dual < admmparams.res_gap:
       print(
-        f"//{curr_time - start_time: .2f}, @{_iter} # alm: {r.relax_obj: .4f} gap: {gap:.3%}, 𝜉x - y: {residual_xix_sum: .4e}"
+        f"//{curr_time - start_time: .2f}, @{_iter}  #alm: {r.relax_obj:.4f} primal_eps (𝜉z - y): {residual_xix_sum:.4e}, dual_eps: {residual_dual:.4e}"
       )
-      print(f"terminited by gap")
       break
     if adm_time >= admmparams.time_limit:
       break
     mu += residual_xix * rho
     _iter += 1
-  r.result_xi = r_xi
+    
+  r.mu = mu
   r.nodes = _iter
   r.solve_time = adm_time
   r.true_obj = qp_obj_func(qp.Q, qp.q, xval)
@@ -207,9 +219,6 @@ def msc_subproblem_x(  # follows the args
   
   if verbose:
     model.setLogHandler(sys.stdout)
-  
-  if bounds is None:
-    bounds = MscBounds.construct(qp)
   
   qel = qp.gamma[0].reshape(xshape)
   qcones = model.variable("xr", dom.inRotatedQCone(3, n))

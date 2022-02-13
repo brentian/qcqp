@@ -28,7 +28,7 @@ class MSKMscResult(MSKResult):
     self.qel = None
     self.q = None
   
-  def solve(self, verbose=False, qp=None):
+  def solve(self, verbose=False, qp: QP = None):
     start_time = time.time()
     if verbose:
       self.problem.setLogHandler(sys.stdout)
@@ -53,7 +53,10 @@ class MSKMscResult(MSKResult):
       zc = self.zval
       resc = self.resc = np.abs(yc - zc ** 2)
       self.resc_feas = resc.max()
-      self.resc_feasC = resc[:, 1:].max() if resc.shape[1] > 1 else 0
+      if qp.m > 0:
+        self.resc_feasC = qp.check(self.xval).max()
+      else:
+        self.resc_feasC = 0
     else:  # infeasible
       self.bound = self.relax_obj = -1e6
       self.resc_feas = 0
@@ -126,7 +129,7 @@ def msc_diag(
     quad_expr = expr.dot(a[i], x)
     if not qp.bool_zero_mat[i + 1]:
       model.constraint(
-        expr.vstack(0.5, s.index(i), expr.flatten(expr.mul(qp.R[i].T, x))),
+        expr.vstack(0.5, s.index(i), expr.flatten(expr.mul(qp.R[i + 1].T, x))),
         dom.inRotatedQCone()
       )
       quad_expr = expr.add(quad_expr, s.index(i))
