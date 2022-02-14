@@ -84,6 +84,7 @@ class Params(object):
   feas_eps = 1e-4
   opt_eps = 1e-4
   time_limit = 200
+  threads = 4 # maximum threads used if the backend method supports it.`
   
   def __dict__(self):
     return {k: self.__getattribute__(k) for k in keys}

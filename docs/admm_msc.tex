@@ -42,6 +42,7 @@
 \usepackage[table]{xcolor}
 \usepackage[font=small,labelfont=bf]{caption}
 
+\newtheorem{theorem}[]{Theorem}
 
 
 \begin{document}
@@ -73,8 +74,8 @@ Let basis \(V\) whose columns are \([v_1, ..., v_r]\) convexify the objective an
 
 We can introduce the MSC relaxation,
 \begin{align}
-    \model{MSC} \quad \mx \quad & \diag(\Lambda_0)^Ty - x^TQ_-x \\
-    \mathrm{s.t.} \quad         & (y, x) \in \Omega             \\
+    \model{MSC} \quad \mx \quad & \diag(\Lambda_0)^Ty - x^T\left(Q + \diag(\Lambda_0)\right)x \\
+    \mathrm{s.t.} \quad         & (y, x) \in \Omega                                           \\
                                 & (v_i^Tx)^2 \le y_i
 \end{align}
 
@@ -89,24 +90,43 @@ With \(y\) being an overestimate of \(V^Tx \circ V^Tx\), consider the following 
 \end{align*}
 
 
-Use AL,
+The AL,
 
 \begin{equation}
-    \mathcal L = ... + \sum_{i \in I} \mu_i \left [\xi_i \cdot(v_i^Tx) - y_i\right] + \frac{\rho}{2}\sum_{i \in I} (\xi_i \cdot (v_i^Tx) - y_i)^2
+    \mathcal L = ... + \sum_{i=1}^r \mu_i \left (\xi_i \cdot(v_i^Tx) - y_i\right) + \frac{\rho}{2}\sum_{i=1}^r \left(\xi_i \cdot (v_i^Tx) - y_i\right)^2
 \end{equation}
 
+\subsection{An ADMM method}
 At iteration \(k\),
 
-\begin{align*}
-    (x,y,z,t)^{k+1} & = {\arg\min}_{(x,y,z)\in\Omega, t\ge 0} L\left(x,y,z,\xi^k,s^k,\kappa^k,\mu^k\right)    \\
-    (\xi)^{k+1}     & = {\arg\min}_{(\xi)\in\mathscr{Q}} L\left((x,y,z,t)^{k+1},\xi,s, \kappa^k, \mu^k\right) \\
-    \kappa^{k+1}    & = \kappa^k + \rho\left(t^{k+1}-s^{k+1}\right)                                           \\
-    \mu^{k+1}       & = \mu^k + \rho\left( \langle\xi^{k+1}, x^{k+1}\rangle - s^{k+1}\right)
-\end{align*}
+\begin{subequations}
+    \begin{align}
+        \label{eq.admm.iterx}   (x^{k+1}, y^{k+1}) & = \arg\min_{x, y} L\left(x,y,\xi^k,\mu^k\right)                         \\
+        \label{eq.admm.iterxi}   \xi^{k+1}         & = \arg\min_{\xi} L\left(x^{k+1}, y^{k+1}, \mu^k\right)                  \\
+        \mu^{k+1}                                  & = \mu^k + \tau^k\rho\left((\xi^{k+1})^T V^T x^{k+1} - e^Ty^{k+1}\right)
+    \end{align}
+\end{subequations}
+The optimization problem \eqref{eq.admm.iterx} is convex that can be solved effectively. The iteration for \(\xi\) can be decomposed into \(r\) subproblems, at iteration \(k+1\), for \(i = 1, ..., r\),
+
+\begin{equation}
+    \begin{aligned}
+        \mn & \mu_i^k \left (\xi_i \cdot(v_i^Tx^{k+1}) - y_i^{k+1}\right) + \frac{\rho}{2} \left(\xi_i \cdot (v_i^Tx^{k+1}) - y_i^{k+1}\right)^2 \\
+        \st & \xi_i^2 \le y_i^{k+1}
+    \end{aligned}
+\end{equation}
+
+which is a one dimension problem that allows analytic solution.
+
+\begin{theorem}
+    The termination criterion for ADMM,
+    \begin{enumerate}
+        \item Primal residual. \(\left \|(V^Tx^{k+1}) \circ \xi^{k+1} - y^{k+1} \right\| \le \epsilon\)
+        \item Dual residual. \(\left\|(V^Tx^{k+1}) \circ (\xi^{k+1}-\xi^k)\right\| \le \epsilon\)
+    \end{enumerate}
+\end{theorem}
 
 
-
-\bibliography{headers/qcqp}
-\bibliographystyle{apalike}
+% \bibliography{headers/qcqp}
+% \bibliographystyle{apalike}
 \section{Review}
 \end{document}

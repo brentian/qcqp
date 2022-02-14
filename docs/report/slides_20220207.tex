@@ -43,6 +43,7 @@
 % set the toc to be using the number
 \setbeamertemplate{section in toc}[sections numbered]
 \setbeamertemplate{subsection in toc}[subsections numbered]
+\setbeamertemplate{caption}[numbered]
 
 \makeatletter
 \patchcmd{\beamer@sectionintoc}
@@ -284,7 +285,7 @@
 
 
 \section{The ALM Using Revised MSC}
-\begin{frame}{Bilinear Approximation}
+\begin{frame}{Biaffine Approximation}
   \begin{align}
     \model{MSC} \quad \mx \quad & y ^T\lambda_0                                       \\
     \mathrm{s.t.} \quad         & (y,z,x) \in \Omega                                  \\
@@ -361,53 +362,54 @@
 
 \begin{frame}[standout]{QCQP}
 
-  Below are results for QCQP
+  Below are results for QCQP\(^\dagger\)
 
   \small
+  \begin{table}[h!]
+    \centering
+    \begin{tabular}{llrrrrrll}
+      \toprule
+      {} & prob\_num & solve\_time & best\_bound & best\_obj          & node\_time & nodes   & primal\# & method  \\
+      \midrule
+      0  & 40:10:0   & 500.015     & 4.0959      & 1.8862             & 0.000      & 19963.0 &          & grb     \\
+      1  & 40:10:0   & 97.251      & 1.8823      & 1.8818             & 0.054      & 1249.0  & 18       & bb\_msc \\
+      0  & 40:20:0   & 500.018     & 3.4412      & 1.0707             & 0.000      & 20530.0 &          & grb     \\
+      1  & 40:20:0   & 176.183     & 1.0598      & 1.0591             & 0.027      & 1507.0  & 20       & bb\_msc \\
+      0  & 100:10:0  & 1500.040    & 10.7053     & 0.1937             & 0.000      & 6178.0  & -        & grb     \\
+      1  & 100:10:0  & 1020.678    & 0.1941      & 0.1933             & 0.121      & 3415.0  & -        & bb\_msc \\
+      0  & 100:20:0  & 1500.030    & 11.0759     & 0.2413             & 0.000      & 6160.0  & -        & grb     \\
+      1  & 100:20:0  & 1500.551    & 0.2503      & 0.2464             & 0.134      & 2652.0  & -        & bb\_msc \\
+      0  & 100:30:0  & 1500.008    & 10.8644     & 0.1360             & 0.00       & 12232.0 & -        & grb     \\
+      1  & 100:30:0  & 1008.489    & 0.1358      & 0.1358\(^\dagger\) & 0.22       & 1921.0  & -        & bb\_msc \\
+      \bottomrule
+    \end{tabular}
+    \caption{The randomly generated QCQP (\redsf{rand-qcqp}) instances with \(r = 5\), terminate at \(\epsilon = e^{-5}\) or maximum running time \(1,500\)s. \(\dagger\){still have some precion bugs in branch and cut.}}
+  \end{table}
   \begin{table}[h!]
     \begin{tabular}{llrrrrrl}
       \toprule
       {} & prob\_num & solve\_time & best\_bound & best\_obj & node\_time & nodes   & method  \\
       \midrule
-      0  & 40:10:0   & 122.044     & 1.0022      & 1.0022    & 0.05       & 1479    & bb\_msc \\
-      0  & 40:10:0   & 500.011     & 3.09        & 1.0023    & 0          & 33007.0 & grb     \\
-      \bottomrule
-    \end{tabular}
-  \end{table}
-  \begin{table}[h!]
-    \centering
-    \begin{tabular}{llrrrrrll}
-      \toprule
-      {} & prob\_num & solve\_time & best\_bound & best\_obj & node\_time & nodes   & primal\# & method  \\
-      \midrule
-      0  & 40:10:0   & 500.011     & 3.09        & 1.0023    & 0          & 33007.0 & grb                \\
-      0  & 40:10:0   & 122.044     & 1.0022      & 1.0022    & 0.05       & 1479    & bb\_msc            \\
-      0  & 40:20:0   & 1500.040    & 204.6865    & 204.6630  & 0.000      & 62139.0 & -        & grb     \\
-      1  & 40:20:0   & 152.304     & 204.6827    & 204.6626  & 0.027      & 1216.0  & 22       & bb\_msc \\
-      0  & 100:10:0  & 1500.101    & 6471.3599   & 0.1906    & 0.00       & 79.0    & -        & grb     \\
-      1  & 100:10:0  & 1062.794    & 0.1957      & 0.1904    & 0.12       & 3727.0  & 65       & bb\_msc \\
-      0  & 100:20:0  & 1500.082    & 5093.9949   & 0.2649    & 0.000      & 37.0    & -        & grb     \\
-      1  & 100:20:0  & 1500.030    & 0.2668      & 0.2642    & 0.225      & 3020.0  & 56       & bb\_msc \\
-      0  & 100:30:0  & 1500.008    & 10.8644     & 0.1360    & 0.00       & 12232.0 & grb                \\
-      1  & 100:30:0  & 1008.489    & 0.1358      & 0.1358    & 0.22       & 1921.0  & bb\_msc            \\
-      \bottomrule
-    \end{tabular}
-    \caption{The randomly generated QCQP (\redsf{rand-qcqp}) instances with \(r = 5\), terminate at \(\epsilon = e^{-5}\) or maximum running time \(1,500\)s. }
-  \end{table}
+      0  & 40:10:0   & 1500.027    & 5.2998      & 4.3267    & 0.000      & 63147.0 & grb     \\
+      1  & 40:10:0   & 1500.321    & 5.4472      & 4.1006    & 0.034      & 15502.0 & bb\_msc \\
+      0  & 40:20:0   & 1500.010    & 4.8955      & 3.4024    & 0.000      & 60377.0 & grb     \\
+      1  & 40:20:0   & 1500.814    & 5.1576      & 3.5756    & 0.041      & 11651.0 & bb\_msc \\
 
+      \bottomrule
+    \end{tabular}
+    \caption{The randomly generated QCQP (\redsf{rand-qcqp}) instances with \(r = 10\), terminate at \(\epsilon = e^{-5}\) or maximum running time \(1,500\)s. }
+  \end{table}
   \begin{table}[h!]
     \begin{tabular}{llrrrrrl}
       \toprule
       {} & prob\_num   & solve\_time & best\_bound & best\_obj & node\_time & nodes   & method  \\
       \midrule
       0  & QPLIB\_0911 & 1099.673    & 32.1476     & 32.1476   & 0.000      & 1123.0  & grb     \\
-      1  & QPLIB\_0911 & 1500.082    & 35.3012     & 31.3445   & 0.113      & 3703.0  & bb\_msc \\
+      1  & QPLIB\_0911 & 1515.119    & 35.6267     & 29.3279   & 0.090      & 2702    & bb\_msc \\
       2  & QPLIB\_1055 & 70.978      & 33.0370     & 33.0370   & 0.000      & 453.0   & grb     \\
-      3  & QPLIB\_1055 & 1500.098    & 34.9861     & 33.4787   & 0.021      & 11508.0 & bb\_msc \\
+      3  & QPLIB\_1055 & 1505.870    & 35.1088     & 32.1447   & 0.022      & 9703    & bb\_msc \\
       4  & QPLIB\_1940 & 1500.002    & 42.5500     & 37.5080   & 0.000      & 67103.0 & grb     \\
-      5  & QPLIB\_1940 & 1500.077    & 43.3073     & 37.3101   & 0.226      & 2047.0  & bb\_msc \\
-      6  & QPLIB\_1143 & 19.032      & 57.2467     & 57.2467   & 0.000      & 25.0    & grb     \\
-      7  & QPLIB\_1143 & 1500.037    & 69.7329     & 64.5376   & 0.022      & 9865.0  & bb\_msc \\
+      5  & QPLIB\_1940 & 1500.390    & 43.5463     & 29.4716   & 0.208      & 1434    & bb\_msc \\
       \bottomrule
     \end{tabular}
     \caption{The QPLIB QCQP (\redsf{qplib-qcqp}) instances. Note this subset of QPLIB instances are provided by Nick Sahinidis. Each instance has very balanced eigenvalues.}
@@ -422,18 +424,25 @@
 \end{frame}
 
 \begin{frame}[standout]{QCL}
-  \begin{tabular}{llrrrrrl}
-    \toprule
-    {} & prob\_num   & solve\_time & best\_bound & best\_obj & node\_time & nodes  & method  \\
-    \midrule
-    0  & QPLIB\_2761 & 1479.828    & -0.0010     & -0.0010   & 0          & 2214.0 & grb     \\
-    0  & QPLIB\_2761 & 1500.359    & 11.4096     & 0.0000    & 0.198      & 2600   & bb\_msc \\
-    1  & QPLIB\_0018 & 43.730      & 6.3860      & 6.3860    & 0          & 2831.0 & grb     \\
-    1  & QPLIB\_0018 & 1500.080    & 42.8144     & 5.9552    & 0.004      & 31184  & bb\_msc \\
-    2  & QPLIB\_2712 & 377.647     & -0.0129     & -0.0129   & 0          & 859.0  & grb     \\
-    2  & QPLIB\_2712 & 1500.216    & 6.4589      & -0.0000   & 0.037      & 10669  & bb\_msc \\
-    \bottomrule
-  \end{tabular}
+  \begin{table}
+    \begin{tabular}{llrrrrrl}
+      \toprule
+      {} & prob\_num   & solve\_time & best\_bound & best\_obj & node\_time & nodes  & method  \\
+      \midrule
+      0  & QPLIB\_2761 & 1479.828    & -0.0010     & -0.0010   & 0          & 2214.0 & grb     \\
+      0  & QPLIB\_2761 & 1500.390    & 11.4674     & -0.2017   & 0.649      & 1142   & bb\_msc \\
+      1  & QPLIB\_0018 & 43.730      & 6.3860      & 6.3860    & 0          & 2831.0 & grb     \\
+      1  & QPLIB\_0018 & 1500.023    & 40.0342     & 5.8297    & 0.006      & 83458  & bb\_msc \\·
+      2  & QPLIB\_2712 & 377.647     & -0.0129     & -0.0129   & 0          & 859.0  & grb     \\
+      2  & QPLIB\_2712 & 1500.005    & 6.4931      & -0.1455   & 0.073      & 6990   & bb\_msc \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+
+  Remark
+  \begin{itemize}
+    \item In \redsf{qplib-qcl} instances each of which has very balanced eigenvalues. bb\_msc becomes less effective.
+  \end{itemize}
 \end{frame}
 
 
@@ -441,10 +450,27 @@
 \setlength\pdfpageheight{10.00cm}%
 
 \begin{frame}[allowframebreaks]{Future Work}
+  \begin{enumerate}
+    \item Find low-rank graph applications. Max-cut, ...
+    \item Start to migrate code to C++
+    \item Find smarter rules to decide whether to start ADMM.
+    \item Find better branching rules.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Future Work: Better Branching}
+
+  Recall that we have a mutual \(V\) to convexify \({Q, A_i}\), if there is no \(\{A_i\}\), then \(V\) could be eigenvectors. This is not effective if it is not a low-rank matrix.
+
+  We first consider \(Q\) only. Instead of branching on \(v_j^T x\), consider the following procedure:
   \begin{itemize}
-    \item Extension to an indefinite quadratic inequalities
-    \item Plug in ADMM as primal feasible solution.
+    \item find \(p\) that creates two subproblems,
+          \[p^TV^Tx \le p_0 \vee  p^TV^Tx \ge p_0\]
+    \item use \(p\) to create RLT cuts.
   \end{itemize}
+
+
+
 \end{frame}
 
 
