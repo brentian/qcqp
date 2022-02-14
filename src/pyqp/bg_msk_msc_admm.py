@@ -127,13 +127,13 @@ def msc_admm(
   ########################
   # initialization
   ########################
-  if ws_result is None or ws_result.zval is None :
+  if ws_result is None or ws_result.zval is None:
     zval = np.ones((n, dim))
     mu = np.zeros((n, dim))
   else:
     zval = ws_result.zval
     mu = ws_result.mu
-    
+  
   rho = 2
   xival = zval
   
@@ -173,7 +173,7 @@ def msc_admm(
       print(
         f"//{curr_time - start_time: .2f}, @{_iter}  #alm: {r.relax_obj:.4f} primal_eps (𝜉z - y): {residual_xix_sum:.4e}, dual_eps: {residual_dual:.4e}"
       )
-
+    
     if residual_xix_sum < admmparams.res_gap and residual_dual < admmparams.res_gap:
       print(
         f"//{curr_time - start_time: .2f}, @{_iter}  #alm: {r.relax_obj:.4f} primal_eps (𝜉z - y): {residual_xix_sum:.4e}, dual_eps: {residual_dual:.4e}"
@@ -183,7 +183,7 @@ def msc_admm(
       break
     mu += residual_xix * rho
     _iter += 1
-    
+  
   r.mu = mu
   r.nodes = _iter
   r.solve_time = adm_time
@@ -226,7 +226,7 @@ def msc_subproblem_x(  # follows the args
   y = qcones.slice([1, 0], [2, n]).reshape(n, 1)
   z = qcones.slice([2, 0], [3, n]).reshape(n, 1)
   model.constraint(ones, dom.equalsTo(0.5))
-  s = model.variable('sqr', [m])
+  s = model.variable('sqr', [m + 1])
   x = model.variable("x", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
   Y = [y]
   Z = [z]
@@ -239,12 +239,13 @@ def msc_subproblem_x(  # follows the args
   for i in range(m):
     quad_expr = expr.dot(a[i], x)
     if not qp.bool_zero_mat[i + 1]:
+      si = s.index(i + 1)
       model.constraint(
-        expr.vstack(0.5, s.index(i), expr.flatten(expr.mul(qp.R[i].T, x))),
+        expr.vstack(0.5, si, expr.flatten(expr.mul(qp.R[i + 1].T, x))),
         dom.inRotatedQCone()
       )
-      quad_expr = expr.add(quad_expr, s.index(i))
-      quad_expr = expr.sub(quad_expr, expr.dot(qp.l[i] * np.ones((n, 1)), y))
+      quad_expr = expr.add(quad_expr, si)
+      quad_expr = expr.sub(quad_expr, expr.dot(qp.l[i + 1] * np.ones((n, 1)), y))
     
     if qp.sign is not None:
       # unilateral case
@@ -253,8 +254,14 @@ def msc_subproblem_x(  # follows the args
     else:
       # bilateral case
       # todo, fix this
-      # quad_dom = dom.inRange(qp.al[i], qp.au[i])
-      quad_dom = dom.lessThan(qp.au[i])
+      _l, _u = qp.al[i], qp.au[i]
+      if _u < 1e6:
+        if _l > -1e6:
+          # bilateral
+          quad_dom = dom.inRange(qp.al[i], qp.au[i])
+        else:
+          # LHS is inf
+          quad_dom = dom.lessThan(qp.au[i])
     
     model.constraint(quad_expr, quad_dom)
   

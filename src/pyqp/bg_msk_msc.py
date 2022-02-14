@@ -39,13 +39,11 @@ class MSKMscResult(MSKResult):
       raise ValueError(f"failed with status: {status}")
     end_time = time.time()
     if status == mf.ProblemStatus.PrimalAndDualFeasible:
-      self.xval = self.xvar.level().reshape(self.xvar.getShape()).round(self.PRECISION)
-      self.zval = self.zvar.level().reshape(self.zvar.getShape()).round(self.PRECISION)
+      self.xval = self.xvar.level().reshape(self.xvar.getShape())  # .round(self.PRECISION)
+      self.zval = self.zvar.level().reshape(self.zvar.getShape())  # .round(self.PRECISION)
       if self.yvar is not None:
-        self.yval = self.yvar.level().reshape(self.yvar.getShape()).round(self.PRECISION)
+        self.yval = self.yvar.level().reshape(self.yvar.getShape())  # .round(self.PRECISION)
       self.bound = self.relax_obj = self.problem.primalObjValue()
-      if qp is not None:
-        self.true_obj = qp_obj_func(qp.Q, qp.q, self.xval)
       ############################
       # extras
       ############################
@@ -57,6 +55,10 @@ class MSKMscResult(MSKResult):
         self.resc_feasC = qp.check(self.xval).max()
       else:
         self.resc_feasC = 0
+      if self.resc_feasC <= 5e-5:
+        self.true_obj = qp_obj_func(qp.Q, qp.q, self.xval)
+      else:
+        self.true_obj = -1e6
     else:  # infeasible
       self.bound = self.relax_obj = -1e6
       self.resc_feas = 0
@@ -104,7 +106,7 @@ def msc_diag(
   model.constraint(ones, dom.equalsTo(0.5))
   
   # second-order cones
-  s = model.variable('sqr', [m])
+  s = model.variable('sqr', [m + 1])
   ##############################
   # or use 2-d PSD cone
   # zcone = model.variable("zc", dom.inPSDCone(2, n))
@@ -124,16 +126,21 @@ def msc_diag(
   model.constraint(rlt_expr, dom.lessThan(-(bounds.xlb * bounds.xub).sum()))
   # else:
   model.constraint(expr.sum(y), dom.lessThan(bounds.sphere ** 2))
+  model.constraint(
+    expr.sub(y, expr.mulElm(bounds.zlb + bounds.zub, z)),
+    dom.lessThan(-bounds.zlb * bounds.zub)
+  )
   
   for i in range(m):
     quad_expr = expr.dot(a[i], x)
     if not qp.bool_zero_mat[i + 1]:
+      si = s.index(i + 1)
       model.constraint(
-        expr.vstack(0.5, s.index(i), expr.flatten(expr.mul(qp.R[i + 1].T, x))),
+        expr.vstack(0.5, si, expr.flatten(expr.mul(qp.R[i + 1].T, x))),
         dom.inRotatedQCone()
       )
-      quad_expr = expr.add(quad_expr, s.index(i))
-      quad_expr = expr.sub(quad_expr, expr.dot(qp.l[i] * np.ones((n, 1)), y))
+      quad_expr = expr.add(quad_expr, si)
+      quad_expr = expr.sub(quad_expr, expr.dot(qp.l[i + 1] * np.ones((n, 1)), y))
     
     if qp.sign is not None:
       # unilateral case

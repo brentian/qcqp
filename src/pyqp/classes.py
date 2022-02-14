@@ -97,8 +97,8 @@ class BCParams(Params):
   feas_eps = 1e-5
   opt_eps = 1e-4
   time_limit = 200
-  interval_logging = 5
-  interval_primal = 30
+  interval_logging = 10
+  interval_primal = 50
   verbose = False
   relax = True  # todo fix this
   dual_backend = 'msk'
@@ -124,7 +124,7 @@ class ADMMParams(Params):
   logging_interval = 1
   time_limit = 60
   obj_gap = 1e-4
-  res_gap = 1e-4
+  res_gap = 1e-5
 
 
 def qp_obj_func(Q, q, xval: np.ndarray):
@@ -306,7 +306,7 @@ class MscBounds(Bounds):
                                                  (qneg.T < 0)).sum(axis=1)
       ).reshape(qp.q.shape)
       
-      self.zlb, self.zub = np.array(zlb).round(self.PRECISION), np.array(zub).round(self.PRECISION)
+      self.zlb, self.zub = np.array(zlb), np.array(zub)
   
   def unpack(self):
     return self.xlb.copy(), self.xub.copy(), \

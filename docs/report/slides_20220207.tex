@@ -361,21 +361,35 @@
 
 \begin{frame}[standout]{QCQP}
 
+  Below are results for QCQP
+
   \small
+  \begin{table}[h!]
+    \begin{tabular}{llrrrrrl}
+      \toprule
+      {} & prob\_num & solve\_time & best\_bound & best\_obj & node\_time & nodes   & method  \\
+      \midrule
+      0  & 40:10:0   & 122.044     & 1.0022      & 1.0022    & 0.05       & 1479    & bb\_msc \\
+      0  & 40:10:0   & 500.011     & 3.09        & 1.0023    & 0          & 33007.0 & grb     \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
   \begin{table}[h!]
     \centering
     \begin{tabular}{llrrrrrll}
       \toprule
       {} & prob\_num & solve\_time & best\_bound & best\_obj & node\_time & nodes   & primal\# & method  \\
       \midrule
-      0  & 40:10:0   & 994.079     & 211.8225    & 211.8225  & 0.000      & 53349.0 & -        & grb     \\
-      1  & 40:10:0   & 126.504     & 211.8422    & 211.8220  & 0.034      & 1232.0  & 27       & bb\_msc \\
+      0  & 40:10:0   & 500.011     & 3.09        & 1.0023    & 0          & 33007.0 & grb                \\
+      0  & 40:10:0   & 122.044     & 1.0022      & 1.0022    & 0.05       & 1479    & bb\_msc            \\
       0  & 40:20:0   & 1500.040    & 204.6865    & 204.6630  & 0.000      & 62139.0 & -        & grb     \\
       1  & 40:20:0   & 152.304     & 204.6827    & 204.6626  & 0.027      & 1216.0  & 22       & bb\_msc \\
       0  & 100:10:0  & 1500.101    & 6471.3599   & 0.1906    & 0.00       & 79.0    & -        & grb     \\
       1  & 100:10:0  & 1062.794    & 0.1957      & 0.1904    & 0.12       & 3727.0  & 65       & bb\_msc \\
       0  & 100:20:0  & 1500.082    & 5093.9949   & 0.2649    & 0.000      & 37.0    & -        & grb     \\
       1  & 100:20:0  & 1500.030    & 0.2668      & 0.2642    & 0.225      & 3020.0  & 56       & bb\_msc \\
+      0  & 100:30:0  & 1500.008    & 10.8644     & 0.1360    & 0.00       & 12232.0 & grb                \\
+      1  & 100:30:0  & 1008.489    & 0.1358      & 0.1358    & 0.22       & 1921.0  & bb\_msc            \\
       \bottomrule
     \end{tabular}
     \caption{The randomly generated QCQP (\redsf{rand-qcqp}) instances with \(r = 5\), terminate at \(\epsilon = e^{-5}\) or maximum running time \(1,500\)s. }

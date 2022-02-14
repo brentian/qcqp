@@ -15,25 +15,6 @@ from .classes import qp_obj_func, QP, BCParams, Result, Bounds, Branch, CuttingP
 from .classes import PRECISION_OBJVAL, PRECISION_SOL
 
 
-class SDPSmallCone(CuttingPlane):
-  def __init__(self, data):
-    self.data = data
-  
-  def serialize_to_msk(self, *args, **kwargs):
-    pass
-  
-  @staticmethod
-  def apply(branch, bounds):
-    # todo, find a way to implement this
-    # or to show it is not valid.
-    raise ValueError("not finished!")
-    i = branch.xpivot
-    j = branch.xminor
-    u_i, l_i = bounds.xub[i, 0], bounds.xlb[i, 0]
-    u_j, l_j = bounds.xub[j, 0], bounds.xlb[j, 0]
-    return SDPSmallCone((i, j, u_i, l_i, u_j, l_j))
-
-
 class RLTCuttingPlane(CuttingPlane):
   def __init__(self, data):
     super().__init__(data)
@@ -90,7 +71,9 @@ def add_rlt_cuts(branch, bounds):
 
 
 cutting_method = {
-  'rlt': add_rlt_cuts
+  # RLT MOVED INTO bg_msk PART
+  # DO NOT NEED
+  # 'rlt': add_rlt_cuts
 }
 
 

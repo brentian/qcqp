@@ -13,6 +13,7 @@ from collections import defaultdict
 class QP(object):
   import copy
   cp = copy.deepcopy
+  EPS_EIGEN = 1e-4
   
   def __init__(self, Q, q, A, a, b, sign, al=None, au=None):
     self.Q = Q / 2 + Q.T / 2
@@ -95,7 +96,7 @@ class QP(object):
     self.U = np.empty((m + 1, n, n), dtype=np.float)
     self.gamma = np.empty((m + 1, n), dtype=np.float)
     gamma, u = nl.eigh(self.Q)
-    indefn = (gamma > 1e-4).sum()
+    indefn = (gamma > self.EPS_EIGEN).sum()
     self.indefn[0] = indefn
     self.indefU[0] = u[:, :indefn]  # only positive part
     self.gamma[0] = gamma
@@ -107,7 +108,7 @@ class QP(object):
       gamma_i, u_i = nl.eigh(Ai)
       self.gamma[i + 1] = gamma_i
       self.U[i + 1] = u_i
-      indefn = (gamma > 1e-4).sum()
+      indefn = (gamma < - self.EPS_EIGEN).sum()
       self.indefn[i + 1] = indefn
       self.indefU[i + 1] = u_i[:, :indefn]
     
@@ -129,7 +130,7 @@ class QP(object):
     :return:
     """
     gamma, u = nl.eigh(A)
-    l = (0 if min(gamma) > 0 else - min(gamma)) + 1e-6
+    l = (0 if min(gamma) > 0 else - min(gamma)) + QP.EPS_EIGEN
     As = A + l * np.eye(n)
     try:
       R = np.linalg.cholesky(As)
@@ -266,21 +267,20 @@ class QP(object):
   # feasibility checking
   ########################
   @staticmethod
-  def _check_one(x, _A, _a, _b):
+  def _check_one_un(x, _A, _a, _b):
     return max((x.T @ _A @ x).trace() + (x.T @ _a).trace() - _b, 0)
   
   @staticmethod
-  def _check_one(x, _A, _a, _l, _u):
+  def _check_one_bi(x, _A, _a, _l, _u):
     _expr = (x.T @ _A @ x).trace() + (x.T @ _a).trace()
     return max(max(_l - _expr, 0), max((_expr - _u), 0))
   
   def check(self, x):
     if self.uni:
       return np.fromiter(
-        (self._check_one(x, self.A[i], self.a[i], self.b[i]) for i in range(self.m)), dtype=np.float64)
-    else:
-      return np.fromiter(
-        (self._check_one(x, self.A[i], self.a[i], self.al[i], self.au[i]) for i in range(self.m)), dtype=np.float64)
+        (self._check_one_un(x, self.A[i], self.a[i], self.b[i]) for i in range(self.m)), dtype=np.float64)
+    return np.fromiter(
+      (self._check_one_bi(x, self.A[i], self.a[i], self.al[i], self.au[i]) for i in range(self.m)), dtype=np.float64)
   
   ########################
   # cliques and chordal sparsity
