@@ -285,35 +285,75 @@
 
 
 \section{The ALM Using Revised MSC}
-\begin{frame}{Biaffine Approximation}
+\begin{frame}[allowframebreaks]{Biaffine Approximation}
   \begin{align}
-    \model{MSC} \quad \mx \quad & y ^T\lambda_0                                       \\
-    \mathrm{s.t.} \quad         & (y,z,x) \in \Omega                                  \\
-    ( \mu_i)    \quad           & \xi_i \cdot (v_i^Tx) = y_i           & \red{i\in I} \\
-                                & \xi_i^2 \le y_i,  (v_i^Tx)^2 \le y_i
+    \model{MSC} \quad \mx \quad & \diag(\Lambda_0)^Ty + x^T\left(Q - \diag(\Lambda_0)\right)x \\
+    \mathrm{s.t.} \quad         & (y, x) \in \Omega                                           \\
+                                & (v_i^Tx)^2 \le y_i
   \end{align}
-  The augmented Lagrangian can be written corresponding to multiplier \(\mu\),
+  With \(y\) being an overestimate of \(V^Tx \circ V^Tx\), consider the following system,
+
+  \begin{align*}
+    ( \mu_i)    \quad & \xi_i \cdot (v_i^Tx) = y_i           \\
+                      & \xi_i^2 \le y_i,  (v_i^Tx)^2 \le y_i
+  \end{align*}
+
+
+  The AL,
 
   \begin{equation}
-    \mathcal L = y^T\lambda + \sum_{i \in I} \mu_i \left [\xi_i \cdot(v_i^Tx) - y_i\right] + \frac{\rho}{2}\sum_{i \in I} (\xi_i \cdot (v_i^Tx) - y_i)^2
+    \mathcal L = ... + \sum_{i=1}^r \mu_i \left (\xi_i \cdot(v_i^Tx) - y_i\right) + \frac{\rho}{2}\sum_{i=1}^r \left(\xi_i \cdot (v_i^Tx) - y_i\right)^2
   \end{equation}
-
-  where dimension of \(\mu\) is decided by the number of basis introduced in the relaxation.
 
   At iteration \(k\),
 
-  \begin{align*}
-    (x,y,z,t)^{k+1} & = {\arg\min}_{(x,y)\in\Omega, t\ge 0} L\left(x,y,z,\xi^k,s^k,\kappa^k,\mu^k\right)      \\
-    (\xi)^{k+1}     & = {\arg\min}_{(\xi)\in\mathscr{Q}} L\left((x,y,z,t)^{k+1},\xi,s, \kappa^k, \mu^k\right) \\
-    \kappa^{k+1}    & = \kappa^k + \rho\left(t^{k+1}-s^{k+1}\right)                                           \\
-    \mu^{k+1}       & = \mu^k + \rho\left( \langle\xi^{k+1}, x^{k+1}\rangle - s^{k+1}\right)
-  \end{align*}
+  \begin{subequations}
+    \begin{align}
+      \label{eq.admm.iterx}   (x^{k+1}, y^{k+1}) & = \arg\min_{x, y} L\left(x,y,\xi^k,\mu^k\right)                         \\
+      \label{eq.admm.iterxi}   \xi^{k+1}         & = \arg\min_{\xi} L\left(x^{k+1}, y^{k+1}, \mu^k\right)                  \\
+      \mu^{k+1}                                  & = \mu^k + \tau^k\rho\left((\xi^{k+1})\circ V^T x^{k+1} - y^{k+1}\right)
+    \end{align}
+  \end{subequations}
+  The optimization problem \eqref{eq.admm.iterx} is convex that can be solved effectively. The iteration for \(\xi\) can be decomposed into \(r\) subproblems, at iteration \(k+1\), for \(i = 1, ..., r\),
 
+  \begin{equation}
+    \begin{aligned}
+      \mn & \mu_i^k \left (\xi_i \cdot(v_i^Tx^{k+1}) - y_i^{k+1}\right) + \frac{\rho}{2} \left(\xi_i \cdot (v_i^Tx^{k+1}) - y_i^{k+1}\right)^2 \\
+      \st & \xi_i^2 \le y_i^{k+1}
+    \end{aligned}
+  \end{equation}
+
+  which is a one dimension problem that allows analytic solution.
+
+  \begin{theorem}
+    The termination criterion for ADMM,
+    \begin{enumerate}
+      \item Primal residual. \(\left \|(V^Tx^{k+1}) \circ \xi^{k+1} - y^{k+1} \right\| \le \epsilon\)
+      \item Dual residual. \(\left\|(V^Tx^{k+1}) \circ (\xi^{k+1}-\xi^k)\right\| \le \epsilon\)
+    \end{enumerate}
+  \end{theorem}
   As a comparison, see the \hyperlink{oldad}{ADMM in original \(x\)}.
+\end{frame}
+
+\begin{frame}[allowframebreaks]{ADMM in BB}
+  Embed ADMM into BB as a primal method.
+
+  \begin{enumerate}
+    \item ADMM is faster then the old one
+    \item The strategy is to warm-start ADMM in the subregions. [very fast, from \~90 to \~30]
+  \end{enumerate}
+
 \end{frame}
 
 
 \section{Computational Results}
+\begin{frame}
+  \begin{enumerate}
+    \item We use eigenvectors \(V = V_0\) of \(Q\) to convexify constraints.
+    \item We simply choose \(\Lambda_j = \lambda_j I\)
+    \item We test on Box QP, QCQP, and QCL.
+  \end{enumerate}
+\end{frame}
 \setlength\pdfpagewidth{16.00cm}%
 \setlength\pdfpageheight{20.00cm}%
 \begin{frame}[standout]{Box QP}
@@ -432,7 +472,7 @@
       0  & QPLIB\_2761 & 1479.828    & -0.0010     & -0.0010   & 0          & 2214.0 & grb     \\
       0  & QPLIB\_2761 & 1500.390    & 11.4674     & -0.2017   & 0.649      & 1142   & bb\_msc \\
       1  & QPLIB\_0018 & 43.730      & 6.3860      & 6.3860    & 0          & 2831.0 & grb     \\
-      1  & QPLIB\_0018 & 1500.023    & 40.0342     & 5.8297    & 0.006      & 83458  & bb\_msc \\·
+      1  & QPLIB\_0018 & 1500.023    & 40.0342     & 5.8297    & 0.006      & 83458  & bb\_msc \\
       2  & QPLIB\_2712 & 377.647     & -0.0129     & -0.0129   & 0          & 859.0  & grb     \\
       2  & QPLIB\_2712 & 1500.005    & 6.4931      & -0.1455   & 0.073      & 6990   & bb\_msc \\
       \bottomrule
@@ -460,16 +500,17 @@
 
 \begin{frame}[allowframebreaks]{Future Work: Better Branching}
 
-  Recall that we have a mutual \(V\) to convexify \({Q, A_i}\), if there is no \(\{A_i\}\), then \(V\) could be eigenvectors. This is not effective if it is not a low-rank matrix.
+  Recall that we have a mutual \(V\) to convexify \({Q, A_i}\), if there is no \(\{A_i\}\), then \(V\) could be eigenvectors. This is not effective if it is not a low-rank matrix, i.e., there exists, \(v_1, ..., v_r\).
 
-  We first consider \(Q\) only. Instead of branching on \(v_j^T x\), consider the following procedure:
+  Instead of branching on \(z_j = v_j^T x\)
+
   \begin{itemize}
-    \item find \(p\) that creates two subproblems,
-          \[p^TV^Tx \le p_0 \vee  p^TV^Tx \ge p_0\]
-    \item use \(p\) to create RLT cuts.
+    \item find \(p\) of our interest, moreover,
+          \begin{align*}
+            p^Tz \le p_0 \vee  p^Tz \ge p_0 \\
+          \end{align*}
+          \(pp^T\) is not diagonal so unable to create RLT cuts.
   \end{itemize}
-
-
 
 \end{frame}
 
