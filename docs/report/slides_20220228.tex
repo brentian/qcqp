@@ -1,0 +1,154 @@
+\PassOptionsToClass{a4paper,10pt}{article} % for article mode 
+\PassOptionsToClass{utf8,aspectratio=1610,10pt}{beamer} % for beamer, handout, trans modes
+\newcommand*{\BeamerswitchSpawn}[1]{
+    \ShellEscape{... -jobname=\jobname#1 \jobname} %
+}
+\documentclass{beamerswitch}
+\mode<article>{
+  \usepackage[top=3cm, bottom=3cm, left=3cm, right=2cm]{geometry}
+}
+\mode<presentation>{
+  
+}
+\usepackage{amsmath, subfiles, bm, hyperref, graphicx}
+\usepackage{mathrsfs}
+\usepackage{caption, longtable, booktabs}
+\usepackage{cancel}
+
+% my cmd
+%%%%%%%%%%%%%%%%
+% start my commands
+%%%%%%%%%%%%%%%%
+\newcommand{\lm}{\lambda_\textbf{max}}
+\newcommand{\trace}{\textbf{trace}}
+\newcommand{\diag}{\textbf{diag}}
+\newcommand{\rank}{\textbf{rank}}
+\newcommand{\model}[1]{(\textbf{#1})}
+\newcommand{\mx}{\mathbf{\max}\;}
+\newcommand{\mn}{\mathbf{\min}\;}
+\newcommand{\st}{\mathrm{s.t.\;}}
+\newcommand{\ex}{\mathbf E}
+\newcommand{\dx}{\;\bm dx}
+\newcommand{\pr}{\mathbf P}
+\newcommand{\id}{\mathbf I}
+\newcommand{\bp}{\mathbb P}
+\newcommand{\be}{\mathbb E}
+\newcommand{\bi}{\mathbb I}
+\newcommand{\bxi}{{\bm \xi}}
+\newcommand{\va}{\mathbf{Var}}
+\newcommand{\dif}{\mathbf{d}}
+\newcommand{\minp}[2]{\min\{#1, #2\}}
+\newcommand{\intp}{\mathbf{int}}
+\newcommand{\apex}{\mathbf{apex}}
+\newcommand{\conv}{\mathbf{conv}}
+\newcommand{\red}[1]{\textcolor{red}{#1}}
+\newcommand{\redsf}[1]{\textcolor{red}{\textsf{#1}}}
+\newcommand{\real}{\mathbb{R}}
+
+%%%%%%%%%%%%%%%%
+% finish my commands
+%%%%%%%%%%%%%%%%
+\usefonttheme[onlymath]{serif}
+\setbeamertemplate{theorems}[numbered]
+\setbeamertemplate{section in toc}[sections numbered]
+\setbeamertemplate{subsection in toc}[subsections numbered]
+\setbeamertemplate{caption}[numbered]
+% default navigation
+\defbeamertemplate{navigation symbols}{mydefault}{%
+    \usebeamerfont{footline}%
+    \usebeamercolor[fg]{footline}%
+    \hspace{1em}%
+    \insertframenumber/\inserttotalframenumber
+}
+% standout navigation
+\defbeamertemplate{navigation symbols}{standout}{%
+  \setbeamertemplate{navigation symbols}{}%
+}
+
+\BeforeBeginEnvironment{frame}{%
+  \setbeamertemplate{navigation symbols}[mydefault]%
+}
+
+\makeatletter
+\define@key{beamerframe}{standout}[true]{%
+  \setbeamertemplate{navigation symbols}[standout]
+}
+\makeatother
+
+\title{QCQP: Progress Report}
+\begin{document}
+
+\author{
+  Chuwen Zhang
+}
+\frame{\titlepage}
+
+\begin{frame}[allowframebreaks]{Convex QP}
+  Recall \cite{ye_extension_1989}, \cite{ye_affine_1992}
+  \begin{align*}
+    \min q(x)\doteq ~ & x^TQx + q^Tx    \\
+    \st             ~ & Ax = b, x \ge 0
+  \end{align*}
+  We solve by successive trust region subproblems with affine scaling
+  \begin{align*}
+    \min q(x)\doteq ~ & x^TQx + q^Tx                               \\
+    \st             ~ & Ax = b, x \ge 0                            \\
+                      & \|(D^k)^{-1}(x - x^k)\|^2  \le \beta^2 < 1
+  \end{align*}
+
+  \begin{enumerate}
+    \item  Affine scaling: \(D^k = \diag(x^k)\)
+    \item  or add a barrier term: \(- \ln(x)^Te \approx - \left(\mu^{k+1} \alpha / \sqrt{n}\right) e^{T} D^{-1}\left(x-x^{k}\right)\)
+    \item  Solve QPS at iteration \(k\) by solving a linear equation
+  \end{enumerate}
+\end{frame}
+\begin{frame}[allowframebreaks]{Adopt interior trust region for diagonalized QP}
+  Consider box QP in (diagonalized) standard form, \(x \in [0, u]\), we have the the quadratic subproblem (QPS) using the interior trust region method,
+  \begin{equation}\label{eq.interior.boxqp}
+    \begin{aligned}
+      \max ~ & \lambda^T y + q^Tx  + \mu \sum_j \ln x_j & \approx \lambda^T y + q^Tx + \frac{\alpha \mu}{\sqrt n} e^T(Dx-e) \\
+      \st ~  & x_j^2 = y_j                              & (\gamma, \Gamma = \diag(\gamma))                                  \\
+             & x_j \le u_j                              & (\theta)                                                          \\
+             & \|Dx - e\| \le \beta^2                   & (\kappa)
+    \end{aligned}
+  \end{equation}
+  where \(D = \diag(x^k)^{-1}\) is the affine scaling matrix.
+  \framebreak
+
+  Lagrangian function,
+  \begin{align*}
+    L ~ & = -\lambda^Ty - q^Tx - \frac{\alpha \mu}{\sqrt n} e^T(Dx-e) \\
+        & + x^T\Gamma x - \gamma^Ty + \theta^Tx - \theta^Tu           \\
+        & + \kappa x^TD^2x - 2\kappa e^TDx + \kappa(e^Te - \beta^2)
+  \end{align*}
+  The first order condition for QPS,
+
+  \begin{align*}
+    \xi                                    =  \frac{\alpha \mu}{\sqrt n},~ -\Lambda - \Gamma & = 0                          \\
+    2(\Gamma + \kappa \cdot D^2)x + \theta                                                   & = q + De\cdot(\xi + 2\kappa) \\
+    \theta \circ (x - u)                                                                     & = 0                          \\
+    \kappa \left (\|Dx - e\|^2 - \beta^2   \right )                                          & = 0
+  \end{align*}
+  Similar to \cite{ye_extension_1989}, it is possible to drop complementary for ellipsoid condition and \(\kappa\)
+
+  \framebreak
+  Add second order condition,
+  \begin{align*}
+    S(\kappa)                             & = \kappa \cdot D^2 - \red{\Lambda} \succeq 0 & \dagger  \\
+    2S (\kappa) \cdot \tilde \theta       & = \theta                                     &          \\
+    2S (\kappa) \cdot (x + \tilde \theta) & = q + De\cdot(\xi + 2\kappa)                 & \ddagger \\
+  \end{align*}
+
+  \begin{enumerate}
+    \item We can clearly construct a lower bound for \(\kappa\), by making \(\dagger\) psd and RHS of \(\ddagger\) nonnegative.
+    \item We know \(x + \tilde \theta \ge 0, x\le u \), by suitably choose \(\kappa > 0\), we can always find \(x + \tilde \theta \ge 0\)
+    \item Next we find \(\tilde \theta \) to make \(x \le u, \theta \circ (x - u) = 0\)
+  \end{enumerate}
+\end{frame}
+
+
+\begin{frame}[allowframebreaks]{Bibliography}
+  \bibliography{headers/qcqp}
+  \bibliographystyle{apalike}
+\end{frame}
+\end{document}
