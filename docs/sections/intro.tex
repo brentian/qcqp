@@ -1,101 +1,27 @@
 \documentclass[../main]{subfiles}
 
 \begin{document}
-\section{Develop Plan}
-
-The first part is devoted to SDP relaxations.
-
-\begin{itemize}
-      \tightlist
-      \item We first test HQCQP for vectors, add support for SeDuMi, should be able to switch SDP solvers
-      \item Extend to inhomogeneous QCQP.
-      \item Develop and test both relaxations, see \ref{sdp-method-1}, \ref{sdp-method-2}
-      \item We test on well-known problems (vectors), e.g., QKP (quadratic knapsack), Max-cut, ...
-      \item Start to test matrix variable problems, see \ref{sdp-extending}, SNL, QAP,
-            etc using vectorized method.
-      \item Introduce matrix variables, ..., if needed.
-\end{itemize}
-
-Start with Pure Python or Julia interface as a fast prototype. Then migrate to C/C++ interface with Python and Matlab support.
-
-The second part is devoted to ``Refinement''. to be discussed.
-
-The third part is for Branch-and-cut method, using ideas from integer programming,
-to create a global QCQP solver using SDP as lower bound in the branching process. to be discussed.
-
-Last part is for modeling and AMLs support.
-
-\begin{itemize}
-      \tightlist
-      \item in Python one can use cvxpy or other AMLs; in Julia one may extend JuMP.
-      \item add support for COPT?
-\end{itemize}
-
-\section{Scope of Work}
-Develop a QCQP solver that uses SDP-relaxation-and-refinement approach.
-The QCQP solver should be problem-independent that works for any QCQP
-instance.
-\subsection{Modeling interface}\label{modeling-interface}
-
-The modeling interface is domain specific language, a simple tool for
-user to define a \textbf{QCQP} problem, then the solver translates into
-canonical form of QCQP. For example, for a HQCQP, canonical form
-includes parameters \(Q\), \(A_i, b_i, \forall i\)
-
-To-dos:
-
-\begin{itemize}
-      \tightlist
-      \item
-            The modeling part does the canonicalization, works like cvxpy, yalmip,
-            etc.
-      \item
-            Directly use COPT.
-\end{itemize}
-
-See \cite{agrawal_rewriting_2018}, \cite{diamond_cvxpy_2016},
-\cite{dunning_jump_2017}, \cite{lofberg_yalmip_2004}
-
-\subsection{SDP interface}\label{sdp-interface}
-
-The SDP interface should be solver \textbf{independent}. SDP interface
-starts with canonical form to create a SDP-relaxation. So the users do
-not have to derive SDP by themselves. The interface should output a SDP
-problem in a standard format, e.g., SDPA format, that can be accepted by
-any SDP solver.
-
-To-dos including:
-
-\begin{itemize}
-      \tightlist
-      \item starts with canonical form.
-      \item interface with solver: create problems, extract solutions, status,
-            etc.
-      \item consider two types of relaxation: method-I, method-II.
-\end{itemize}
+\section{Introduction}
+In this paper, we are concerned with global solutions to nonconvex quadratic constrained quadratic programming (QCQP) problems.
 
 
-We consider two types of SDP relaxations:
+The inhomogeneous QCQP problem can be expressed in the following form:
 
-\subsection{Local Refinement}\label{local-refinement}
+\begin{equation}
+      \label{eq:inhoqcqp}
+      \begin{aligned}
+            \model{QCQP} ~\mx~ & x^T A_0 x + a_0^T x         \\
+            \st ~              & x^T A_i x + a_i^T x \le b_i \\
+      \end{aligned}
+\end{equation}
 
-Local Refinement from SDP solution to QP seems to be problem dependent,
-whereas we can start with:
+The variable is \(x \in \real^n\) and the matrices \(\{A_i, i=0,\ldots, m\}\) are symmetric matrices. We say the problem \eqref{eq:inhoqcqp} is homogeneous if \(a_i = 0, i=0,\ldots, m\). The generic QCQP envelopes a wide range of important applications such as the max-cut problem, quadratic assignment problem, sensor network localization \cite{biswas_semidefinite_2004}, and so forth. Despite the algebraic elegance of QCQP, only a few special cases of the problem are easy in terms of polynomial solvability. It can be shown in many other cases the problem is NP-hard, see \cite[]{pardalos_quadratic_1991, ...}.
 
-\begin{itemize}
-      \tightlist
-      \item
-            Use Gurobi to do the refinement
-      \item
-            use existing methods, including residual minimization (SNL),
-            randomization (for BQP), see \cite{luo_semidefinite_2010} and papers for
-            SNL.
-      \item
-            add an \textbf{option} for user to choose a refinement method.
-\end{itemize}
+Among convex relaxations, semidefinite programming relaxation (SDR) is a widely used technique to solve QCQP approximately. In this approach, the variable \(x\) in the original space is lifted to a rank-one matrix \(X = xx^T\). By placing \(X\) in the space of semidefinite matrices while ignoring the requirement on rank, the SDR produces an upper bound for QCQP that turns out to be very appealing in many applications \cite[]{biswas_semidefinite_2004,biswas_semidefinite_2006}. In general, the solution of SDR (say \(X^*\)) has a rank that is greater than one. A general bound on rank of \(X^*\) is given in \cite[]{pataki, }. It is possible, however, to expect a rank-one solution from SDR if the data matrices come with some special structures, such as the case where the matrices are diagonal\cite[]{burer_exact_2020}, forest structured \cite[]{azuma_exact_2021}, and many others.
+% We note \cite[]{wang_tightness_2021}
+If one permits only one quadratic constraint, it is also possible to find exact solutions by SDR. see \cite{sturm_cones_2003, ye_new_2003}.
 
-
-\subsection{Branch-and-Cut for Global Optimization}\label{branch-and-cut}
+Without a safeguard on the rank of the SDR, a popular approach is to recover \(x\) by sacrificing the quality of objective value by using low-rank approximations. For this vein of research, one refer to \cite[]{so_unified_2008,}. Instead, if a global solution is desired, branch-and-bound type methods can be used to successively solve SDR in smaller subregions \cite[]{audet_branch_2000,vandenbussche_branch-and-cut_2005}. In fact, LP relaxation can be used to replace SDR in nodal problems to achieve cheaper subproblems as well as to take advantage of warm-start techniques. However, the quicker LP relaxations typically produce upper bounds way-off from those by SDR, which greatly increase the number of needed nodes in the searching process.
 
 
 \end{document}

@@ -1,4 +1,4 @@
-\PassOptionsToClass{a4paper,10pt}{article} % for article mode 
+\PassOptionsToClass{a4paper,10pt}{article} % for article mode
 \PassOptionsToClass{utf8,aspectratio=1610,10pt}{beamer} % for beamer, handout, trans modes
 \newcommand*{\BeamerswitchSpawn}[1]{
     \ShellEscape{... -jobname=\jobname#1 \jobname} %
@@ -8,9 +8,9 @@
   \usepackage[top=3cm, bottom=3cm, left=3cm, right=2cm]{geometry}
 }
 \mode<presentation>{
-  
+
 }
-\usepackage{amsmath, subfiles, bm, hyperref, graphicx}
+\usepackage{amsmath, amssymb, subfiles, bm, hyperref, graphicx}
 \usepackage{mathrsfs}
 \usepackage{caption, longtable, booktabs}
 \usepackage{cancel}
@@ -98,7 +98,7 @@
 
   \begin{enumerate}
     \item  Affine scaling: \(D^k = \diag(x^k)\)
-    \item  or add a barrier term: \(- \ln(x)^Te \approx - \left(\mu^{k+1} \alpha / \sqrt{n}\right) e^{T} D^{-1}\left(x-x^{k}\right)\)
+    \item  or add a barrier term: \(- \ln(x)^Te \approx - \left(\kappa^{k+1} \alpha / \sqrt{n}\right) e^{T} D^{-1}\left(x-x^{k}\right)\)
     \item  Solve QPS at iteration \(k\) by solving a linear equation
   \end{enumerate}
 \end{frame}
@@ -106,10 +106,9 @@
   Consider box QP in (diagonalized) standard form, \(x \in [0, u]\), we have the the quadratic subproblem (QPS) using the interior trust region method,
   \begin{equation}\label{eq.interior.boxqp}
     \begin{aligned}
-      \max ~ & \lambda^T y + q^Tx  + \mu \sum_j \ln x_j & \approx \lambda^T y + q^Tx + \frac{\alpha \mu}{\sqrt n} e^T(Dx-e) \\
-      \st ~  & x_j^2 = y_j                              & (\gamma, \Gamma = \diag(\gamma))                                  \\
-             & x_j \le u_j                              & (\theta)                                                          \\
-             & \|Dx - e\| \le \beta^2                   & (\kappa)
+      \max ~ & x^T\Lambda x + q^Tx  + \mu \sum_j \ln x_j & \stackrel{\mu =\kappa}{\approx} x^T\Lambda x + q^Tx + \frac{\alpha \kappa}{\sqrt n} e^T(Dx-e) \\
+      \st ~  & x_j \le u_j                               & (\theta)                                                                                      \\
+             & \|Dx - e\| \le \beta^2                    & (\kappa)
     \end{aligned}
   \end{equation}
   where \(D = \diag(x^k)^{-1}\) is the affine scaling matrix.
@@ -117,26 +116,25 @@
 
   Lagrangian function,
   \begin{align*}
-    L ~ & = -\lambda^Ty - q^Tx - \frac{\alpha \mu}{\sqrt n} e^T(Dx-e) \\
-        & + x^T\Gamma x - \gamma^Ty + \theta^Tx - \theta^Tu           \\
-        & + \kappa x^TD^2x - 2\kappa e^TDx + \kappa(e^Te - \beta^2)
+    L ~ = & -x^T\Lambda x - q^Tx - \frac{\alpha \kappa}{\sqrt n} e^T(Dx-e) \\
+          & + \theta^Tx - \theta^Tu                                        \\
+          & + \kappa x^TD^2x - 2\kappa e^TDx + \kappa(e^Te - \beta^2)
   \end{align*}
   The first order condition for QPS,
 
   \begin{align*}
-    \xi                                    =  \frac{\alpha \mu}{\sqrt n},~ -\Lambda - \Gamma & = 0                          \\
-    2(\Gamma + \kappa \cdot D^2)x + \theta                                                   & = q + De\cdot(\xi + 2\kappa) \\
-    \theta \circ (x - u)                                                                     & = 0                          \\
-    \kappa \left (\|Dx - e\|^2 - \beta^2   \right )                                          & = 0
+    2(\kappa \cdot D^2 - \Lambda)x + \theta         & = q + \kappa \cdot De \cdot\left (2 + \frac{\alpha}{\sqrt n} \right ) \\
+    \theta \circ (x - u)                            & = 0                                                                   \\
+    \kappa \left (\|Dx - e\|^2 - \beta^2   \right ) & = 0
   \end{align*}
   Similar to \cite{ye_extension_1989}, it is possible to drop complementary for ellipsoid condition and \(\kappa\)
 
   \framebreak
   Add second order condition,
   \begin{align*}
-    S(\kappa)                             & = \kappa \cdot D^2 - \red{\Lambda} \succeq 0 & \dagger  \\
-    2S (\kappa) \cdot \tilde \theta       & = \theta                                     &          \\
-    2S (\kappa) \cdot (x + \tilde \theta) & = q + De\cdot(\xi + 2\kappa)                 & \ddagger \\
+    S(\kappa)                             & = \kappa \cdot D^2 - \red{\Lambda} \succeq 0                    & \dagger  \\
+    2S (\kappa) \cdot \tilde \theta       & = \theta                                                        &          \\
+    2S (\kappa) \cdot (x + \tilde \theta) & = q + \kappa De\cdot \left (2 + \frac{\alpha}{\sqrt n} \right ) & \ddagger \\
   \end{align*}
 
   \begin{enumerate}
@@ -146,6 +144,36 @@
   \end{enumerate}
 \end{frame}
 
+\begin{frame}[allowframebreaks]{General QCQP}
+
+  With simultaneous convexification,
+
+  \begin{equation}\label{eq.int.qcqp}
+    \begin{aligned}
+      \max ~ & x^TV\Gamma_0V^T x - x^T\tilde Q x + q^Tx                         \\
+      \st  ~ & x^T\tilde A_j x + a_j ^Tx - b_j \le x^TV\Gamma_j V^Tx & (\tau)   \\
+             & \left \|DV^Tx - e  \right \|  \le \beta               & (\kappa) \\
+             & 0 \le V^Tx \le u                                      & (\theta)
+    \end{aligned}
+  \end{equation}
+
+  We have \(Q = \tilde{Q} - V\Gamma_0V^T, A_j = \tilde{A_j} - V\Gamma_j V^T\) such that \(\tilde{Q} \succeq 0, A_j \succeq 0, \forall j\). Let \(\bm A = \begin{bmatrix}    A_1 \\ ... \\ A_m  \end{bmatrix}, \bm a = \begin{bmatrix}
+    a_1^T \\...\\a_m^T  \end{bmatrix} \),
+  \begin{align*}
+    L = & ~ x^T\left[\tilde Q + \tau^T \bm A + V\left (\red{\kappa D^2} - \Gamma_0 - \tau^T \bm \Gamma \right )V^T\right ]x \\
+        & + (\tau^T\bm a)^T x- \tau^T \bm b + \theta^TV^Tx - \theta^Tu                                                      \\
+        & - 2 \kappa x^T VDe - x^Tq + \kappa e^Te - \kappa \beta^2
+  \end{align*}
+  \framebreak
+
+  First and second order condition,
+  \begin{align*}
+    S           & = \red{\kappa D^2} - \Gamma_0 - \tau^T \bm  \Gamma                                          \\
+    0           & = 2\left(\tilde Q + \tau^T \bm A + V^TSV\right) x + V\theta + \tau^T\bm a - q - 2\kappa VDe \\
+    0           & = \theta \circ (V^Tx-u)                                                                     \\
+    S \succeq 0 & \Rightarrow \tilde Q + \tau^T \bm A + V^TSV \succeq 0
+  \end{align*}
+\end{frame}
 
 \begin{frame}[allowframebreaks]{Bibliography}
   \bibliography{headers/qcqp}

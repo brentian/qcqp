@@ -19,4 +19,22 @@
             ]
         },
     ],
+    "grammarly.overrides": [
+        {
+            "files": [
+                "**/docs/sections/intro.tex"
+            ],
+            "config": {
+                "audience": "knowledgeable",
+                "dialect": "american",
+                "domain": "general",
+                "emotions": [
+                    "neutral"
+                ],
+                "goals": [
+                    "inform"
+                ]
+            }
+        }
+    ],
 }
