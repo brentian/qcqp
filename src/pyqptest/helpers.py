@@ -15,7 +15,7 @@ np.set_printoptions(linewidth=200, precision=3)
 
 # relaxation
 from pyqp import bg_grb, bg_msk
-from pyqp import bg_msk_msc, bg_msk_msc_admm
+from pyqp import bg_msk_msc, bg_msk_msc_admm, bg_msk_msc_ipm
 from pyqp import bg_msk_norm, bg_msk_norm_admm
 from pyqp import bg_msk_mix
 # branch and bound
@@ -36,12 +36,13 @@ METHODS = collections.OrderedDict(
     ("bb_msc_no_primal", bb_diag.bb_box),
     ("bb_msc", bb_diag.bb_box),
     ("admm_msc", bg_msk_msc_admm.msc_admm),
+    ("trs_msc", bg_msk_msc_ipm.trs_msc),
     # msc and socp using norm balls
     ("nsocp", bg_msk_norm.socp),
     ("bb_nmsc", bb_nmsc.bb_box),
     ("bb_nsocp", bb_nmsc.bb_box_nsocp),
     ("admm_nmsc", bg_msk_norm_admm.msc_admm),  # local method using admm
-    # mixed-cone, todo.
+    # mixed-cone ? todo.
     ("mcone", bg_msk_mix.socp),
     ("bb_mcone", bb_mix.bb_box_nsocp)
   ]
@@ -53,8 +54,8 @@ METHOD_HELP_MSGS = {k: bg_msk.dshor.__doc__ for k, v in METHODS.items()}
 
 QP_SPECIAL_PARAMS = {
   # relaxation
-  "msc": {"decompose_method": "eig-type1", "force_decomp": True},
-  "emsc": {"decompose_method": "eig-type2", "force_decomp": True},
+  "msc": {"convexify_method": 1, "force_decomp": True, "bound_method": bg_msk_msc.MscBounds},
+  "trs_msc": {"convexify_method": 1, "force_decomp": True, "bound_method": bg_msk_msc.MscBounds},
   "asocp": {"decompose_method": "eig-type1", "force_decomp": False},
   # global method
   "bb_msc_no_primal": {"convexify_method": 1, "use_primal": False, "force_decomp": True},
@@ -98,7 +99,7 @@ parser.add_argument(
   "--bg", default='msk', type=str, help="backend used, e.g., mosek."
 )
 parser.add_argument(
-  "--bg_pr", default=None, type=str, help="backend used, primal method"
+  "--bg_pr", default='admm', type=str, help="backend used, primal method"
 )
 parser.add_argument(
   "--problem_type", type=int, help=f"if randomly generated, what is the problem type?\n{QP_RANDOM_INSTANCE_TYPE}",

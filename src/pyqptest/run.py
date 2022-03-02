@@ -30,12 +30,16 @@ def run_single_instance(
     func = METHODS[k]
     
     qp1 = copy.deepcopy(qp)
+    bd1 = copy.deepcopy(bd)
     special_params = QP_SPECIAL_PARAMS.get(k, {})
     if qp1.Qpos is None or special_params.get("force_decomp", True):
       qp1.decompose(**special_params)
+      
       print(f"redecomposition with method {special_params}")
+    if special_params.get("bound_method"):
+      bd1 = special_params["bound_method"](**bd.__dict__, qp=qp1)
     try:
-      r = func(qp1, bd, params=params, admmparams=admmparams, **special_params)
+      r = func(qp1, bd1, params=params, admmparams=admmparams, **special_params)
       reval = r.eval(qp.name)
       evals.append({**reval.__dict__, "method": k})
       results[k] = r

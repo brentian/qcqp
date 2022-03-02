@@ -13,6 +13,7 @@ from collections import defaultdict
 class QP(object):
   import copy
   cp = copy.deepcopy
+  EPS_EIGEN = 1e-4
   
   def __init__(self, Q, q, A, a, b, sign, al=None, au=None):
     self.Q = Q / 2 + Q.T / 2
@@ -22,6 +23,7 @@ class QP(object):
     self.b = b
     self.sign = sign
     # LHS and RHS
+    self.uni = True
     self.al = al
     self.au = au
     self.vl = None
@@ -46,7 +48,12 @@ class QP(object):
     self.n, self.d = q.shape
     self.m, *_ = a.shape
     self.eigen()
-    self.precondition()
+    
+    # convexify terms
+    self.V = 0
+    self.R = {}
+    self.l = {}
+    self.At = {}
   
   def __str__(self):
     # todo add a description
@@ -57,26 +64,6 @@ class QP(object):
   
   def unpack(self):
     return self.Q, self.q, self.A, self.a, self.b, self.sign, self.al, self.au
-  
-  ########################
-  # store eigenvalues
-  ########################
-  def eigen(self):
-    """
-    now we simply construct it by eigenvalue decomposition.
-    :return:
-    """
-    n, m = self.n, self.m
-    self.U = np.empty((m + 1, n, n), dtype=np.float)
-    self.gamma = np.empty((m + 1, n), dtype=np.float)
-    gamma, u = nl.eigh(self.Q)
-    self.gamma[0] = gamma
-    self.U[0] = u
-    for i in range(self.m):
-      Ai = self.A[i]
-      gamma_i, u_i = nl.eigh(Ai)
-      self.gamma[i + 1] = gamma_i
-      self.U[i + 1] = u_i
   
   ########################
   # homogenization
@@ -94,21 +81,72 @@ class QP(object):
       self.Ah.append(_Ah.__array__())
   
   ########################
-  # feasibility checking
+  # store eigenvalues
   ########################
-  def check(self, x):
-    if (0 <= x).all() and (x <= 1).all():
-      pass
-    else:
-      return False
+  def precondition(self):
+    self.bool_zero_mat = {}
+    self.bool_zero_mat[0] = self._bool_zero(self.Q)
     for i in range(self.m):
-      _va = (x.T @ self.A[i] @ x).trace() + (x.T @ self.a[i]).trace()
-      if _va > self.b[i]:
-        return False
-    return True
+      Ai = self.A[i]
+      self.bool_zero_mat[i + 1] = self._bool_zero(Ai)
+  
+  def eigen(self):
+    """
+    now we simply construct it by eigenvalue decomposition.
+    :return:
+    """
+    self.precondition()
+    n, m = self.n, self.m
+    self.indefU = {}
+    self.indefn = {}
+    self.U = np.empty((m + 1, n, n), dtype=np.float)
+    self.gamma = np.empty((m + 1, n), dtype=np.float)
+    gamma, u = nl.eigh(self.Q)
+    indefn = (gamma > self.EPS_EIGEN).sum()
+    self.indefn[0] = indefn
+    self.indefU[0] = u[:, :indefn]  # only positive part
+    self.gamma[0] = gamma
+    self.U[0] = u
+    for i in range(self.m):
+      if self.bool_zero_mat[i]:
+        continue
+      Ai = self.A[i]
+      gamma_i, u_i = nl.eigh(Ai)
+      self.gamma[i + 1] = gamma_i
+      self.U[i + 1] = u_i
+      indefn = (gamma < - self.EPS_EIGEN).sum()
+      self.indefn[i + 1] = indefn
+      self.indefU[i + 1] = u_i[:, :indefn]
+    
+    self.bool_spectral = True
+  
+  @staticmethod
+  def _bool_zero(_A):
+    if _A is None:
+      return True
+    return (np.abs(_A) <= 1e-5).all()
+  
+  @staticmethod
+  def _scaled_cholesky(n, A):
+    """
+    Scale an indefinite A to be PSD
+     R = l*I + A
+    :param n:
+    :param A:
+    :return:
+    """
+    gamma, u = nl.eigh(A)
+    l = (0 if min(gamma) > 0 else - min(gamma)) + QP.EPS_EIGEN
+    As = A + l * np.eye(n)
+    try:
+      R = np.linalg.cholesky(As)
+    except Exception as e:
+      print(np.linalg.eigvalsh(As).min())
+      print(e.__traceback__.format_exc())
+    return l, R, As
   
   ########################
-  # eigenvalue decomposition
+  # decomposition
   # and orthogonal basis
   ########################
   def decompose(
@@ -127,8 +165,7 @@ class QP(object):
     self.Aneg = {}
     self.Amul = {}
     self.Aeig = {}
-    self.R = {}
-    self.l = {}
+    
     if decompose_method == 'eig-type1':
       func = self._decompose_matrix
     elif decompose_method == 'eig-type2':
@@ -173,59 +210,29 @@ class QP(object):
   def convexify(self, method: int = 0):
     """
     :param method:
-    1. 0, use x'x \le s to convexify
-    2. 1, use Q = VLV', and then (V'x)
-    3. 2, more complex...
+    - 0, use x'x \le s to convexify
+    - 1, use Q = VLV', and then (V'x)
+    - 2, use a predetermined
+      orthonormal (partial) basis V
+      this V is potentially low rank.
     
     :return:
     """
-    # construct convex cones
-    for i in range(self.m):
-      Ai = self.A[i]
-      if not self.bool_zero_mat[i + 1]:
-        self.l[i], self.R[i] = self._scaled_cholesky(self.n, Ai)
+    if method == 1:
+      # construct convex cones
+      for i in range(self.m):
+        Ai = self.A[i]
+        if not self.bool_zero_mat[i + 1]:
+          self.l[i + 1], self.R[i + 1], self.At[i + 1] = self._scaled_cholesky(self.n, Ai)
+        else:
+          self.l[i + 1], self.R[i + 1], self.At[i + 1] = 0, 0, 0
+      if not self.bool_zero_mat[0]:
+        self.l[0], self.R[0], self.At[0] = self._scaled_cholesky(self.n, - self.Q)
       else:
-        self.l[i], self.R[i] = 0, 0
-    if not self.bool_zero_mat[0]:
-      l, R = self._scaled_cholesky(self.n, - self.Q)
-      self.l[-1] = l
-      self.R[-1] = R
-    else:
-      self.l[-1], self.R[-1] = 0, 0
+        self.l[0], self.R[0], self.At[0] = 0, 0, 0
+      self.V = self.U[0]
     
     return 1
-  
-  def precondition(self):
-    self.bool_zero_mat = {}
-    self.bool_zero_mat[0] = self._bool_zero(self.Q)
-    for i in range(self.m):
-      Ai = self.A[i]
-      self.bool_zero_mat[i + 1] = self._bool_zero(Ai)
-  
-  @staticmethod
-  def _bool_zero(_A):
-    if _A is None:
-      return True
-    return (np.abs(_A) <= 1e-5).all()
-  
-  @staticmethod
-  def _scaled_cholesky(n, A):
-    """
-    Scale an indefinite A to be PSD
-     R = l*I + A
-    :param n:
-    :param A:
-    :return:
-    """
-    gamma, u = nl.eigh(A)
-    l = (0 if min(gamma) > 0 else - min(gamma)) + 1e-6
-    As = A + l * np.eye(n)
-    try:
-      R = np.linalg.cholesky(As)
-    except Exception as e:
-      print(np.linalg.eigvalsh(As).min())
-      print(e.__traceback__.format_exc())
-    return l, R
   
   def _decompose_matrix(self, A):
     """
@@ -262,6 +269,25 @@ class QP(object):
     mul = gamma.reshape((self.n, 1))
     
     return (upos, ipos), (uneg, ineg), mul, gamma.reshape((self.n, 1))
+  
+  ########################
+  # feasibility checking
+  ########################
+  @staticmethod
+  def _check_one_un(x, _A, _a, _b):
+    return max((x.T @ _A @ x).trace() + (x.T @ _a).trace() - _b, 0)
+  
+  @staticmethod
+  def _check_one_bi(x, _A, _a, _l, _u):
+    _expr = (x.T @ _A @ x).trace() + (x.T @ _a).trace()
+    return max(max(_l - _expr, 0), max((_expr - _u), 0))
+  
+  def check(self, x):
+    if self.uni:
+      return np.fromiter(
+        (self._check_one_un(x, self.A[i], self.a[i], self.b[i]) for i in range(self.m)), dtype=np.float64)
+    return np.fromiter(
+      (self._check_one_bi(x, self.A[i], self.a[i], self.al[i], self.au[i]) for i in range(self.m)), dtype=np.float64)
   
   ########################
   # cliques and chordal sparsity
@@ -357,17 +383,18 @@ class QP(object):
       b = np.array(data['b'])
       sign = np.ones(m)
       al = au = None
+      uni = True
     except:
       b = sign = None
       print("do not provide unilateral RHS, this is a bilateral problem")
       try:
         al = np.array(data['al'])
         au = np.array(data['au'])
+        uni = False
       except:
-        print(
+        raise ValueError(
           "do not provide bilateral LHS&RHS, no constraints are successfully parsed"
         )
-        al = au = None
     try:
       vl = np.array(data['vl']).reshape((n, d))
       vu = np.array(data['vu']).reshape((n, d))
@@ -378,6 +405,7 @@ class QP(object):
     instance.vl = vl
     instance.vu = np.ones((n, d))  # vu * (vu <= 1e6) + 1e6 * (vu > 1e6)  # avoid too big RHS
     instance.name = data.get("name")
+    instance.uni = uni
     return instance
 
 

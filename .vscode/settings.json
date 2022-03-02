@@ -4,31 +4,7 @@
     "editor.insertSpaces": true,
     "python.formatting.provider": "yapf",
     "editor.fontFamily": "'Roboto Mono'",
-    "latex-workshop.latex.tools": [
-        {
-            "name": "xetexmk",
-            "command": "latexmk",
-            "args": [
-                "-cd",
-                "-synctex=1",
-                // "-f",
-                "-interaction=nonstopmode",
-                "-file-line-error",
-                "-xelatex",
-                "-outdir=%OUTDIR%",
-                "%DOC%"
-            ],
-            "env": {}
-        },
-        {
-            "name": "bibtex",
-            "command": "bibtex",
-            "args": [
-                "%DOCFILE%"
-            ],
-            "env": {}
-        },
-    ],
+    "editor.fontWeight": "400",
     "latex-workshop.latex.recipes": [
         {
             "name": "latexmk",
@@ -36,6 +12,29 @@
                 "xetexmk"
             ]
         },
+        {
+            "name": "latexmk-arc",
+            "tools": [
+                "xetexmk-arc"
+            ]
+        },
     ],
-    "editor.fontWeight": "400",
+    "grammarly.overrides": [
+        {
+            "files": [
+                "**/docs/sections/intro.tex"
+            ],
+            "config": {
+                "audience": "knowledgeable",
+                "dialect": "american",
+                "domain": "general",
+                "emotions": [
+                    "neutral"
+                ],
+                "goals": [
+                    "inform"
+                ]
+            }
+        }
+    ],
 }

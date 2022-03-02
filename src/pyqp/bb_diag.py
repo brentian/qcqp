@@ -81,7 +81,7 @@ class MscBranch(Branch):
     x_index = np.unravel_index(np.argmax(res, axis=None), res.shape)
     # x_index = res_sum.argmax()
     self.xpivot = x_index
-    self.xpivot_val = x[x_index].round(self.PRECISION)
+    self.xpivot_val = x[x_index]
     self.type = MscBranch.bound
     self.var_type = not relax
   
@@ -162,7 +162,7 @@ class MscBBItem(BBItem):
   
   def create_model(self, qp: QP):
     self.result = self.backend_func(qp, self.bound, **self.result_args)
-    self.cuts.add_cuts(self.result, self.result_args['backend_name'])
+    # self.cuts.add_cuts(self.result, self.result_args['backend_name'])
     self.bool_model_init = True
 
 
@@ -181,12 +181,6 @@ class MscRLT(RLTCuttingPlane):
     expr1, dom1 = exprs(exprs(yi, exprm(ui, zi)),
                         exprm(li, zi)), bg_msk.dom.lessThan(- ui * li)
     yield expr1, dom1
-
-
-def add_rlt_cuts(branch, bounds):
-  n, m = branch.zpivot
-  u_i, l_i = bounds.zub[m, n, 0], bounds.zlb[m, n, 0]
-  return MscRLT((m, n, u_i, l_i))
 
 
 class MscRLTForX(RLTCuttingPlane):
@@ -308,11 +302,10 @@ def generate_child_items(
 
 
 def bb_box(
-    qp_init: QP,
+    qp: QP,
     bounds: Bounds,
     verbose=False,
     params=BCParams(),
-    decompose_method="eig-type2",
     **kwargs
 ):
   print(json.dumps(params.__dict__(), indent=2))
@@ -325,7 +318,7 @@ def bb_box(
   interval_logging = params.interval_logging
   
   admmparams = ADMMParams()
-  
+  admmparams.logging_interval = 10
   # choose backend
   if backend_func is None:
     if backend_name == 'msk':
@@ -337,7 +330,7 @@ def bb_box(
   if primal_func is None and bool_use_primal:
     if primal_name == 'admm':
       primal_func = bg_msk_msc_admm.msc_admm
-      admmparams.max_iteration = 20
+      admmparams.max_iteration = 100
     elif primal_name == 'nadmm':
       # more expensive
       primal_func = bg_msk_norm_admm.msc_admm
@@ -350,10 +343,6 @@ def bb_box(
   k = -1
   start_time = time.time()
   
-  # create a copy of QP based on decomposition method
-  qp = QP(*qp_init.unpack())
-  qp.decompose(decompose_method=decompose_method)
-  
   # root
   root_bound = MscBounds(**bounds.__dict__, qp=qp)
   
@@ -361,7 +350,8 @@ def bb_box(
   
   # solution info
   bcinfo = BCInfo()
-  bcinfo.best_r = root_r = backend_func(qp, bounds=root_bound, solver=params.dual_backend, verbose=False, solve=True)
+  bcinfo.best_r = root_r = backend_func(qp, bounds=root_bound, solver=params.dual_backend, verbose=False, solve=False)
+  bcinfo.best_r.solve(True, qp)
   
   # global cuts
   glc = MscCuts()
@@ -382,7 +372,7 @@ def bb_box(
     """
     
     parent_sdp_val = item.parent_bound
-    ub = max(ub_dict.values())
+    
     ub_dict.pop(item.node_id)
     
     r_primal = feasible_via_primal.pop(item.node_id) if item.node_id in feasible_via_primal else None
@@ -401,7 +391,7 @@ def bb_box(
       r.solve_time = time.time() - start_time
       bcinfo.counter_solved_nodes += 1
     
-    if r.relax_obj < bcinfo.lb:
+    if r.relax_obj <= bcinfo.lb:
       # prune this tree
       if k % interval_logging == 0:
         print(f"prune #{item.node_id} @{r.relax_obj :.4f} by bound")
@@ -444,41 +434,41 @@ def bb_box(
     
     if bool_start_primal and bool_has_primal and not bool_pass_primal:
       try:
-        r_primal = primal_func(qp, item.bound, True, admmparams, r)
+        r_primal = primal_func(qp, item.bound, True, admmparams, r_primal)
         bcinfo.counter_primal_invoke += 1
         if not bool_sol_feasible or r_primal.true_obj > r.true_obj:
           r.xval = r_primal.xval
           r.yval = r_primal.yval
           r.zval = r_primal.zval
-          print(f"primal {primal_func.__name__} is better: {r_primal.true_obj, r.true_obj}")
-          r.true_obj = r_primal.true_obj
           bcinfo.counter_primal_improv += 1
       except Exception as e:
         print(f"primal {primal_func.__name__} failed ")
         print(e.__traceback__.format_exec())
     
-    # if bool_pass_primal:
-    #   # do not need to start primal
-    #   # still using parent's primal
-    #   print("primal passed")
+    if r_primal is not None and r_primal.true_obj > r.true_obj:
+      r.true_obj = r_primal.true_obj
     
     if r.true_obj > bcinfo.lb:
       bcinfo.best_r = r
       bcinfo.lb = r.true_obj
     
-    gap = (ub - bcinfo.lb) / (abs(ub) + 1e-3)
-    gap_primal = abs(r.true_obj - r.relax_obj) / (abs(r.relax_obj) + 1e-3)
+    if len(ub_dict) > 0:
+      bcinfo.ub = max(ub_dict.values())
+    
+    bcinfo.gap = gap = (bcinfo.ub - bcinfo.lb) / (abs(bcinfo.lb) + 1e-2)
+    gap_primal = abs(r.true_obj - r.relax_obj) / (abs(r.true_obj) + 1e-2)
     
     if k % interval_logging == 0:
       print(
-        f"time: {r.solve_time:.2e} #{item.node_id:.2e}, "
+        f"time: {r.solve_time:.2e} "
+        f"#{item.node_id:.2e}, "
         f"depth: {item.depth:.2e}, "
         f"feas: {r.resc_feas:.3e} "
         f"feasC: {r.resc_feasC:.3e} "
         f"obj: {r.true_obj:.3e}, "
         f"sdp_obj: {r.relax_obj:.3e}, "
         f"gap_*: {gap_primal:.2%} ",
-        f"gap:{gap:.2%} ([{bcinfo.lb:.2e},{r.relax_obj:.2e},{ub:.2e}]")
+        f"gap:{gap:.2%} ([{bcinfo.lb:.3e},{r.relax_obj:.3e},{bcinfo.ub:.3e}]")
     
     if gap <= params.opt_eps or r.solve_time >= params.time_limit:
       print(f"terminate #{item.node_id} by gap or time_limit")
@@ -498,7 +488,7 @@ def bb_box(
     )
     for next_item in _:
       bcinfo.counter_total_nodes += 1
-      next_priority = - r.relax_obj.round(PRECISION_OBJVAL)
+      next_priority = - r.relax_obj
       queue.put((next_priority, next_item))
       ub_dict[next_item.node_id] = r.relax_obj
       feasible_via_primal[next_item.node_id] = r_primal
@@ -511,12 +501,12 @@ def bb_box(
     priority, item = queue.get()
     info = _process_item(item)
     queue.task_done()
+    
     if info == 1:
       break
   
   bcinfo.best_r.nodes = bcinfo.counter_solved_nodes
-  max_left = max(*ub_dict.values()) if ub_dict.__len__() > 0 else 1e6
-  bcinfo.best_r.bound = min(bcinfo.best_r.relax_obj, max_left)
+  bcinfo.best_r.bound = max(bcinfo.ub, bcinfo.lb)
   bcinfo.best_r.solve_time = time.time() - start_time
   
   print(f"//finished with {bcinfo.best_r.solve_time: .3f} s \n"

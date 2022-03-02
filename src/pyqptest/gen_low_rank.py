@@ -21,16 +21,16 @@ def generate(n, m, problem_dtls: str):
   
   Q = Rp @ Rp.T - Rn @ Rn.T
   
-  Ga = np.random.randint(-5, 5, (m, r))
+  Ga = np.random.randint(0, 5, (m, r))
   Rr = np.zeros((m, r, r))
   for i in range(m):
     np.fill_diagonal(Rr[i], np.diag(Ga[i]))
   
-  Arp = np.random.uniform(0, 1, (m, n, r))
+  Arn = np.random.uniform(-1, 1, (m, n, r))
   
-  Arn = np.random.randint(0, 5, (m, n, n))
+  Arp = np.random.randint(0, 5, (m, n, n))
   
-  A = Arp @ Rr @ Arp.transpose(0, 2, 1) - Arn @ Arn.transpose(0, 2, 1)
+  A = Arp @ Arp.transpose(0, 2, 1) - Arn @ Rr @ Arn.transpose(0, 2, 1)
   q = np.random.randint(0, 5, (n, 1))
   a = np.random.randint(0, 5, (m, n, 1))
   b = np.ones(m) * n
