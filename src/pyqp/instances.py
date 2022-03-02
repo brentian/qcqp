@@ -48,6 +48,12 @@ class QP(object):
     self.n, self.d = q.shape
     self.m, *_ = a.shape
     self.eigen()
+    
+    # convexify terms
+    self.V = 0
+    self.R = {}
+    self.l = {}
+    self.At = {}
   
   def __str__(self):
     # todo add a description
@@ -137,7 +143,7 @@ class QP(object):
     except Exception as e:
       print(np.linalg.eigvalsh(As).min())
       print(e.__traceback__.format_exc())
-    return l, R
+    return l, R, As
   
   ########################
   # decomposition
@@ -159,8 +165,7 @@ class QP(object):
     self.Aneg = {}
     self.Amul = {}
     self.Aeig = {}
-    self.R = {}
-    self.l = {}
+    
     if decompose_method == 'eig-type1':
       func = self._decompose_matrix
     elif decompose_method == 'eig-type2':
@@ -205,25 +210,27 @@ class QP(object):
   def convexify(self, method: int = 0):
     """
     :param method:
-    1. 0, use x'x \le s to convexify
-    2. 1, use Q = VLV', and then (V'x)
-    3. 2, more complex...
+    - 0, use x'x \le s to convexify
+    - 1, use Q = VLV', and then (V'x)
+    - 2, use a predetermined
+      orthonormal (partial) basis V
+      this V is potentially low rank.
     
     :return:
     """
-    # construct convex cones
-    for i in range(self.m):
-      Ai = self.A[i]
-      if not self.bool_zero_mat[i + 1]:
-        self.l[i + 1], self.R[i + 1] = self._scaled_cholesky(self.n, Ai)
+    if method == 1:
+      # construct convex cones
+      for i in range(self.m):
+        Ai = self.A[i]
+        if not self.bool_zero_mat[i + 1]:
+          self.l[i + 1], self.R[i + 1], self.At[i + 1] = self._scaled_cholesky(self.n, Ai)
+        else:
+          self.l[i + 1], self.R[i + 1], self.At[i + 1] = 0, 0, 0
+      if not self.bool_zero_mat[0]:
+        self.l[0], self.R[0], self.At[0] = self._scaled_cholesky(self.n, - self.Q)
       else:
-        self.l[i + 1], self.R[i + 1] = 0, 0
-    if not self.bool_zero_mat[0]:
-      l, R = self._scaled_cholesky(self.n, - self.Q)
-      self.l[0] = l
-      self.R[0] = R
-    else:
-      self.l[0], self.R[0] = 0, 0
+        self.l[0], self.R[0], self.At[0] = 0, 0, 0
+      self.V = self.U[0]
     
     return 1
   

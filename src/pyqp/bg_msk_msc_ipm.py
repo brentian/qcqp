@@ -7,11 +7,12 @@ import sys
 import time
 
 from .bg_msk import MSKResult, dom, expr, mf
+from .bg_msk_msc import msc_diag, MSKMscResult
 from .classes import qp_obj_func, MscBounds, Result, Bounds
 from .instances import QP
 
 
-class MSKMscResult(MSKResult):
+class MSKMscTRSResult(MSKMscResult):
   
   def __init__(self):
     super().__init__()
@@ -28,7 +29,7 @@ class MSKMscResult(MSKResult):
     self.qel = None
     self.q = None
   
-  def solve(self, verbose=False, qp: QP = None):
+  def solve(self, verbose=False, qp: QP = None, rk: MSKMscResult = None):
     start_time = time.time()
     if verbose:
       self.problem.setLogHandler(sys.stdout)
@@ -39,11 +40,17 @@ class MSKMscResult(MSKResult):
       raise ValueError(f"failed with status: {status}")
     end_time = time.time()
     if status == mf.ProblemStatus.PrimalAndDualFeasible:
-      self.xval = self.xvar.level().reshape(self.xvar.getShape())  # .round(self.PRECISION)
+      self.vval = self.xvar.level().reshape(self.xvar.getShape())  # .round(self.PRECISION)
       self.zval = self.zvar.level().reshape(self.zvar.getShape())  # .round(self.PRECISION)
       if self.yvar is not None:
         self.yval = self.yvar.level().reshape(self.yvar.getShape())  # .round(self.PRECISION)
       self.bound = self.relax_obj = self.problem.primalObjValue()
+      ############################
+      # add the trial step
+      ############################
+      self.xval = self.vval + rk.xval
+      self.dval = self.zval - rk.zval
+      self.rval = self.yval - rk.yval
       ############################
       # extras
       ############################
@@ -66,15 +73,14 @@ class MSKMscResult(MSKResult):
     self.solved = True
     self.unit_time = self.problem.getSolverDoubleInfo("optimizerTime")
     self.solve_time = round(end_time - start_time, 3)
-    self.release()
-  
-  def release(self):
-    self.problem.dispose()
 
 
-def msc_diag(
+def trs_msc(
     qp: QP,
     bounds: MscBounds = None,
+    rk: MSKMscResult = None,
+    g=None,  #
+    d=None,  #
     sense="max",
     verbose=True,
     solve=True,
@@ -82,7 +88,8 @@ def msc_diag(
     **kwargs
 ):
   """
-  The many-small-cone approach
+  The interior point trust region for
+    penalized many-small-cone
   Returns
   -------
   """
@@ -97,54 +104,50 @@ def msc_diag(
   if verbose:
     model.setLogHandler(sys.stdout)
   
+  if rk is None:
+    rk = msc_diag(qp, bounds, solve=True)
+  
+  # current point
+  xk, yk, zk = rk.xval, rk.yval, rk.zval
+  
   # at most n 3-d rotated cones for
   # (1, y, z = v'x) ∈ Q
   qcones = model.variable("xr", dom.inRotatedQCone(3, n))
   ones = qcones.slice([0, 0], [1, n])
-  y = qcones.slice([1, 0], [2, n]).reshape(n, 1)
-  z = qcones.slice([2, 0], [3, n]).reshape(n, 1)
+  # y_+ = y_k + dy,
+  # z_+ = z_k + dz,
+  # x_+ = x_k + dx,
+  yp = qcones.slice([1, 0], [2, n]).reshape(n, 1)
+  zp = qcones.slice([2, 0], [3, n]).reshape(n, 1)
   model.constraint(ones, dom.equalsTo(0.5))
   
+  # compute the step
+  dz = expr.sub(zp, zk)
+  dy = expr.sub(yp, yk)
+  dx = model.variable("x", [*xshape], dom.inRange(bounds.xlb - xk, bounds.xub - xk))
+
   # second-order cones
   s = model.variable('sqr', [m + 1])
-  ##############################
-  # or use 2-d PSD cone
-  # zcone = model.variable("zc", dom.inPSDCone(2, n))
-  # y = zcone.slice([0, 0, 0], [n, 1, 1]).reshape([n, 1])
-  # z = zcone.slice([0, 0, 1], [n, 1, 2]).reshape([n, 1])
-  # for idx in range(n):
-  #   model.constraint(zcone.index([idx, 1, 1]), dom.equalsTo(1))
-  ##############################
-  x = model.variable("x", [*xshape], dom.inRange(bounds.xlb, bounds.xub))
   
-  # Q.T x = Z
-  model.constraint(expr.sub(expr.mul(qp.U[0], z), x), dom.equalsTo(0))
-  
-  # RLT cuts
-  # this means you can place on x directly.
-  rlt_expr = expr.sub(expr.sum(y), expr.dot(bounds.xlb + bounds.xub, x))
-  model.constraint(rlt_expr, dom.lessThan(-(bounds.xlb * bounds.xub).sum()))
-  # else:
-  model.constraint(expr.sum(y), dom.lessThan(bounds.sphere ** 2))
-  model.constraint(
-    expr.sub(y, expr.mulElm(bounds.zlb + bounds.zub, z)),
-    dom.lessThan(-bounds.zlb * bounds.zub)
-  )
+  # V.T x = Z
+  model.constraint(expr.sub(expr.mul(qp.V, dz), dx), dom.equalsTo(0))
   
   for i in range(m):
-    quad_expr = expr.dot(a[i], x)
+    # for each i in m,
+    #   construct the trial step constraint
+    quad_expr = expr.dot(a[i] + 2 * qp.At[i + 1] @ xk, dx)
     if not qp.bool_zero_mat[i + 1]:
       si = s.index(i + 1)
       model.constraint(
-        expr.vstack(0.5, si, expr.flatten(expr.mul(qp.R[i + 1].T, x))),
+        expr.vstack(0.5, si, expr.flatten(expr.mul(qp.R[i + 1].T, dx))),
         dom.inRotatedQCone()
       )
       quad_expr = expr.add(quad_expr, si)
-      quad_expr = expr.sub(quad_expr, expr.dot(qp.l[i + 1] * np.ones((n, 1)), y))
+      quad_expr = expr.sub(quad_expr, expr.dot(qp.l[i + 1] * np.ones((n, 1)), dy))
     
     if qp.sign is not None:
       # unilateral case
-      quad_dom = dom.equalsTo(b[i]) if sign[i] == 0 else dom.lessThan(b[i])
+      quad_dom = dom.equalsTo(0) if sign[i] == 0 else dom.lessThan(0)
     
     else:
       # bilateral case
@@ -160,26 +163,62 @@ def msc_diag(
     
     model.constraint(quad_expr, quad_dom)
   
+  # objective is the penalty term
+  y_sqr = model.variable('yp')
+  # todo, let g = I, D = diag(zval)
+  # then  σ/min(zval) D − σΓ ⪰ 0
   # objectives
-  true_obj_expr = expr.add(expr.dot(q, x), expr.dot(qp.gamma[0], y))
-  obj_expr = true_obj_expr
+  yshape = dy.getShape()
+  sigma = qp.l[0] * 10
+  a = qp.gamma[0] * (qp.gamma[0] > 0)
+  G = np.eye(n) + np.diag(a.flatten())
+  Gd = np.diag(G).reshape(yshape)
+  D = np.eye(n)
+  Dd = np.diag(D).reshape(yshape)
+  Rd = np.sqrt(D)
+  mu = np.sqrt((Gd / Dd).max() + 10)
+  # -C(Γ)
+  Cg = (rk.resc.T @ Gd).sum() * sigma
+  
+  pstack = expr.vstack(
+    [y_sqr,
+     expr.flatten(expr.mul(mu * Rd.T, dy)),
+     expr.flatten(expr.mul(mu * D - G, dz))]
+  )
+  penalty = model.constraint(
+    expr.vstack(
+      0.5,
+      pstack
+    ),
+    dom.inRotatedQCone()
+  )
+  
+  obj_expr = expr.add(
+    [
+      expr.dot(q, dx),
+      expr.dot(qp.gamma[0].reshape(yshape) - sigma * Gd, dy),
+      expr.mul(- sigma, y_sqr),
+      expr.dot(dz, 2 * sigma * G @ zk),
+      # also add -C(Γ)
+    ]
+  )
   
   # obj_expr = true_obj_expr
   model.objective(
-    mf.ObjectiveSense.Maximize, obj_expr
+    mf.ObjectiveSense.Maximize, expr.sub(obj_expr, Cg)
   )
   
-  r = MSKMscResult()
-  r.obj_expr = true_obj_expr
-  r.xvar = x
-  r.yvar = y
-  r.zvar = z
+  r = MSKMscTRSResult()
+  r.obj_expr = obj_expr
+  r.xvar = dx
+  r.yvar = yp
+  r.zvar = zp
   r.qel = qp.gamma[0]
   r.q = q
   r.problem = model
   if not solve:
     return r
   
-  r.solve(verbose=verbose, qp=qp)
+  r.solve(verbose=verbose, qp=qp, rk=rk)
   
   return r

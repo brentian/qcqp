@@ -84,7 +84,7 @@ class Params(object):
   feas_eps = 1e-4
   opt_eps = 1e-4
   time_limit = 200
-  threads = 4 # maximum threads used if the backend method supports it.`
+  threads = 4  # maximum threads used if the backend method supports it.`
   
   def __dict__(self):
     return {k: self.__getattribute__(k) for k in keys}
@@ -262,52 +262,9 @@ class MscBounds(Bounds):
       self.zub = zub.copy()
     else:
       # for z and y's
-      zlb = []
-      zub = []
-      qpos, qipos = qp.Qpos
-      qneg, qineg = qp.Qneg
-      
-      ################################
-      # not needed
-      ################################
-      # zub.append(
-      #   (
-      #       (qpos.T * (qpos.T > 0)).sum(axis=1) + (qneg.T *
-      #                                              (qneg.T > 0)).sum(axis=1)
-      #   ).reshape(qp.q.shape)
-      # )
-      # zlb.append(
-      #   (
-      #       (qpos.T * (qpos.T < 0)).sum(axis=1) + (qneg.T *
-      #                                              (qneg.T < 0)).sum(axis=1)
-      #   ).reshape(qp.q.shape)
-      # )
-      # for i in range(qp.a.shape[0]):
-      #   apos, ipos = qp.Apos[i]
-      #   aneg, ineg = qp.Aneg[i]
-      #   zub.append(
-      #     (
-      #         (apos.T * (apos.T > 0)).sum(axis=1) + (aneg.T *
-      #                                                (aneg.T > 0)).sum(axis=1)
-      #     ).reshape(qp.q.shape)
-      #   )
-      #   zlb.append(
-      #     (
-      #         (apos.T * (apos.T < 0)).sum(axis=1) + (aneg.T *
-      #                                                (aneg.T < 0)).sum(axis=1)
-      #     ).reshape(qp.q.shape)
-      #   )
-      zub = (
-          (qpos.T * (qpos.T > 0)).sum(axis=1) + (qneg.T *
-                                                 (qneg.T > 0)).sum(axis=1)
-      ).reshape(qp.q.shape)
-      
-      zlb = (
-          (qpos.T * (qpos.T < 0)).sum(axis=1) + (qneg.T *
-                                                 (qneg.T < 0)).sum(axis=1)
-      ).reshape(qp.q.shape)
-      
-      self.zlb, self.zub = np.array(zlb), np.array(zub)
+      # todo, could do better
+      n, r = qp.V.shape
+      self.zlb, self.zub = - 1e6 * np.ones((r, 1)), 1e6 * np.ones((r, 1))
   
   def unpack(self):
     return self.xlb.copy(), self.xub.copy(), \
