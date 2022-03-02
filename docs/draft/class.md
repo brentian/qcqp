@@ -1,4 +1,0 @@
-
-
-- disjunctive approach
-  - 
