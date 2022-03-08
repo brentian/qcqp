@@ -114,6 +114,9 @@ def parse_case(fp=None):
     else:
       print(f"no need to proceed at {t}")
   
+  
+  # axis 1 for the problem
+  output["d"] = 1
   return output
 
 

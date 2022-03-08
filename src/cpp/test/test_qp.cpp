@@ -17,5 +17,7 @@ int main(int argc, char *argv[]) {
     cout << qp.q;
     cout << "\nQ (homo)\n";
     cout << qp.Qh;
+
+    qp.setup();
     return 1;
 }

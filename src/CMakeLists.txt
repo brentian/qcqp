@@ -6,9 +6,11 @@ cmake_minimum_required(VERSION 3.15)
 project(qcqp VERSION 0.0.1 LANGUAGES C CXX)
 
 
-# specify the C++ standard
+# specify the C/C++ standard
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED True)
 
 # paths
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

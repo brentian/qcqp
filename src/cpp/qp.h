@@ -18,15 +18,16 @@ public:
     // N: size of homogenized matrices, N:=(n+1)^2
     const int n, m, d;
     const int N;
+
     // objective Q∙Y + q∙x
     //  and homogenized Qh
     eigen_matrix Q;
     eigen_array q;
     eigen_matrix Qh;
-    __unused eigen_matrix Qhfull; // not used
     // diagonal constraint
     //  diag(Y) <= x
     // homogenized by Qd
+    // note this is only needed by SDP
     std::vector<eigen_matrix> Qd;
     // constraints A_i∙Y + a_i∙x <= b_i
     //  and homogenized Ah_i
@@ -36,6 +37,11 @@ public:
     eigen_array b;
     bool verbose = false; // debug only
 
+    // spectral decompositions
+    // stored in eigensolve
+    std::vector<Eigen::SelfAdjointEigenSolver<eigen_matrix>> vec_es;
+
+    // functions
     QP(int n, int m, int d, double *Q_data, double *q_data);
 
     QP(int n, int m, int d, double *Q_data, double *q_data,
@@ -46,6 +52,9 @@ public:
     void show();
 
     double inhomogeneous_obj_val(double *x) const;
+
+    void setup();
+    void convexify(int method = 0);
 };
 
 class Backend {

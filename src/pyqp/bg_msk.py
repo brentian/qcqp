@@ -60,7 +60,7 @@ class MSKResult(Result):
     else:
       self.xb = self.xval
       self.yb = self.yval
-    self.true_obj = qp_obj_func(self.qp.Q, self.qp.q, self.xb)
+      self.true_obj = qp_obj_func(self.qp.Q, self.qp.q, self.xb)
 
 
 def shor(qp: QP,

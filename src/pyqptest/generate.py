@@ -1,29 +1,32 @@
-import argparse
-
-import numpy as np
-
-from pyqp.classes import QPI, QP
-
-np.random.seed(1)
-parser = argparse.ArgumentParser("QCQP runner")
-parser.add_argument("--n", type=int, help="dim of x", default=5)
-parser.add_argument("--m", type=int, help="if randomly generated num of constraints", default=5)
-parser.add_argument("--num", type=int, help="number of instances", default=1)
-parser.add_argument("--rho", type=float, help="density of problem", default=.2)
-parser.add_argument("--fpath", type=str, help="file directory", default="data/generated/")
+from .helpers import *
+import pyqptest.gen_low_rank as gen_ncvx_fixed
+import pyqptest.gen_bqp as gen_bqp
 
 # fix seed
 np.random.seed(1)
 
-
-def main():
+if __name__ == '__main__':
   parser.print_usage()
   args = parser.parse_args()
-  n, m, fpath, rho, num = args.n, args.m, args.fpath, args.rho, args.num
-  for _ in range(num):
-    qp: QP = QPI.normal(int(n), int(m), rho=args.rho)
-    qp.serialize(wdir=fpath)
-
-
-if __name__ == '__main__':
-  main()
+  
+  np.random.seed(args.seed)
+  n, m, ptype, btype = args.n, args.m, args.problem_type, args.bound_type
+  # problem dtls
+  pdtl_str = args.problem_dtls
+  bdtl_str = args.bound_dtls
+  # problem
+  problem_id = f"{n}:{m}:{0}"
+  # start
+  if ptype == 0:
+    qp = QPI.normal(int(n), int(m), rho=0.5)
+  elif ptype == 1:
+    qp = gen_bqp.generate(int(n), pdtl_str)
+  elif ptype == 2:
+    qp = gen_ncvx_fixed.generate(int(n), int(m), pdtl_str)
+  else:
+    raise ValueError("no such problem type defined")
+  if btype == 0:
+    bd = Bounds(xlb=np.zeros(shape=(n, 1)), xub=np.ones(shape=(n, 1)))
+  else:
+    bd = Bounds(shape=(n, 1), s=n / 10)
+  qp.serialize(wdir=args.fpath)

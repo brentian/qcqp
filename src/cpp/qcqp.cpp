@@ -28,20 +28,24 @@ void check_solution(Result &r, QP &qp, const CutPool &cp) {
 void check_solution(Result &r, QP &qp) {
     using namespace std;
     int i = 0;
-    cout << "Comple: X∙Y:" << endl;
+    cout << "Comp: X∙Y:" << endl;
     cout << (r.Xm * r.Ym).format(EIGEN_IO_FORMAT) << endl;
-    cout << "Residual: X - xx.T:" << endl;
+    cout << "Res: X - xx.T:" << endl;
     eigen_const_arraymap xm(r.x, r.n);
     cout << (r.Xm.block(0, 0, r.n, r.n) - xm.matrix() * xm.matrix().adjoint()).format(EIGEN_IO_FORMAT) << endl;
     fprintf(stdout,
-            "check objectives: Q∙X = %.3f, alpha + b∙z = %.3f\n",
+            "Obj: Q∙X = %.3f, alpha + b∙z = %.3f\n",
             (r.Xm * qp.Qh).trace(),
             qp.b.dot(eigen_const_arraymap(r.y + r.n + 1, r.m)) + r.y[0]);
-    cout << "check quad constraints..." << endl;
+    cout << "Quad constr..." << endl;
     for (const auto &Ah: qp.Ah) {
-        fprintf(stdout, "check for constraint: %d, %.3f, %.3f, %.3f\n",
+        fprintf(stdout, "Constr: %d, %.3f, %.3f, %.3f\n",
                 i, (r.Xm * Ah).trace(), r.S[i], qp.b[i]);
         i++;
     }
+
+    fprintf(stdout,
+            "Primal: %.3f \n",
+            qp.inhomogeneous_obj_val(r.x));
 
 }

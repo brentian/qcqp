@@ -3,11 +3,7 @@
 //
 
 #include "branch.h"
-//
-//Bound::Bound(Bound &another) {
-//    xlb = std::vector<double>(another.xlb);
-//    xub = std::vector<double>(another.xub);
-//}
+
 
 Bound::Bound(int n) {
     xlb = std::vector<double>(n, 0.0);

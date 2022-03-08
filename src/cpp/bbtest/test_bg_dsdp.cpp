@@ -1,6 +1,6 @@
 //
 // Created by C. Zhang on 2021/7/25.
-// test for sdpa backend
+// test for dsdp backend
 //
 
 
@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     tree.run(qp, params);
 
 
-    auto r = tree.best_r.top();
+    auto r = tree.best_result.top();
     r.show(true);
 //
 //    p1.create_problem();

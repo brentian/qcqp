@@ -30,13 +30,6 @@ from pympler import tracker
 
 tr = tracker.SummaryTracker()
 
-parser.add_argument(
-  "--seed",
-  type=int,
-  default=1,
-  help="random seed"
-)
-
 if __name__ == '__main__':
   
   parser.print_usage()

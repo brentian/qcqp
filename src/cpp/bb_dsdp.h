@@ -1,9 +1,8 @@
-//
-// Created by C. Zhang on 2021/9/16.
-//
+// branch and bound for QCQP
+//  using SDP (DSDP) as backend.
 
-#ifndef QCQP_BB_DSDP_H
-#define QCQP_BB_DSDP_H
+#ifndef QCQP_BB_SDPA_H
+#define QCQP_BB_SDPA_H
 
 #include "qp.h"
 #include "utils.h"
@@ -13,8 +12,6 @@
 #include "bg_dsdp.h"
 #include "bg_dsdp_cut.h"
 
-
-//template Node<QP_DSDP> Node_DSDP;
 class Node_DSDP : public Node {
 public:
     QP_DSDP p;
@@ -29,18 +26,22 @@ public:
 
 
     void create_problem(CutPool &cp) {
-        time(&opt_start_time);
+        time(&time_opt_start);
         // push cuts
         p.cp = cp;
+#if QCQP_BRANCH_DBG
+        p.create_problem(false, true);
+#else
         p.create_problem();
+#endif
         bool_setup = true;
     }
 
     void optimize() {
         p.optimize();
         bool_solved = true;
-        time(&opt_end_time);
-        solve_time = difftime(opt_end_time, opt_start_time);
+        time(&time_opt_end);
+        time_solve = difftime(time_opt_end, time_opt_start);
     }
 
     void extract_solution();
@@ -59,6 +60,7 @@ public:
     double tolfeas = 1e-4;
     double lb = -1e6;
     double ub = -1e6;
+    double gap = 1e6;
 };
 
 class Tree_DSDP : public Tree<Node_DSDP, Result_DSDP> {
@@ -66,6 +68,8 @@ public:
     time_t timer;
 
     int run(QP &qp, Params &param);
+
+    int iter(Node_DSDP &node, Params &param, QP &qp);
 
     template<typename KeyType, typename ValueType>
     std::pair<KeyType, ValueType> fetch_next();
@@ -80,4 +84,4 @@ std::pair<KeyType, ValueType> get_max(const std::map<KeyType, ValueType> &x) {
 }
 
 
-#endif //QCQP_BB_DSDP_H
+#endif //QCQP_BB_SDPA_H

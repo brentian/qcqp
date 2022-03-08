@@ -21,7 +21,7 @@ struct RLT : Cut {
     int i{}, j{}, n{};
     double li{}, ui{}, lj{}, uj{};
 
-    static RLT create_from_branch(Branch &branch, int orient);
+    static std::vector<RLT> create_from_branch(Branch &branch, int orient);
     RLT(int n, int i, int j, double li, double ui, double lj, double uj);
     RLT();
 };

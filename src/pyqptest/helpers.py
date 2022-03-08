@@ -66,8 +66,8 @@ QP_SPECIAL_PARAMS = {
 
 QP_RANDOM_INSTANCE_TYPE = {
   0: 'normal',
-  1: 'rankr',
-  2: 'bqp',
+  1: 'bqp',
+  2: 'rankr',
 }
 
 ###################
@@ -117,4 +117,11 @@ parser.add_argument(
 parser.add_argument(
   "--bound_dtls", type=str,
   help=f"bound details",
+)
+
+parser.add_argument(
+  "--seed",
+  type=int,
+  default=1,
+  help="random seed"
 )

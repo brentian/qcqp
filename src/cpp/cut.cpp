@@ -45,7 +45,7 @@ RLT::RLT(int n, int i, int j, double li, double ui, double lj, double uj) :
 
 }
 
-RLT RLT::create_from_branch(Branch &branch, int orient) {
+std::vector<RLT> RLT::create_from_branch(Branch &branch, int orient) {
     int i = branch.i;
     int j = branch.j;
     int n = branch.n;
@@ -55,11 +55,11 @@ RLT RLT::create_from_branch(Branch &branch, int orient) {
         double lj = branch.left_b.xlb[j];
         double ui = branch.left_b.xub[i];
         double uj = branch.left_b.xub[j];
-        return {n, i, j, li, ui, lj, uj};
+        return {{n, i, j, li, ui, lj, uj}, {n, j, i, lj, uj, li, ui}};
     }
     double li = branch.right_b.xlb[i];
     double lj = branch.right_b.xlb[j];
     double ui = branch.right_b.xub[i];
     double uj = branch.right_b.xub[j];
-    return {n, i, j, li, ui, lj, uj};
+    return {{n, i, j, li, ui, lj, uj}, {n, j, i, lj, uj, li, ui}};
 }

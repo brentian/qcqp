@@ -115,7 +115,7 @@ void QP_DSDP::create_problem(
             BConeSetPSlackVariable(bcone, vari);
             DSDPSetDualObjective(p, vari, qp.b[k]);
         } else {
-            // provided by Cutpool
+            // provided by CutPool
             Cut c = cp[k - m];
             SDPConeSetSparseVecMat(
                     sdpcone,
@@ -260,8 +260,9 @@ void QP_DSDP::setup() {
     _ei_val[0] = 1.0;
     _ei_val[1] = -0.5;
     _ei_idx = new int[2 * n]{0};
-    _ah_data = new double[n_lower_tr * m_with_cuts]{0.0};
-
+    if (m_with_cuts > 0) {
+        _ah_data = new double[n_lower_tr * m_with_cuts]{0.0};
+    }
     bool_setup = true;
 
 }

@@ -4,6 +4,7 @@
 //
 
 #include "bg_sdpa.h"
+#include "qcqp.h"
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -95,47 +96,12 @@ int main(int argc, char *argv[]) {
     qp_sdpa.create_problem(false, true);
     qp_sdpa.optimize(true);
     qp_sdpa.extract_solution();
-    qp_sdpa.print_sdpa_formatted_solution();
-//    qp_sdpa.p.copyCurrentToInit();
-//    qp_sdpa.p.setParameterEpsilonStar(1.0e-8);
-//
-//    qp_sdpa.p.setInitPoint(true);
-//    qp_sdpa.p.copyCurrentToInit();
-//    qp_sdpa.p.solve();
     qp_sdpa.p.printParameters(stdout);
 
     auto r1 = qp_sdpa.get_solution();
     std::cout << INTERVAL_STR;
     std::cout << "check solution\n";
-    r1.check_solution(qp);
-    std::cout << INTERVAL_STR;
-    std::cout << "print solution: \n";
-    r1.show();
-    std::cout << INTERVAL_STR;
-
-
-    std::cout << INTERVAL_STR;
-    std::cout << "second solve with cut\n";
-    std::cout << "and run with warm-start solution\n";
-    QP_SDPA qp_sdpa1(<#initializer#>, qp);
-    // generate cut
-    std::cout << "generate cut\n";
-    std::cout << INTERVAL_STR;
-    auto ct = RLT_SDPA();
-    ct.create_from_bound(qp.n, 1, 1, 0, 0.6964, 0, 0.6964);
-    qp_sdpa1.cp.push_back(ct);
-    // generate cut finished
-    qp_sdpa1.create_problem(false, false);
-    std::cout << "generate initial solution\n";
-    auto r = Result_SDPA(r1.n, r1.m, r1.d);
-    r.construct_init_point(r1, 0.90, qp_sdpa1.cp.size());
-    r.show();
-    qp_sdpa1.assign_initial_point(r, true);
-    qp_sdpa1.print_sdpa_formatted_solution();
-    qp_sdpa1.optimize(true);
-    qp_sdpa1.extract_solution();
-    auto r2 = qp_sdpa1.get_solution();
-    r2.show();
+    check_solution(r1, qp);
     std::cout << "finished\n";
     return 1;
 }

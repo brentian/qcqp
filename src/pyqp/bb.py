@@ -141,15 +141,15 @@ class BBItem(object):
       self.bound = bound
 
 
-def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=False, backend_name='msk',
+def generate_child_items(qp, total_nodes, parent: BBItem, branch: Branch, verbose=False, backend_name='msk',
                          backend_func=None, sdp_solver="MOSEK"):
-  Q, q, A, a, b, sign, *_ = parent.qp.unpack()
+  Q, q, A, a, b, sign, *_ = qp.unpack()
   # left <=
   left_bounds = Bounds(*parent.bound.unpack())
   left_succ = left_bounds.update_bounds_from_branch(branch, left=True)
   
   # left_r = backend_func(parent.qp, left_bounds, solver=sdp_solver, verbose=verbose, solve=False)
-  left_r = backend_func(parent.qp, left_bounds, solver=sdp_solver, verbose=verbose, solve=False, r_parent=parent.result)
+  left_r = backend_func(qp, left_bounds, solver=sdp_solver, verbose=verbose, solve=False, r_parent=parent.result)
   if not left_succ:
     # problem is infeasible:
     left_r.solved = True
@@ -160,7 +160,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
     left_cuts = parent.cuts.generate_cuts(branch, left_bounds)
     left_cuts.add_cuts(left_r, backend_name)
   
-  left_item = BBItem(parent.qp, parent.depth + 1, total_nodes, parent.node_id, parent.result.relax_obj, left_r,
+  left_item = BBItem(parent.depth + 1, total_nodes, parent.node_id, parent.result.relax_obj, left_r,
                      left_bounds, left_cuts)
   
   # right >=
@@ -168,7 +168,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
   right_succ = right_bounds.update_bounds_from_branch(branch, left=False)
   
   # right_r = backend_func(parent.qp, right_bounds, solver=sdp_solver, verbose=verbose, solve=False)
-  right_r = backend_func(parent.qp, right_bounds, solver=sdp_solver, verbose=verbose, solve=False,
+  right_r = backend_func(qp, right_bounds, solver=sdp_solver, verbose=verbose, solve=False,
                          r_parent=parent.result)
   if not right_succ:
     # problem is infeasible
@@ -180,7 +180,7 @@ def generate_child_items(total_nodes, parent: BBItem, branch: Branch, verbose=Fa
     right_cuts = parent.cuts.generate_cuts(branch, right_bounds)
     right_cuts.add_cuts(right_r, backend_name)
   
-  right_item = BBItem(parent.qp, parent.depth + 1, total_nodes + 1, parent.node_id, parent.result.relax_obj, right_r,
+  right_item = BBItem(parent.depth + 1, total_nodes + 1, parent.node_id, parent.result.relax_obj, right_r,
                       right_bounds, right_cuts)
   return left_item, right_item
 
@@ -208,7 +208,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
   # global cuts
   glc = Cuts()
   
-  root = BBItem(qp, 0, 0, -1, 1e8, result=root_r, bound=root_bound, cuts=glc)
+  root = BBItem(0, 0, -1, 1e8, root_r, root_bound, glc)
   total_nodes = 1
   ub = root_r.relax_obj
   lb = -1e6
@@ -271,6 +271,7 @@ def bb_box(qp: QP, bounds: Bounds, verbose=False, params=BCParams(), **kwargs):
     br = Branch()
     br.simple_vio_branch(x, y, res)
     left_item, right_item = generate_child_items(
+      qp,
       total_nodes, item, br, sdp_solver=params.dual_backend, verbose=verbose, backend_name=backend_name,
       backend_func=backend_func)
     total_nodes += 2
