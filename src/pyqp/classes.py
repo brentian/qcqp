@@ -262,9 +262,17 @@ class MscBounds(Bounds):
       self.zub = zub.copy()
     else:
       # for z and y's
-      # todo, could do better
       n, r = qp.V.shape
-      self.zlb, self.zub = - 1e6 * np.ones((r, 1)), 1e6 * np.ones((r, 1))
+      self.zlb, self.zub = np.empty((r, 1)), np.empty((r, 1))
+      for i in range(r):
+        vv = qp.V[:,i]
+        vals = np.vstack([vv * xlb.flatten(),
+                          vv * xub.flatten()])
+        self.zlb[i, 0] = vals.min(0).sum()
+        self.zub[i, 0] = vals.max(0).sum()
+      print(qp.V)
+      print(self.zlb)
+      print(self.zub)
   
   def unpack(self):
     return self.xlb.copy(), self.xub.copy(), \

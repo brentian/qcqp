@@ -11,7 +11,7 @@ void check_solution(Result &r, QP &qp, const CutPool &cp) {
     if (cp.empty()) {
         check_solution(r, qp);
     } else {
-#if DSDP_SDP_DBG
+#if DSDP_REL_DBG
         check_solution(r, qp);
         cout << "check cuts..." << endl;
         int i = 0;
@@ -36,11 +36,11 @@ void check_solution(Result &r, QP &qp) {
     fprintf(stdout,
             "Obj: Q∙X = %.3f, alpha + b∙z = %.3f\n",
             (r.Xm * qp.Qh).trace(),
-            qp.b.dot(eigen_const_arraymap(r.y + r.n + 1, r.m)) + r.y[0]);
-    cout << "Quad constr..." << endl;
+            qp.br.dot(eigen_const_arraymap(r.y + r.n + 1, r.m)) + r.y[0]);
+    cout << "Quad construct_sparse..." << endl;
     for (const auto &Ah: qp.Ah) {
         fprintf(stdout, "Constr: %d, %.3f, %.3f, %.3f\n",
-                i, (r.Xm * Ah).trace(), r.S[i], qp.b[i]);
+                i, (r.Xm * Ah).trace(), r.S[i], qp.br[i]);
         i++;
     }
 

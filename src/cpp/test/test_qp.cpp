@@ -16,8 +16,12 @@ int main(int argc, char *argv[]) {
     cout << "\nq\n";
     cout << qp.q;
     cout << "\nQ (homo)\n";
-    cout << qp.Qh;
+    cout << qp.Qh << endl;
 
     qp.setup();
+    qp.convexify();
+    cout << qp.vec_es[0].eigenvalues() << endl;
+    cout << qp.A[0] << endl;
+    cout << qp.Ac[0] << endl;
     return 1;
 }

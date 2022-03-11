@@ -122,10 +122,10 @@ def msc_diag(
   
   # RLT cuts
   # this means you can place on x directly.
-  rlt_expr = expr.sub(expr.sum(y), expr.dot(bounds.xlb + bounds.xub, x))
-  model.constraint(rlt_expr, dom.lessThan(-(bounds.xlb * bounds.xub).sum()))
+  # rlt_expr = expr.sub(expr.sum(y), expr.dot(bounds.xlb + bounds.xub, x))
+  # model.constraint(rlt_expr, dom.lessThan(-(bounds.xlb * bounds.xub).sum()))
   # else:
-  model.constraint(expr.sum(y), dom.lessThan(bounds.sphere ** 2))
+  # model.constraint(expr.sum(y), dom.lessThan(bounds.sphere ** 2))
   model.constraint(
     expr.sub(y, expr.mulElm(bounds.zlb + bounds.zub, z)),
     dom.lessThan(-bounds.zlb * bounds.zub)

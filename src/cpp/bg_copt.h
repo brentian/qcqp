@@ -18,20 +18,34 @@
 class Result_COPT : public Result {
 public:
     double r0;
-
+    eigen_array x;
+    eigen_array z;
+    eigen_array xall;
+    eigen_array y;
     Result_COPT(int n, int m, int d);
 
     void construct_init_point(Result_COPT &r, double lambda = 0.99, int pool_size = 0);
 };
 
 class QP_COPT : public Backend {
+public:
+
+    QP &qp;
+    copt_prob *prob = nullptr;
+    Result_COPT r;
+    CutPool cp;
+
+    int ncol;
+    int ydim;
     explicit QP_COPT(QP &qp);
 
-    ~QP_COPT();
+    ~QP_COPT() {
+      COPT_DeleteProb(&prob);
+    }
 
     void setup();
 
-    void create_problem(bool solve = false, bool verbose = false, bool use_lp_cone = false);
+    void create_problem(copt_env *env, Bound & bound, bool solve = false, bool verbose = false);
 
     void assign_initial_point(Result_COPT &r_another, bool dual_only) const;
 

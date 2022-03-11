@@ -6,46 +6,34 @@
 
 
 Bound::Bound(int n) {
-    xlb = std::vector<double>(n, 0.0);
-    xub = std::vector<double>(n, 1.0);
+  xlb = std::vector<double>(n, 0.0);
+  xub = std::vector<double>(n, 1.0);
+}
+
+Bound::Bound(int n, eigen_matrix V) : Bound(n) {
+  compz(n, V);
+}
+
+void Bound::compz(int n, eigen_matrix V) {
+  int cols = V.cols();
+  zlb = std::vector<double>(cols, 0.0);
+  zub = std::vector<double>(cols, 0.0);
+  eigen_arraymap _l(xlb.data(), n);
+  eigen_arraymap _u(xub.data(), n);
+
+  for (int j = 0; j < cols; ++j) {
+    eigen_matrix zv(n, 2);
+    zv.col(0) = V.col(j).cwiseProduct(_l);
+    zv.col(1) = V.col(j).cwiseProduct(_u);
+    auto z1 = zv.rowwise().maxCoeff();
+    zub[j] = zv.rowwise().maxCoeff().sum();
+    zlb[j] = zv.rowwise().minCoeff().sum();
+  }
+}
+
+Bound::Bound(Bound &b, eigen_matrix V) : Bound(b) {
+
 }
 
 Bound::Bound() = default;
-
-
-void Branch::create_from_result(const Result &r) {
-    using namespace std;
-    n = r.n;
-    eigen_const_arraymap xm(r.x, r.n);
-
-
-    eigen_matrix::Index maxRow, maxCol;
-    auto row_sum = r.Res.rowwise().sum();
-    row_sum.maxCoeff(&maxRow, &maxCol);
-    i = (int) maxRow;
-    r.Res.row(maxRow).maxCoeff(&maxRow, &maxCol);
-    j = (int) maxCol;
-    xpivot_val = r.x[i];
-    xminor_val = r.x[j];
-#if QCQP_BRANCH_DBG
-    fprintf(stdout, "pivoting on i, j: (%d, %d)@ (%.2f, %.2f) ~ %.2f\n",
-            i, j, xpivot_val, xminor_val, r.Res(i, j));
-#endif
-}
-
-void Branch::imply_bounds(Bound &b) {
-    // copy from parent bound
-    left_b = Bound(b);
-    right_b = Bound(b);
-    // left
-    left_b.xub[i] = xpivot_val;
-    // right
-    right_b.xlb[i] = xpivot_val;
-}
-
-Branch::Branch(Result &r) {
-    create_from_result(r);
-}
-
-
 

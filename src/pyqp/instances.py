@@ -85,7 +85,7 @@ class QP(object):
   ########################
   def precondition(self):
     self.bool_zero_mat = {}
-    self.bool_zero_mat[0] = self._bool_zero(self.Q)
+    self.bool_zero_mat[0] = self._bool_zero( - self.Q)
     for i in range(self.m):
       Ai = self.A[i]
       self.bool_zero_mat[i + 1] = self._bool_zero(Ai)
@@ -101,7 +101,7 @@ class QP(object):
     self.indefn = {}
     self.U = np.empty((m + 1, n, n), dtype=np.float)
     self.gamma = np.empty((m + 1, n), dtype=np.float)
-    gamma, u = nl.eigh(self.Q)
+    gamma, u = nl.eigh(- self.Q)
     indefn = (gamma > self.EPS_EIGEN).sum()
     self.indefn[0] = indefn
     self.indefU[0] = u[:, :indefn]  # only positive part

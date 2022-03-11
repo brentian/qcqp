@@ -23,8 +23,27 @@ Node_DSDP::Node_DSDP(
 
 void Node_DSDP::extract_solution() {
     p.extract_solution();
-    val_rel = p.r.bound;
+    val_rel = p.r.relax;
     val_prm = p.r.primal;
+}
+
+void Node_DSDP::create_problem(CutPool &cp) {
+  time(&time_opt_start);
+  // push cuts
+  p.cp = cp;
+#if QCQP_BRANCH_DBG
+  p.create_problem(false, true);
+#else
+  p.create_problem();
+#endif
+  bool_setup = true;
+}
+
+void Node_DSDP::optimize() {
+  p.optimize();
+  bool_solved = true;
+  time(&time_opt_end);
+  time_solve = difftime(time_opt_end, time_opt_start);
 }
 
 int Tree_DSDP::iter(Node_DSDP &node, Params &param, QP &qp) {
@@ -41,12 +60,13 @@ int Tree_DSDP::iter(Node_DSDP &node, Params &param, QP &qp) {
     if (!node.bool_solved) {
         node.create_problem(current_cuts);
         // warm-start is only needed if it has to be solved;
-        if (param.warmstart and node_id) {
-            auto parent_r = map_result.at(node.id_parent);
-            auto rws = Result_DSDP(qp.n, qp.m, qp.d);
-            rws.construct_init_point(parent_r, 0.99, current_cuts.size());
-            node.p.assign_initial_point(rws, true);
-        }
+        // todo: not implemented yet.
+        // if (param.warmstart and node_id) {
+        //     auto parent_r = map_result.at(node.id_parent);
+        //     auto rws = Result_DSDP(qp.n, qp.m, qp.d);
+        //     rws.construct_init_point(parent_r, 0.99, current_cuts.size());
+        //     node.p.assign_initial_point(rws, true);
+        // }
         node.optimize();
         node.extract_solution();
     }
@@ -117,7 +137,7 @@ int Tree_DSDP::run(QP &qp, Params &param) {
     queue.insert(std::pair<long, Node_DSDP>(0, root));
 
     while (!queue.empty()) {
-        std::pair<long, double> next_kv = fetch_next<long, double>();
+        std::pair<long, double> next_kv = fetch_next();
         long node_id = next_kv.first;
         Node_DSDP node = queue.at(node_id);
         long parent_id = node.id_parent;
@@ -198,14 +218,6 @@ int Tree_DSDP::run(QP &qp, Params &param) {
 
     return 1;
 }
-//Node_DSDP Tree_DSDP::get_best_node() {
-//    return queue.at(best_node);
-//}
 
-template<typename KeyType, typename ValueType>
-std::pair<KeyType, ValueType> Tree_DSDP::fetch_next() {
-    auto kv = get_max(map_ub);
-    return kv;
-}
 
 

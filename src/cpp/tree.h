@@ -66,14 +66,14 @@ public:
 
 template<typename T>
 std::string to_string_with_precision(const T a_value, const int n = 3, const bool bool_scientific = false) {
-    std::ostringstream out;
-    out.precision(n);
-    if (bool_scientific) {
-        out << std::scientific << a_value;
-        return out.str();
-    }
-    out << std::fixed << a_value;
+  std::ostringstream out;
+  out.precision(n);
+  if (bool_scientific) {
+    out << std::scientific << a_value;
     return out.str();
+  }
+  out << std::fixed << a_value;
+  return out.str();
 }
 
 template<typename NodeType, typename ResultType>
@@ -94,63 +94,63 @@ public:
     const std::string LOG_AUTHOR_INFO = "(c) Chuwen Zhang, 2021-2022 \n";
     // const std::string LOG_AUTHOR_INFO = "(c) Chuwen Zhang, Yinyu Ye, 2021-2022 \n";
     const std::vector<std::string> LOG_HEADER_ARR = {
-            "time", "#/depth", "cuts",
-            "ipm", "inf",
-            "prm", "rel", "gap",
-            "status"
+        "time", "#/depth", "cuts",
+        "ipm", "inf",
+        "prm", "rel", "gap",
+        "status"
     };
     const int LENGHTH_SLOT = 12;
 
     void print_header() {
 
-        std::cout << LOG_BREAKER << std::endl;
-        std::cout << std::string((LOG_BREAKER.size() - LOG_HEADER.size()) / 2, ' ') << LOG_HEADER;
-        std::cout << std::string((LOG_BREAKER.size() - LOG_AUTHOR_INFO.size()) / 2, ' ') << LOG_AUTHOR_INFO;
-        std::cout << LOG_BREAKER << std::endl;
-        std::cout << ITER_HEADER;
+      std::cout << LOG_BREAKER << std::endl;
+      std::cout << std::string((LOG_BREAKER.size() - LOG_HEADER.size()) / 2, ' ') << LOG_HEADER;
+      std::cout << std::string((LOG_BREAKER.size() - LOG_AUTHOR_INFO.size()) / 2, ' ') << LOG_AUTHOR_INFO;
+      std::cout << LOG_BREAKER << std::endl;
+      std::cout << ITER_HEADER;
     };
 
     std::string gen_header_slots() {
-        auto ss = std::stringstream();
-        for (auto ele: LOG_HEADER_ARR) {
-            auto empty_size = LENGHTH_SLOT - ele.size();
-            auto pre_size = empty_size / 2;
-            auto aff_size = empty_size - pre_size;
-            ss << "|" << std::string(pre_size, ' ') << ele << std::string(aff_size, ' ');
-        }
-        ss << "|" << std::endl;
-        return ss.str();
+      auto ss = std::stringstream();
+      for (auto ele: LOG_HEADER_ARR) {
+        auto empty_size = LENGHTH_SLOT - ele.size();
+        auto pre_size = empty_size / 2;
+        auto aff_size = empty_size - pre_size;
+        ss << "|" << std::string(pre_size, ' ') << ele << std::string(aff_size, ' ');
+      }
+      ss << "|" << std::endl;
+      return ss.str();
     }
 
     const std::string ITER_HEADER = gen_header_slots();
     const std::string LOG_BREAKER = std::string(ITER_HEADER.size(), '#');
 
     void gen_status_report(
-            double solve_time, long id_node, long depth_node,
-            long cut_size, long iter_ipm,
-            double prm, double relax, double inf, double gap,
-            double lb, double ub, std::string status
+        double solve_time, long id_node, long depth_node,
+        long cut_size, long iter_ipm,
+        double prm, double relax, double inf, double gap,
+        double lb, double ub, std::string status
     ) {
-        auto _line_arr = {
-                to_string_with_precision<double>(solve_time, 2),
-                std::to_string(id_node),
-                std::to_string(cut_size),
-                std::to_string(iter_ipm),
-                to_string_with_precision<double>(inf, 3, true),
-                to_string_with_precision<double>(prm, 3, true),
-                to_string_with_precision<double>(relax, 3, true),
-                to_string_with_precision<double>(gap, 2, true),
-                std::move(status)
-        };
-        auto ss = std::stringstream();
-        for (auto ele: _line_arr) {
-            auto empty_size = LENGHTH_SLOT - ele.size();
-            auto pre_size = empty_size / 2;
-            auto aff_size = empty_size - pre_size;
-            ss << "|" << std::string(pre_size, ' ') << ele << std::string(aff_size, ' ');
-        }
-        ss << "|" << std::endl;
-        std::cout << ss.str();
+      auto _line_arr = {
+          to_string_with_precision<double>(solve_time, 2),
+          std::to_string(id_node),
+          std::to_string(cut_size),
+          std::to_string(iter_ipm),
+          to_string_with_precision<double>(inf, 3, true),
+          to_string_with_precision<double>(prm, 3, true),
+          to_string_with_precision<double>(relax, 3, true),
+          to_string_with_precision<double>(gap, 2, true),
+          std::move(status)
+      };
+      auto ss = std::stringstream();
+      for (auto ele: _line_arr) {
+        auto empty_size = LENGHTH_SLOT - ele.size();
+        auto pre_size = empty_size / 2;
+        auto aff_size = empty_size - pre_size;
+        ss << "|" << std::string(pre_size, ' ') << ele << std::string(aff_size, ' ');
+      }
+      ss << "|" << std::endl;
+      std::cout << ss.str();
     }
 
 };

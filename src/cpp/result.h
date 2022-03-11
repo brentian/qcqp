@@ -12,6 +12,7 @@ class Result {
 public:
     const int n, m, d;
     double *x{};
+    double *z{};
     double *X{};
     double *y{};
     double *Y{};
@@ -31,7 +32,7 @@ public:
     // this primal value is simply extract the vector from homonegenized problem
     //  I do not implement any primal heuristic here.
     double primal = 1e6;
-    double bound = -1e6;
+    double relax = -1e6;
     double primal_feas, dual_feas = 0;
     int iterations = 0;
 

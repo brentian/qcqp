@@ -1,3 +1,7 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2022.                                                                             /
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 //
 // Created by C. Zhang on 2021/7/25.
 // test for sdpa backend
@@ -48,29 +52,6 @@ int main(int argc, char *argv[]) {
     p.optimize();
     p.extract_solution();
     auto r = p.get_solution();
-//    check_solution(r, qp);
-//    r.show();
-    Branch br;
-    br.create_from_result(r);
-    br.imply_bounds(root_b);
-    // only consider right child here
-    auto ct = RLT_DSDP::create_from_branch(br, 1);
-    QP_DSDP p1(qp);
-    p1.cp.push_back(ct);
-    auto r1 = Result_DSDP(qp.n, qp.m, qp.d);
-
-    p1.create_problem(false, true);
-    auto init = std::string(argv[2]);
-    bool use_ws = !init.compare("T");
-    if (use_ws) {
-        r1.construct_init_point(r, 0.99, p1.cp.size());
-        p1.assign_initial_point(r1, true);
-    }
-    p1.optimize();
-    p1.extract_solution();
-//    p1.r.show();
-//    check_solution(p1.r, qp, p1.cp);
-//    p1.r.show();
 
     delete[] Q;
     delete[] q;

@@ -131,7 +131,7 @@ void QP_SDPA::create_problem(bool solve, bool verbose) {
         if (i < m) {
             input_block(n + 2 + i, 1, n + 1, p, qp.Ah[i]);
             p.inputElement(n + 2 + i, 3, i + 1, i + 1, 1, true);
-            p.inputCVec(n + 2 + i, qp.b[i]);
+            p.inputCVec(n + 2 + i, qp.br[i]);
         } else {
             // provided by Cutpool
             Cut c = cp[i - m];

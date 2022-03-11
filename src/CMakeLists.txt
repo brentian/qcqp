@@ -18,9 +18,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_INSTALL_PREFIX "~/.local/")
 
-
 # add subdirectories
 add_subdirectory(pyqp)
 add_subdirectory(pyqptest)
-add_subdirectory(thirdparty)
 add_subdirectory(cpp)
+# add_subdirectory(thirdparty)

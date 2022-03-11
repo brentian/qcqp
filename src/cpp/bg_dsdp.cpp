@@ -63,7 +63,7 @@ void QP_DSDP::create_problem(
             _one_val, //const double val[],
             1 // int64 nnz
     );
-#if DSDP_SDP_DBG
+#if DSDP_REL_DBG
     SDPConeViewDataMatrix(sdpcone, 0, 1);
 #endif
     if (bool_diag) {
@@ -113,7 +113,7 @@ void QP_DSDP::create_problem(
                     n_lower_tr
             );
             BConeSetPSlackVariable(bcone, vari);
-            DSDPSetDualObjective(p, vari, qp.b[k]);
+            DSDPSetDualObjective(p, vari, qp.br[k]);
         } else {
             // provided by CutPool
             Cut c = cp[k - m];
@@ -131,7 +131,7 @@ void QP_DSDP::create_problem(
             DSDPSetDualObjective(p, vari, c.b);
         }
     }
-#if DSDP_SDP_DBG
+#if DSDP_REL_DBG
     // ck consistency.
     for (int k = 0; k < nvar + 1; ++k) {
         fprintf(stdout,
@@ -148,7 +148,7 @@ void QP_DSDP::create_problem(
     int info;
     DSDPSetPenaltyParameter(p, r.Gamma);
     DSDPSetZBar(p, r.zbar);
-#if DSDP_SDP_DBG
+#if DSDP_REL_DBG
     DSDPSetStandardMonitor(p, 1);
 #else
     if (verbose) {
@@ -223,13 +223,13 @@ void QP_DSDP::extract_solution() {
     r.Res = (r.Xm.block(0, 0, n, n) - xm.matrix() * xm.matrix().adjoint()).cwiseAbs();
     // compute primal dual values
     // objectives
-    DSDPGetDObjective(p, &r.bound);
-    r.bound = -r.bound; // fix sense
+    DSDPGetDObjective(p, &r.relax);
+    r.relax = -r.relax; // fix sense
     r.primal = qp.inhomogeneous_obj_val(r.x);
     // solution dtls
     DSDPGetIts(p, &r.iterations);
 
-#if DSDP_SDP_DBG
+#if DSDP_REL_DBG
     std::cout << dsdp_status(pdfeasible) << std::endl;
     std::cout << dsdp_stopreason(reason) << std::endl;
 #endif
@@ -331,7 +331,7 @@ void Result_DSDP::construct_init_point(Result_DSDP &r, double lambda, int pool_s
     for (int i = 0; i < r.ydim; i++) {
         y[i] = r.y[i];
     }
-    zbar = -r.bound;
+    zbar = -r.relax;
 }
 
 Result_DSDP::Result_DSDP(int n, int m, int d) :

@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
     get_arr(test, "a", a);
     get_arr(test, "b", b);
     QP qp = QP(n, m, d, Q, q, A, a, b);
-    Tree_DSDP tree;
+    Tree_DSDP tree{};
     Params params;
     if (!bool_ws) {
         params.warmstart = false;

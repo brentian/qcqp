@@ -18,7 +18,9 @@ public:
     // N: size of homogenized matrices, N:=(n+1)^2
     const int n, m, d;
     const int N;
-
+    // naming convention for matrices
+    // ()h -> homogenized
+    // ()c -> convexified
     // objective Q∙Y + q∙x
     //  and homogenized Qh
     eigen_matrix Q;
@@ -32,14 +34,27 @@ public:
     // constraints A_i∙Y + a_i∙x <= b_i
     //  and homogenized Ah_i
     std::vector<eigen_matrix> Ah;
-    std::vector<eigen_matrix> A;
-    std::vector<eigen_array> a;
-    eigen_array b;
+    std::vector<eigen_matrix> Ar;
+    std::vector<eigen_array> ar;
+    eigen_array br;
     bool verbose = false; // debug only
 
     // spectral decompositions
-    // stored in eigensolve
+    // stored in eigen-solver
+    // we create A by A[0] = Q, A[1:] = Ar
+    //  so that the matrices are unified
+    //  A in R(m + 1, n, n)
     std::vector<Eigen::SelfAdjointEigenSolver<eigen_matrix>> vec_es;
+    std::vector<eigen_matrix> Ac;
+    std::vector<std::vector<int>> Ac_rows;
+    std::vector<std::vector<int>> Ac_cols;
+    std::vector<std::vector<double>> Ac_vals;
+
+    std::vector<eigen_matrix> Dc;
+    std::vector<eigen_matrix> A;
+    std::vector<eigen_array> a;
+    std::vector<double> b;
+    eigen_matrix V;
 
     // functions
     QP(int n, int m, int d, double *Q_data, double *q_data);

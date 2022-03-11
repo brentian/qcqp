@@ -3,7 +3,7 @@ message("Looking for sources in ${PROJECT_SOURCE_DIR}")
 
 # add the executable
 add_executable(test_util test_utils.cpp)
-target_link_libraries(test_util PRIVATE qp nlohmann_json::nlohmann_json)
+target_link_libraries(test_util PRIVATE qpio nlohmann_json::nlohmann_json)
 
 add_executable(test_qp test_qp.cpp)
 target_link_libraries(test_qp PRIVATE qp nlohmann_json::nlohmann_json)
@@ -32,7 +32,10 @@ target_link_libraries(example_copt_socp_ex1 PRIVATE ${COPT_LIBRARIES} qp)
 
 # my examples
 add_executable(test_sdpa test_bg_sdpa.cpp)
-target_link_libraries(test_sdpa PRIVATE qp qpsdpa)
+target_link_libraries(test_sdpa PRIVATE qpsdpa qpio)
 
 add_executable(test_dsdp test_bg_dsdp.cpp)
-target_link_libraries(test_dsdp PRIVATE qp qpio qpdsdp)
+target_link_libraries(test_dsdp PRIVATE qpdsdp qpio)
+
+add_executable(test_copt test_bg_copt.cpp)
+target_link_libraries(test_copt PRIVATE qpcopt qpio)

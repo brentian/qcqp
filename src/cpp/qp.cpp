@@ -46,24 +46,26 @@ void QP::create_diag_Q(int n, int m) {
 QP::QP(int n, int m, int d, double *Q_data, double *q_data, double *A_data, double *a_data, double *b_data)
     : QP(n, m, d, Q_data, q_data) {
   Ah = std::vector<eigen_matrix>(m);
-  A = std::vector<eigen_matrix>(m);
-  a = std::vector<eigen_array>(m);
-  b = eigen_array(m);
+  Ar = std::vector<eigen_matrix>(m);
+  ar = std::vector<eigen_array>(m);
+  br = eigen_array(m);
   for (int i = 0; i < m; ++i) {
     eigen_matmap A_(A_data + i * n * n, n, n);
     eigen_arraymap a_(a_data + i * n, n, 1);
     auto Ah_ = homogenize_quadratic_form(A_, a_);
     Ah[i] = Ah_;
-    A[i] = A_;
-    a[i] = a_;
-    b[i] = b_data[i];
-
+    Ar[i] = A_;
+    ar[i] = a_;
+    br[i] = b_data[i];
   }
 }
 
 void QP::show() {
   std::cout << INTERVAL_STR;
   std::cout << "visualizing QCQP instance" << std::endl;
+  std::cout << "objective: " << std::endl;
+
+  std::cout << Q << std::endl;
   std::cout << "homogenized objective: " << std::endl;
   std::cout << Qh << std::endl;
   if (verbose) {
@@ -78,7 +80,7 @@ void QP::show() {
     std::cout << "------------------------" << std::endl;
   }
   std::cout << "homogenized constraints: (RHS)" << std::endl;
-  std::cout << eigen_array(b).matrix().adjoint() << std::endl;
+  std::cout << eigen_array(br).matrix().adjoint() << std::endl;
   std::cout << INTERVAL_STR;
 }
 
@@ -91,19 +93,18 @@ double QP::inhomogeneous_obj_val(double *x) const {
 // compute decompositions, do basic setup
 void QP::setup() {
   using namespace std;
-  Eigen::SelfAdjointEigenSolver<eigen_matrix> es(Q);
-  // below is the method to acquire basis and values
-  // cout << "The eigenvalues of A are:" << endl << es.eigenvalues() << endl;
-  // cout << "The matrix of eigenvectors, V, is:" << endl << es.eigenvectors() << endl << endl;
-  // eigen_matrix D = es.eigenvalues().asDiagonal();
-  // eigen_matrix V = es.eigenvectors();
-  // cout << "Finally, V * D * V^(-1) = " << endl << V * D * V.adjoint() << endl;
-  vec_es.push_back(es);
+  Eigen::SelfAdjointEigenSolver<eigen_matrix> es(-Q);
+  vec_es.emplace_back(es);
+  A.emplace_back(Q * (-1.0));
+  a.emplace_back(q * (-1.0));
+  b.push_back(0.0);
   for (int i = 0; i < m; ++i) {
-    Eigen::SelfAdjointEigenSolver<eigen_matrix> _es(A[i]);
+    Eigen::SelfAdjointEigenSolver<eigen_matrix> _es(Ar[i]);
     vec_es.push_back(_es);
+    A.push_back(Ar[i]);
+    a.push_back(ar[i]);
+    b.push_back(br[i]);
   }
-
 }
 
 void QP::convexify(int method) {
@@ -111,12 +112,45 @@ void QP::convexify(int method) {
     case (0): {
       // convexify via eigenvectors of Q
       //  i.e., the objective function
-      eigen_matrix V = vec_es[0].eigenvectors();
-      for (int i = 0; i < m; ++i) {
-
+      V = vec_es[0].eigenvectors();
+      for (int i = 0; i < m + 1; ++i) {
+        // todo, finish for qcqp cases.
+        eigen_matrix Ai = A[i];
+        std::cout << Ai << std::endl;
+        auto sigma = vec_es[i].eigenvalues().minCoeff();
+        eigen_matrix cAi;
+        eigen_matrix cDi;
+        if (sigma < 0) {
+          cDi = (1e-3 - sigma) * eigen_array::Ones(n).asDiagonal();
+          cAi = Ai + cDi;
+        } else {
+          cAi = Ai;
+          cDi = eigen_matrix::Zero(n, n);
+        }
+        Ac.emplace_back(cAi);
+        Dc.emplace_back(cDi);
       }
-      // todo, fish for qcqp cases.
+      break;
     }
+    case (1): {
+      break;
+    }
+  }
+  for (int i = 0; i < m + 1; ++i) {
+    eigen_sparse As = Ac[i].sparseView();
+    std::vector<int> ar;
+    std::vector<int> ac;
+    std::vector<double> av;
+
+    for (int i = 0; i < As.outerSize(); i++)
+      for (typename eigen_sparse::InnerIterator it(As, i); it; ++it) {
+        ar.emplace_back(it.row());
+        ac.emplace_back(it.col());
+        av.emplace_back(it.value());
+      }
+    Ac_rows.emplace_back(ar);
+    Ac_cols.emplace_back(ac);
+    Ac_vals.emplace_back(av);
   }
 }
 
