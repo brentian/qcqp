@@ -15,10 +15,11 @@
 
 int main(int argc, char *argv[]) {
 
-  if (argc < 3) {
+  if (argc < 4) {
     return -1;
   }
   auto bool_ws = !std::string(argv[2]).compare("T");
+  auto interval_logging = std::stoi(argv[3]);
   json test = parse_json(argv[1]);
   std::string fp = std::string(argv[1]);
   std::cout << fp << std::endl;
@@ -40,10 +41,11 @@ int main(int argc, char *argv[]) {
   QP qp = QP(n, m, d, Q, q, A, a, b);
   qp.setup();
   qp.convexify();
-  qp.show();
+#if COPT_REL_DBG
+  // qp.show();
+#endif
   // bound instance.
   Bound root_b(n, qp.V);
-  std::cout << qp.V << std::endl;
   // initialize copt
   copt_env *env = nullptr;
   int info = COPT_CreateEnv(&env);
@@ -58,6 +60,7 @@ int main(int argc, char *argv[]) {
 
   //
   Params params = Params();
+  params.interval_logging = interval_logging;
   if (!bool_ws) {
     params.warmstart = false;
   }
@@ -65,7 +68,7 @@ int main(int argc, char *argv[]) {
 
 
   auto r = tree.best_result.top();
-  r.show(true);
+  //  r.show(true);
 
   delete[] Q;
   delete[] q;

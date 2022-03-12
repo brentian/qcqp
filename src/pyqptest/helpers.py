@@ -102,7 +102,7 @@ parser.add_argument(
   "--bg_pr", default='admm', type=str, help="backend used, primal method"
 )
 parser.add_argument(
-  "--problem_type", type=int, help=f"if randomly generated, what is the problem type?\n{QP_RANDOM_INSTANCE_TYPE}",
+  "--problem_type", type=int, help=f"if randomly generated, what is the problem branch_type?\n{QP_RANDOM_INSTANCE_TYPE}",
   default=0
 )
 parser.add_argument(
@@ -111,7 +111,7 @@ parser.add_argument(
   help="problem details"
 )
 parser.add_argument(
-  "--bound_type", type=int, help=f"if randomly generated, what is the problem type?\n{QP_RANDOM_INSTANCE_TYPE}",
+  "--bound_type", type=int, help=f"if randomly generated, what is the problem branch_type?\n{QP_RANDOM_INSTANCE_TYPE}",
   default=0
 )
 parser.add_argument(

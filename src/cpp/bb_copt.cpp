@@ -31,71 +31,82 @@ int Tree_COPT::iter(Node_COPT &node, Params &param, QP &qp, copt_env *env, long 
   auto node_id = node.id;
   auto current_cuts = map_cuts[node_id];
   auto current_bound = map_bound[node_id];
-  if (node.val_rel_pa < param.lb) {
-    // prune by parent
-    // fprintf(stdout, "prune #%ld by parent\n", node_id);
-    return 0;
-  }
-
-  if (!node.bool_solved) {
-    node.create_problem(env, current_cuts, current_bound);
-    // warm-start is only needed if it has to be solved;
-    // todo: no warm-start yet.
-    // if (param.warmstart and node_id) {
-    //   auto parent_r = map_result.at(node.id_parent);
-    //   auto rws = Result_COPT(qp.n, qp.m, qp.d);
-    //   rws.construct_init_point(parent_r, 0.99, current_cuts.size());
-    //   node.p.assign_initial_point(rws, true);
-    // }
-    node.optimize();
-    node.extract_solution();
-  }
-  if (node_id and map_num_unsolved_child[node.id_parent] == 0) {
-    map_result.erase(node.id_parent);
-  }
-  auto node_r = node.get_solution();
-
-  // evaluate
-  auto Res = node_r.Res;
-  double infeas = Res.maxCoeff();
-  double relax = node.val_rel;
-  double primal = node.val_prm;
-
-  // timers
-  auto solve_time = difftime(node.time_opt_end, timer);
-  // update lower bound by primal solution
-  if (primal > param.lb) {
-    param.lb = primal;
-    best_node_id = node_id;
-    if (!best_result.empty()) {
-      best_result.pop();
-    }
-    best_result.push(node_r);
-  }
-  // update upper bound by sdp relaxation
-  param.ub = node.val_rel_pa;
-  param.gap = (param.ub - param.lb) / abs((param.lb) + param.tolfeas);
   int info;
   std::string status;
-  if (param.gap <= param.tolgap) {
-    info = 1;
-    status = "finished";
-  } else if (relax < param.lb) {
+  auto solve_time = 0.0;
+  auto infeas = 0.0;
+  if (node.val_rel_pa < param.lb) {
     // bound prune.
     info = 0;
-    status = "D";
-  } else if (infeas < param.tolfeas) {
-    // primal solution is feasible rank-1 solution
-    info = 0;
-    status = "P";
+    status = "-";
   } else {
-    status = "";
-    info = -1;
+    if (!node.bool_solved) {
+      node.create_problem(env, current_cuts, current_bound);
+      // warm-start is only needed if it has to be solved;
+      // todo: no warm-start yet.
+      // if (param.warmstart and node_id) {
+      //   auto parent_r = map_result.at(node.id_parent);
+      //   auto rws = Result_COPT(qp.n, qp.m, qp.d);
+      //   rws.construct_init_point(parent_r, 0.99, current_cuts.size());
+      //   node.p.assign_initial_point(rws, true);
+      // }
+      node.optimize();
+      node.extract_solution();
+    }
+    if (node_id and map_num_unsolved_child[node.id_parent] == 0) {
+      map_result.erase(node.id_parent);
+    }
+    auto node_r = node.get_solution();
+
+    // evaluate
+    auto Res = node_r.Res;
+
+    double relax = node.val_rel;
+    double primal = node.val_prm;
+
+    infeas = Res.maxCoeff();
+    // timers
+    solve_time = difftime(node.time_opt_end, timer);
+
+    // update upper bound by sdp relaxation
+    if (node.id == 0) {
+      param.ub = node_r.relax;
+    } else {
+      param.ub = node.val_rel_pa;
+    }
+    param.gap = (param.ub - param.lb) / abs((param.lb) + param.tolfeas);
+
+    if (relax < param.lb) {
+      // bound prune.
+      info = 0;
+      status = "-";
+    } else if (param.gap <= param.tolgap) {
+      info = 1;
+      status = "finished";
+    } else if (infeas < param.tolfeas) {
+      // primal solution is feasible rank-1 solution
+      info = 0;
+      status = "P";
+    } else {
+      info = -1;
+      status = "";
+    }
+    // update lower bound by primal solution
+    if (primal > param.lb) {
+      param.lb = primal;
+      best_node_id = node_id;
+      if (!best_result.empty()) {
+        best_result.pop();
+      }
+      best_result.push(node_r);
+    }
   }
+
   // status report
-  if (itern % 20 == 0) {
+  auto left_nodes = queue.size();
+  if ((itern % param.interval_logging == 0) || (info == 1) || (left_nodes == 0)) {
     gen_status_report(
-        solve_time, node_id, node.depth,
+        solve_time, node_id, left_nodes,
         current_cuts.size(), node.p.r.iterations,
         param.lb, param.ub, infeas, param.gap,
         param.lb, param.ub, status
@@ -107,7 +118,8 @@ int Tree_COPT::iter(Node_COPT &node, Params &param, QP &qp, copt_env *env, long 
 
 int Tree_COPT::run(QP &qp, Bound &root_b, copt_env *env, Params &param) {
   Node_COPT root(0, qp);
-
+  double *priority_arr = qp.Dc[0].diagonal().data();
+  std::vector<double> priority(priority_arr, priority_arr + qp.Dc[0].size());
   print_header();
 
   double gap;
@@ -141,11 +153,11 @@ int Tree_COPT::run(QP &qp, Bound &root_b, copt_env *env, Params &param) {
       map_bound.erase(node_id);
       map_cuts.erase(node_id);
     } else {
-      auto node_r = node.p.r;
+      auto node_r = node.get_solution();
 
       // branch
       Branch<Result_COPT> br{};
-      br.create_from_result(node_r, 'z');
+      br.maximum_priority(node_r, priority, 'z');
       br.imply_bounds(current_bound, qp, 'z');
       // create child
       long child_depth = node.depth + 1;
@@ -163,12 +175,12 @@ int Tree_COPT::run(QP &qp, Bound &root_b, copt_env *env, Params &param) {
           node.val_rel, 0.0, 0.0
       );
       // update containers
-      map_bound[left_id] = br.left_b;
+      map_bound[left_id] = br.b_left;
       map_cuts[left_id] = node.p.cp;
       map_ub[left_id] = node.val_rel;
       map_num_cuts[left_id] = node.p.cp.size();
       queue.insert(std::pair<long, Node_COPT>(left_id, left_node));
-      map_bound[right_id] = br.right_b;
+      map_bound[right_id] = br.b_right;
       map_cuts[right_id] = node.p.cp;
       map_ub[right_id] = node.val_rel;
       map_num_cuts[right_id] = node.p.cp.size();
@@ -187,8 +199,4 @@ int Tree_COPT::run(QP &qp, Bound &root_b, copt_env *env, Params &param) {
   }
 
   return 1;
-}
-
-Branch_COPT::Branch_COPT() {
-
 }

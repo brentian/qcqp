@@ -113,16 +113,18 @@ void QP::convexify(int method) {
       // convexify via eigenvectors of Q
       //  i.e., the objective function
       V = vec_es[0].eigenvectors();
-      for (int i = 0; i < m + 1; ++i) {
+      Dc.emplace_back((-1.0) * vec_es[0].eigenvalues());
+      Ac.emplace_back(eigen_matrix::Zero(n, n));
+      for (int i = 1; i < m + 1; ++i) {
         // todo, finish for qcqp cases.
         eigen_matrix Ai = A[i];
-        std::cout << Ai << std::endl;
         auto sigma = vec_es[i].eigenvalues().minCoeff();
         eigen_matrix cAi;
-        eigen_matrix cDi;
+        eigen_array cDi;
         if (sigma < 0) {
-          cDi = (1e-3 - sigma) * eigen_array::Ones(n).asDiagonal();
-          cAi = Ai + cDi;
+          cDi = (1e-5 - sigma) * eigen_array::Ones(n);
+          eigen_matrix mcDi = cDi.asDiagonal();
+          cAi = Ai + mcDi;
         } else {
           cAi = Ai;
           cDi = eigen_matrix::Zero(n, n);

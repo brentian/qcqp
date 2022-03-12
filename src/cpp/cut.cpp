@@ -12,17 +12,17 @@ std::vector<RLT<BranchType>> RLT<BranchType>::create_from_branch(BranchType &bra
   int n = branch.n;
   if (!orient) {
     //left child
-    double li = branch.left_b.xlb[i];
-    double lj = branch.left_b.xlb[j];
-    double ui = branch.left_b.xub[i];
-    double uj = branch.left_b.xub[j];
+    double li = branch.b_left.xlb[i];
+    double lj = branch.b_left.xlb[j];
+    double ui = branch.b_left.xub[i];
+    double uj = branch.b_left.xub[j];
     return {{n, i, j, li, ui, lj, uj},
             {n, j, i, lj, uj, li, ui}};
   }
-  double li = branch.right_b.xlb[i];
-  double lj = branch.right_b.xlb[j];
-  double ui = branch.right_b.xub[i];
-  double uj = branch.right_b.xub[j];
+  double li = branch.b_right.xlb[i];
+  double lj = branch.b_right.xlb[j];
+  double ui = branch.b_right.xub[i];
+  double uj = branch.b_right.xub[j];
   return {{n, i, j, li, ui, lj, uj},
           {n, j, i, lj, uj, li, ui}};
 }

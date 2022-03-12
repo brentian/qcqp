@@ -194,12 +194,12 @@ int Tree_DSDP::run(QP &qp, Params &param) {
                     node.val_rel, 0.0, 0.0
             );
             // update containers
-            map_bound[left_id] = br.left_b;
+            map_bound[left_id] = br.b_left;
             map_cuts[left_id] = lc;
             map_ub[left_id] = node.val_rel;
             map_num_cuts[left_id] = node.p.cp.size();
             queue.insert(std::pair<long, Node_DSDP>(left_id, left_node));
-            map_bound[right_id] = br.right_b;
+            map_bound[right_id] = br.b_right;
             map_cuts[right_id] = rc;
             map_ub[right_id] = node.val_rel;
             map_num_cuts[right_id] = node.p.cp.size();

@@ -101,7 +101,7 @@ class QP(object):
     self.indefn = {}
     self.U = np.empty((m + 1, n, n), dtype=np.float)
     self.gamma = np.empty((m + 1, n), dtype=np.float)
-    gamma, u = nl.eigh(- self.Q)
+    gamma, u = nl.eigh(self.Q)
     indefn = (gamma > self.EPS_EIGEN).sum()
     self.indefn[0] = indefn
     self.indefU[0] = u[:, :indefn]  # only positive part

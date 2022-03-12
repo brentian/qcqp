@@ -17,9 +17,7 @@ void QP_COPT::create_problem(copt_env *env, Bound &bound, bool solve, bool verbo
   // [x,z,y,f]
   std::vector<char *> names(ncol);
   // add variables
-  std::vector<double> lb(qp.n, 0.0);
-  std::vector<double> ub(qp.n, 1.0);
-
+  // x
   errcode = COPT_AddCols(
       prob,
       qp.n,
@@ -29,13 +27,16 @@ void QP_COPT::create_problem(copt_env *env, Bound &bound, bool solve, bool verbo
       nullptr,
       nullptr,
       nullptr,
-      lb.data(),
-      ub.data(),
+      bound.xlb.data(),
+      bound.xub.data(),
       names.data()
   );
-  //
-  std::vector<double> zylb(ncol, -COPT_INFINITY);
-  std::vector<double> zyub(ncol, COPT_INFINITY);
+  // zy
+  std::vector<double> zylb = std::vector<double>(bound.zlb);
+  std::vector<double> zyub = std::vector<double>(bound.zub);
+  zylb.resize(2 * ydim, -COPT_INFINITY);
+  zyub.resize(2 * ydim, COPT_INFINITY);
+  // bound of z fed by bound
   errcode = COPT_AddCols(
       prob,
       ydim * 2,
@@ -49,7 +50,7 @@ void QP_COPT::create_problem(copt_env *env, Bound &bound, bool solve, bool verbo
       zyub.data(),
       names.data()
   );
-  // add objective
+  // add objective f
   errcode = COPT_AddCol(
       prob,
       1.0,
@@ -91,7 +92,7 @@ void QP_COPT::create_problem(copt_env *env, Bound &bound, bool solve, bool verbo
   // Add the quadratic objective constraint
   eigen_array cc = eigen_array::Zero(ncol);
   cc(Eigen::seqN(0, qp.n)) = qp.a[0];
-  cc(Eigen::seqN(qp.n + ydim, ydim)) = -qp.Dc[0].diagonal();
+  cc(Eigen::seqN(qp.n + ydim, ydim)) = -qp.Dc[0];
   cc(ncol - 1) = 1.0;
 
   std::vector<int> index(ncol, 0);
@@ -178,7 +179,8 @@ void QP_COPT::optimize() {
   if (errcode) return;
 
   // Retrieve optimal solution
-  if (iLpStatus == COPT_LPSTATUS_OPTIMAL) {
+  if (iLpStatus == COPT_LPSTATUS_OPTIMAL
+      or iLpStatus == COPT_LPSTATUS_NUMERICAL) {
     double dLpObjVal;
     r.xall = eigen_array(ncol);
 
@@ -208,11 +210,12 @@ void QP_COPT::optimize() {
     r.Res = r.y - r.z.cwiseProduct(r.z);
     r.primal = qp.inhomogeneous_obj_val(r.x.data());
     r.relax = dLpObjVal;
-  }
-  else{
+  } else {
+#if QCQP_BRANCH_DBG
     COPT_WriteLp(prob, "/tmp/1.lp");
+#endif
     r.relax = -1e6;
-    r.Res = eigen_matrix::Zero(1,1);
+    r.Res = eigen_matrix::Zero(1, 1);
   }
 }
 

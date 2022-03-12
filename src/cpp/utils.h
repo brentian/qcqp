@@ -40,28 +40,17 @@ void input_lower_triangular(const double *lowert, double *full_x, int n);
 
 int query_index_lt(int i, int j);
 
-class Params {
-public:
-    //        bool verbose=false;
-    bool warmstart = true;
-    double tolgap = 1e-4;
-    double tolfeas = 1e-4;
-    double lb = -1e6;
-    double ub = -1e6;
-    double gap = 1e6;
-};
-/**
- *
- * \param rowCount
- * \param colCount
- * \param nonZeroCount
- * \param nonZeroArray
- * \param rowIndex
- * \param colIndex
- * \return
- */
+
 eigen_sparse construct_sparse(int rowCount, int colCount, int nonZeroCount, double *nonZeroArray, int *rowIndex,
                               int *colIndex);
+
+template<typename KeyType, typename ValueType>
+std::pair<KeyType, ValueType> get_max(const std::map<KeyType, ValueType> &x) {
+  using pairtype = std::pair<KeyType, ValueType>;
+  return *std::max_element(x.begin(), x.end(), [](const pairtype &p1, const pairtype &p2) {
+    return p1.second < p2.second;
+  });
+}
 
 #ifndef QCQP_STRING_UTILS
 #define QCQP_STRING_UTILS
@@ -80,4 +69,18 @@ namespace QCQPStrUtil {
 #define QCQP_BRANCH_DBG 0
 #define DSDP_REL_DBG 0
 #define COPT_REL_DBG 0
+
+class Params {
+public:
+    //        bool verbose=false;
+    bool warmstart = true;
+    double tolgap = 1e-4;
+    double tolfeas = 1e-4;
+    double lb = -1e6;
+    double ub = -1e6;
+    double gap = 1e6;
+    int interval_logging = 10;
+};
+
+
 #endif //QCQP_UTILS_H

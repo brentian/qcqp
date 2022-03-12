@@ -15,37 +15,10 @@
 #include "utils.h"
 
 
-//template<typename T> class Node {
-//public:
-//
-//    Node(long id, QP &qp, // no dfts.
-//         long parent_id = -1, long depth = 0,
-//         double bound = 0.0, double primal_val = 0.0,
-//         double abs_time = 0.0, double create_time = 0.0, double solve_time = 0.0
-//    );
-//
-//    T p;
-//    long id;
-//    long parent_id;
-//    long depth;
-//    double obj_bound;
-//    double primal_val;
-//    double abs_time;
-//    double create_time;
-//    double solve_time;
-//};
-
-
 class Node {
 public:
     Node() = default;
-//    Node(long id, QP &qp, // no dfts.
-//         long parent_id = -1, long depth = 0,
-//         double bound = 0.0, double primal_val = 0.0,
-//         double abs_time = 0.0, double create_time = 0.0, double solve_time = 0.0
-//    );
 
-//    Backend p;
     long id;
     long id_parent;
     long depth;
@@ -56,12 +29,6 @@ public:
     time_t time_opt_start;
     time_t time_opt_end;
     double time_solve;
-    // Cut and variable bound
-    //    CutPool ct;
-    //    Bound bd;
-    //    void attach_cuts(CutPool another_cp);
-    //    void attach_bound(Bound &another);
-    //    CutPool get_cuts();
 };
 
 template<typename T>
@@ -94,12 +61,14 @@ public:
     const std::string LOG_AUTHOR_INFO = "(c) Chuwen Zhang, 2021-2022 \n";
     // const std::string LOG_AUTHOR_INFO = "(c) Chuwen Zhang, Yinyu Ye, 2021-2022 \n";
     const std::vector<std::string> LOG_HEADER_ARR = {
-        "time", "#/depth", "cuts",
+        "time", "#/unexpr", "cuts",
         "ipm", "inf",
         "prm", "rel", "gap",
         "status"
     };
-    const int LENGHTH_SLOT = 12;
+    const std::vector<int> LOG_HEADER_LENGTH_ARR = {
+        12, 13, 7, 7, 11, 11, 11, 11, 9
+    };
 
     void print_header() {
 
@@ -112,11 +81,13 @@ public:
 
     std::string gen_header_slots() {
       auto ss = std::stringstream();
+      int count = 0;
       for (auto ele: LOG_HEADER_ARR) {
-        auto empty_size = LENGHTH_SLOT - ele.size();
+        auto empty_size = LOG_HEADER_LENGTH_ARR[count] - ele.size();
         auto pre_size = empty_size / 2;
         auto aff_size = empty_size - pre_size;
         ss << "|" << std::string(pre_size, ' ') << ele << std::string(aff_size, ' ');
+        count++;
       }
       ss << "|" << std::endl;
       return ss.str();
@@ -126,14 +97,14 @@ public:
     const std::string LOG_BREAKER = std::string(ITER_HEADER.size(), '#');
 
     void gen_status_report(
-        double solve_time, long id_node, long depth_node,
+        double solve_time, long id_node, long left_nodes,
         long cut_size, long iter_ipm,
         double prm, double relax, double inf, double gap,
         double lb, double ub, std::string status
     ) {
       auto _line_arr = {
           to_string_with_precision<double>(solve_time, 2),
-          std::to_string(id_node),
+          std::to_string(id_node) + "/" + std::to_string(left_nodes),
           std::to_string(cut_size),
           std::to_string(iter_ipm),
           to_string_with_precision<double>(inf, 3, true),
@@ -143,11 +114,13 @@ public:
           std::move(status)
       };
       auto ss = std::stringstream();
+      int count = 0;
       for (auto ele: _line_arr) {
-        auto empty_size = LENGHTH_SLOT - ele.size();
+        auto empty_size = LOG_HEADER_LENGTH_ARR[count] - ele.size();
         auto pre_size = empty_size / 2;
         auto aff_size = empty_size - pre_size;
         ss << "|" << std::string(pre_size, ' ') << ele << std::string(aff_size, ' ');
+        count++;
       }
       ss << "|" << std::endl;
       std::cout << ss.str();

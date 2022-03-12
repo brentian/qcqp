@@ -50,7 +50,7 @@ public:
     std::vector<std::vector<int>> Ac_cols;
     std::vector<std::vector<double>> Ac_vals;
 
-    std::vector<eigen_matrix> Dc;
+    std::vector<eigen_array> Dc;
     std::vector<eigen_matrix> A;
     std::vector<eigen_array> a;
     std::vector<double> b;
