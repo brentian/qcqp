@@ -166,8 +166,8 @@ int Tree_DSDP::run(QP &qp, Params &param) {
             br.imply_bounds(current_bound);
             // create child
             long child_depth = node.depth + 1;
-            long left_id = total_nodes + 1;
-            long right_id = total_nodes + 2;
+            long left_id = num_total_nodes + 1;
+            long right_id = num_total_nodes + 2;
 
             // create cuts
             auto lc = CutPool();
@@ -208,7 +208,7 @@ int Tree_DSDP::run(QP &qp, Params &param) {
             map_result.insert(std::pair<long, Result_DSDP>(node_id, node_r));
 
             // counting
-            total_nodes += 2;
+            num_total_nodes += 2;
             map_num_unsolved_child[node_id] = 2;
             // clean up
             map_bound.erase(node_id);

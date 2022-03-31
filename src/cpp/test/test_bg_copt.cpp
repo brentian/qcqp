@@ -1,6 +1,6 @@
 //
 // Created by C. Zhang on 2021/7/25.
-// test for sdpa backend
+// test for COPT backend
 //
 
 
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
   copt_env *env = nullptr;
   int errcode = COPT_CreateEnv(&env);
   if (errcode) return -1;
-  QP_COPT p(qp);
+  Bg_COPT p(qp);
   p.create_problem(env, root_b, false, true);
   p.optimize();
   auto r = p.get_solution();

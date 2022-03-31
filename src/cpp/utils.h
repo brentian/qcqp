@@ -11,6 +11,7 @@
 #include <random>
 #include <thread>
 #include <future>
+#include <chrono>
 
 #include "Eigen/Core"
 #include "Eigen/Dense"
@@ -69,17 +70,21 @@ namespace QCQPStrUtil {
 #define QCQP_BRANCH_DBG 0
 #define DSDP_REL_DBG 0
 #define COPT_REL_DBG 0
+#define COPT_TRS_DBG 0
 
 class Params {
 public:
-    //        bool verbose=false;
-    bool warmstart = true;
+    // bool verbose=false;
+
     double tolgap = 1e-4;
     double tolfeas = 1e-4;
     double lb = -1e6;
     double ub = -1e6;
     double gap = 1e6;
     int interval_logging = 10;
+    int interval_primal = 30;
+    bool bool_warmstart = false;
+    bool bool_use_primal = true;
 };
 
 

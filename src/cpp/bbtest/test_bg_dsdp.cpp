@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
     Tree_DSDP tree{};
     Params params;
     if (!bool_ws) {
-        params.warmstart = false;
+        params.bool_warmstart = false;
     }
     tree.run(qp, params);
 

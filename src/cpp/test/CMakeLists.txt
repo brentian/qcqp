@@ -39,3 +39,6 @@ target_link_libraries(test_dsdp PRIVATE qpdsdp qpio)
 
 add_executable(test_copt test_bg_copt.cpp)
 target_link_libraries(test_copt PRIVATE qpcopt qpio)
+
+add_executable(test_copt_ipm test_bg_copt_ipm.cpp)
+target_link_libraries(test_copt_ipm PRIVATE qpcopt qpio)

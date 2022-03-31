@@ -25,10 +25,10 @@ public:
     double val_rel_pa;
     double val_rel;
     double val_prm;
-    time_t time_created;
-    time_t time_opt_start;
-    time_t time_opt_end;
-    double time_solve;
+    std::chrono::time_point<std::chrono::steady_clock> time_created;
+    std::chrono::time_point<std::chrono::steady_clock> time_opt_start;
+    std::chrono::time_point<std::chrono::steady_clock> time_opt_end;
+    std::chrono::duration<double> time_solve;
 };
 
 template<typename T>
@@ -46,6 +46,7 @@ std::string to_string_with_precision(const T a_value, const int n = 3, const boo
 template<typename NodeType, typename ResultType>
 class Tree {
 public:
+    std::chrono::time_point<std::chrono::steady_clock> timer;
     std::map<long, NodeType> queue;
     std::stack<ResultType> best_result;
     std::map<long, Bound> map_bound; // variable box bound
@@ -56,7 +57,8 @@ public:
     std::map<long, long> map_num_cuts; // number of cuts for parent.
 
     long best_node_id = 0;
-    long total_nodes = 0;
+    long num_total_nodes = 0;
+    long num_finished_nodes = 0;
     const std::string LOG_HEADER = "The Quadratic Constrained Quadratic Programming Solver\n";
     const std::string LOG_AUTHOR_INFO = "(c) Chuwen Zhang, 2021-2022 \n";
     // const std::string LOG_AUTHOR_INFO = "(c) Chuwen Zhang, Yinyu Ye, 2021-2022 \n";
@@ -69,6 +71,12 @@ public:
     const std::vector<int> LOG_HEADER_LENGTH_ARR = {
         12, 13, 7, 7, 11, 11, 11, 11, 9
     };
+
+    // functions
+    std::pair<long, double> fetch_next() {
+      auto kv = get_max(map_ub);
+      return kv;
+    }
 
     void print_header() {
 

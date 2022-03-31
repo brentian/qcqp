@@ -174,3 +174,5 @@ eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a, double 
 Backend::Backend(QP &qp) {
 
 }
+
+

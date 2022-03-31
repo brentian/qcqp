@@ -10,20 +10,20 @@
 
 class Bound {
 public:
-    std::vector<double> xlb;
-    std::vector<double> xub;
-    std::vector<double> zlb;
-    std::vector<double> zub;
+    eigen_array xlb;
+    eigen_array xub;
+    eigen_array zlb;
+    eigen_array zub;
 
     Bound();
 
     explicit Bound(int n);
 
-    explicit Bound(Bound &b, eigen_matrix V);
+    explicit Bound(Bound &b, eigen_matrix & V);
 
-    explicit Bound(int n, eigen_matrix V);
+    explicit Bound(int n, eigen_matrix & V);
 
-    void compz(int n, eigen_matrix V);
+    void compute_rotation(int n, eigen_matrix & V);
 };
 
 // branching rules

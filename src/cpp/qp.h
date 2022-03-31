@@ -45,6 +45,7 @@ public:
     //  so that the matrices are unified
     //  A in R(m + 1, n, n)
     std::vector<Eigen::SelfAdjointEigenSolver<eigen_matrix>> vec_es;
+    // Ac_* is the convexified matrices
     std::vector<eigen_matrix> Ac;
     std::vector<std::vector<int>> Ac_rows;
     std::vector<std::vector<int>> Ac_cols;
@@ -69,6 +70,7 @@ public:
     double inhomogeneous_obj_val(double *x) const;
 
     void setup();
+
     void convexify(int method = 0);
 };
 
@@ -78,7 +80,16 @@ public:
     explicit Backend(QP &qp);
 };
 
+class Primal {
+public:
+
+};
+
 // QP UTIL FUNCS.
 eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a);
+
 eigen_matrix homogenize_quadratic_form(eigen_matmap A, eigen_arraymap a, double b);
+
+using Bg = Backend;
+using Pr = Primal;
 #endif //QCQP_QP_H

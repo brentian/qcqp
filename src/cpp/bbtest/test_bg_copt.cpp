@@ -15,11 +15,12 @@
 
 int main(int argc, char *argv[]) {
 
-  if (argc < 4) {
+  if (argc < 5) {
     return -1;
   }
   auto bool_ws = !std::string(argv[2]).compare("T");
-  auto interval_logging = std::stoi(argv[3]);
+  auto bool_pr = !std::string(argv[3]).compare("T");
+  auto interval_logging = std::stoi(argv[4]);
   json test = parse_json(argv[1]);
   std::string fp = std::string(argv[1]);
   std::cout << fp << std::endl;
@@ -61,9 +62,10 @@ int main(int argc, char *argv[]) {
   //
   Params params = Params();
   params.interval_logging = interval_logging;
-  if (!bool_ws) {
-    params.warmstart = false;
-  }
+
+  params.bool_warmstart = bool_ws;
+  params.bool_use_primal = bool_pr;
+
   tree.run(qp, root_b, env, params);
 
 
